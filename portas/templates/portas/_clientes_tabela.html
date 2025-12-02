@@ -1,0 +1,37 @@
+<div id="clientes-list">
+    <table border="1" cellpadding="4">
+        <tr>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Documento</th>
+            <th>Telefone</th>
+            <th>Cidade / UF</th>
+            <th>Ações</th>
+        </tr>
+        {% for cliente in clientes %}
+            <tr>
+                <td>{{ cliente.nome }}</td>
+                <td>{{ cliente.get_tipo_pessoa_display }}</td>
+                <td>{{ cliente.documento }}</td>
+                <td>{{ cliente.telefone }}</td>
+                <td>
+                    {{ cliente.cidade }}
+                    {% if cliente.uf %}/ {{ cliente.uf }}{% endif %}
+                </td>
+                <td>
+                    <a href="#"
+                       hx-get="{% url 'editar_cliente' cliente.pk %}"
+                       hx-target="#modal-body"
+                       hx-swap="innerHTML"
+                       onclick="openModal(); return false;">
+                        Editar
+                    </a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6">Nenhum cliente cadastrado.</td>
+            </tr>
+        {% endfor %}
+    </table>
+</div>

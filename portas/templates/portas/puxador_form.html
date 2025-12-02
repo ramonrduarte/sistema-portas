@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if puxador %}Editar{% else %}Cadastrar{% endif %} Puxador</title>
+</head>
+<body>
+<h1>{% if puxador %}Editar{% else %}Cadastrar{% endif %} Puxador</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <p>
+        {{ form.codigo.label_tag }}
+        {{ form.codigo }}
+        {{ form.codigo.errors }}
+    </p>
+
+    <p>
+        {{ form.descricao.label_tag }}
+        {{ form.descricao }}
+        {{ form.descricao.errors }}
+    </p>
+
+    <p>
+        {{ form.preco.label_tag }}
+        {{ form.preco }}
+        {{ form.preco.errors }}
+    </p>
+
+    <p>
+        {{ form.acabamento.label_tag }}
+        {{ form.acabamento }}
+        {{ form.acabamento.errors }}
+        &nbsp;
+        <a href="{% url 'cadastrar_acabamento' %}" target="_blank">+ Novo acabamento</a>
+    </p>
+
+    <p>
+        {{ form.tipo.label_tag }}
+        {{ form.tipo }}
+        {{ form.tipo.errors }}
+    </p>
+
+    <p>
+        {{ form.modelo.label_tag }}
+        {{ form.modelo }}
+        {{ form.modelo.errors }}
+    </p>
+
+    <button type="submit">Salvar</button>
+    <a href="{% url 'lista_puxadores' %}">Cancelar</a>
+</form>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Clientes</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, Helvetica, Arial, sans-serif;
+            background: #f4f5f7;
+            margin: 0;
+            padding: 24px;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            padding: 8px 14px;
+            background: #2563eb;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+        }
+
+        th, td {
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+
+        th {
+            text-align: left;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:nth-child(even) td {
+            background: #f9fafb;
+        }
+
+        tr:hover td {
+            background: #eef2ff;
+        }
+
+        /* ========= MODAL ========= */
+
+        #modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(2px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        #modal-body {
+            background: #ffffff;
+            padding: 18px 20px;
+            border-radius: 12px;
+            min-width: 420px;
+            max-width: 720px;
+            max-height: 80vh;
+            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.35);
+            overflow: auto;
+            animation: modal-zoom 0.15s ease-out;
+        }
+
+        @keyframes modal-zoom {
+            from {
+                transform: translateY(6px) scale(0.97);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            color: #64748b;
+        }
+
+        .modal-close:hover {
+            color: #0f172a;
+        }
+    </style>
+</head>
+<body>
+<div class="page-header">
+    <h1>Clientes</h1>
+
+    <button class="btn-primary"
+            hx-get="{% url 'cadastrar_cliente' %}"
+            hx-target="#modal-body"
+            hx-swap="innerHTML"
+            onclick="openModal(); return false;">
+        + Novo cliente
+    </button>
+</div>
+
+{% include "portas/_clientes_tabela.html" %}
+
+<!-- Modal -->
+<div id="modal-backdrop" onclick="backdropClick(event)">
+    <div id="modal-body">
+        <!-- o formulário vem via HTMX pra cá -->
+    </div>
+</div>
+
+<script>
+    function openModal() {
+        document.getElementById('modal-backdrop').style.display = 'flex';
+    }
+    function closeModal() {
+        document.getElementById('modal-backdrop').style.display = 'none';
+    }
+    // Fecha clicando fora do card
+    function backdropClick(event) {
+        if (event.target.id === 'modal-backdrop') {
+            closeModal();
+        }
+    }
+
+    // Quando a tabela (#clientes-list) for atualizada via HTMX após salvar,
+    // fechamos o modal automaticamente.
+    document.body.addEventListener('htmx:afterSwap', function (event) {
+        if (event.detail.target.id === 'clientes-list') {
+            closeModal();
+        }
+    });
+</script>
+
+<p style="margin-top: 16px;">
+    <a href="{% url 'lista_perfis' %}">Voltar para Perfis</a>
+</p>
+</body>
+</html>

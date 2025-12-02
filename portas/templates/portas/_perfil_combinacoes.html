@@ -1,0 +1,35 @@
+<h3>Combinações</h3>
+
+<p><strong>Perfis Puxadores compatíveis:</strong><br>
+    {{ form.puxadores_compativeis }}
+</p>
+
+<p><strong>Puxadores compatíveis:</strong><br>
+    {{ form.puxadores_simples_compativeis }}
+</p>
+
+<p><strong>Divisores compatíveis:</strong><br>
+    {{ form.divisores_compativeis }}
+</p>
+
+<p><strong>Espessura do vidro:</strong><br>
+    <select
+        name="{{ form.espessura_vidro.name }}"
+        id="{{ form.espessura_vidro.id_for_label }}"
+        hx-get="{% url 'perfil_vidros_por_espessura' %}"
+        hx-target="#perfil-vidros"
+        hx-trigger="change"
+        hx-include="[name='espessura_vidro'], [name='perfil_id']"
+    >
+        {% for opt in form.espessura_vidro.field.choices %}
+            <option value="{{ opt.0 }}"
+                {% if opt.0|stringformat:'s' == form.espessura_vidro.value|stringformat:'s' %}selected{% endif %}>
+                {{ opt.1 }}
+            </option>
+        {% endfor %}
+    </select>
+</p>
+
+<div id="perfil-vidros">
+    {% include "portas/_perfil_vidros.html" %}
+</div>

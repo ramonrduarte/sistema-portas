@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Divisores</title>
+</head>
+<body>
+<h1>Divisores</h1>
+
+<p><a href="{% url 'cadastrar_divisor' %}">+ Novo divisor</a></p>
+
+<table border="1" cellpadding="4">
+    <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Preço</th>
+        <th>Acabamento</th>
+        <th>Encaixe</th>
+        <th>Ações</th>
+    </tr>
+    {% for divisor in divisores %}
+        <tr>
+            <td>{{ divisor.codigo }}</td>
+            <td>{{ divisor.descricao }}</td>
+            <td>R$ {{ divisor.preco }}</td>
+            <td>{{ divisor.acabamento }}</td>
+            <td>{{ divisor.get_encaixe_display }}</td>
+            <td>
+                <a href="{% url 'editar_divisor' divisor.pk %}">Editar</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="6">Nenhum divisor cadastrado.</td>
+        </tr>
+    {% endfor %}
+</table>
+
+<p><a href="{% url 'lista_perfis' %}">Voltar para Perfis</a></p>
+</body>
+</html>

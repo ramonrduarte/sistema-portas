@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if acabamento %}Editar{% else %}Cadastrar{% endif %} Acabamento</title>
+</head>
+<body>
+<h1>{% if acabamento %}Editar{% else %}Cadastrar{% endif %} Acabamento</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <p>{{ form.nome.label_tag }} {{ form.nome }} {{ form.nome.errors }}</p>
+
+    <button type="submit">Salvar</button>
+    <a href="{% url 'lista_acabamentos' %}">Cancelar</a>
+</form>
+</body>
+</html>

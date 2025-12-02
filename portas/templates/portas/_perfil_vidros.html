@@ -1,0 +1,7 @@
+<p><strong>Vidros compatíveis:</strong><br>
+    {% if form.vidros_compativeis.field.queryset.exists %}
+        {{ form.vidros_compativeis }}
+    {% else %}
+        Nenhum vidro para essa espessura.
+    {% endif %}
+</p>

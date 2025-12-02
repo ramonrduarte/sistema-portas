@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Orçamento - Porta 1x Perfil Puxador</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+    <h1>Orçamento - Porta 1x Perfil Puxador</h1>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {{ form.cliente_nome.errors }}
+        <p>{{ form.cliente_nome.label_tag }} {{ form.cliente_nome }}</p>
+
+        {{ form.largura_porta_m.errors }}
+        <p>{{ form.largura_porta_m.label_tag }} {{ form.largura_porta_m }}</p>
+
+        {{ form.altura_porta_m.errors }}
+        <p>{{ form.altura_porta_m.label_tag }} {{ form.altura_porta_m }}</p>
+
+        {{ form.quantidade.errors }}
+        <p>{{ form.quantidade.label_tag }} {{ form.quantidade }}</p>
+
+        <!-- Perfil estrutura: ao mudar, chama o endpoint HTMX -->
+        <p>
+            {{ form.perfil_estrutura.label_tag }}
+            <select name="perfil_estrutura" id="id_perfil_estrutura"
+                    hx-get="{% url 'porta_1p_opcoes_compativeis' %}"
+                    hx-target="#opcoes-compativeis"
+                    hx-trigger="change"
+                    hx-include="[name='perfil_estrutura']">
+                {% for option in form.perfil_estrutura.field.queryset %}
+                    <option value="{{ option.id }}"
+                        {% if form.perfil_estrutura.value == option.id|stringformat:"s" %}selected{% endif %}>
+                        {{ option }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+
+        <!-- Área que será substituída pelo HTMX -->
+        <div id="opcoes-compativeis">
+            {% include "portas/_opcoes_compativeis.html" %}
+        </div>
+
+        <button type="submit">Calcular</button>
+    </form>
+
+    {% if orcamento %}
+        <hr>
+        <h2>Resultado do Orçamento #{{ orcamento.id }}</h2>
+        <p>Cliente: {{ orcamento.cliente_nome }}</p>
+
+        <p>Total estrutura: R$ {{ resultado.total_estrutura }}</p>
+        <p>Total puxador: R$ {{ resultado.total_puxador }}</p>
+        <p>Total vidro: R$ {{ resultado.total_vidro }}</p>
+
+        <h3>Total geral: R$ {{ resultado.total_geral }}</h3>
+
+        <h3>Itens detalhados</h3>
+        <ul>
+            {% for item in orcamento.itens.all %}
+                <li>
+                    {{ item.descricao }} — {{ item.quantidade }}x — R$ {{ item.total }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</body>
+</html>

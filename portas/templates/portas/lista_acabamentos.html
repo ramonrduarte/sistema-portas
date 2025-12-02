@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Acabamentos</title>
+</head>
+<body>
+<h1>Acabamentos</h1>
+
+<p><a href="{% url 'cadastrar_acabamento' %}">+ Cadastrar novo acabamento</a></p>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>ID</th>
+        <th>Nome</th>
+        <th>Ações</th>
+    </tr>
+    {% for ac in acabamentos %}
+        <tr>
+            <td>{{ ac.id }}</td>
+            <td>{{ ac.nome }}</td>
+            <td>
+                <a href="{% url 'editar_acabamento' ac.pk %}">Editar</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="3">Nenhum acabamento cadastrado.</td>
+        </tr>
+    {% endfor %}
+</table>
+
+<p><a href="{% url 'lista_perfis' %}">Voltar para perfis</a></p>
+</body>
+</html>

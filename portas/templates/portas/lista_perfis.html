@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfis Estruturais</title>
+</head>
+<body>
+    <h1>Perfis Estruturais</h1>
+
+    <p><a href="{% url 'cadastrar_perfil' %}">+ Cadastrar novo perfil</a></p>
+
+    <table border="1" cellpadding="5">
+        <tr>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th>Preço</th>
+            <th>Compatibilidades</th>
+            <th>Ações</th>
+        </tr>
+        {% for perfil in perfis %}
+            <tr>
+                <td>{{ perfil.codigo }}</td>
+                <td>{{ perfil.descricao }}</td>
+                <td>R$ {{ perfil.preco }}</td>
+                <td>
+                    <strong>Puxadores:</strong>
+                    {{ perfil.puxadores_compativeis.all|join:", " }}<br>
+                    <strong>Vidros:</strong>
+                    {{ perfil.vidros_compativeis.all|join:", " }}<br>
+                    <strong>Puxadores simples:</strong>
+                    {{ perfil.puxadores_simples_compativeis.all|join:", " }}
+                </td>
+                <td>
+                    <a href="{% url 'editar_perfil' perfil.pk %}">Editar</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5">Nenhum perfil cadastrado.</td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    <p>
+        <a href="{% url 'porta_1p' %}">Voltar para orçamento</a>
+    </p>
+</body>
+</html>

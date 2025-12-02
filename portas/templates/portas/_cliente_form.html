@@ -1,0 +1,91 @@
+<div class="modal-header">
+    <h2 class="modal-title">
+        {% if cliente %}Editar{% else %}Cadastrar{% endif %} cliente
+    </h2>
+    <button type="button" class="modal-close" onclick="closeModal()">×</button>
+</div>
+
+<form
+    hx-post="{% if cliente %}{% url 'editar_cliente' cliente.pk %}{% else %}{% url 'cadastrar_cliente' %}{% endif %}"
+    hx-target="#clientes-list"
+    hx-swap="outerHTML"
+    class="modal-form"
+>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-bottom: 12px;">
+        <div style="grid-column: 1 / -1;">
+            {{ form.tipo_pessoa.label_tag }}<br>
+            {{ form.tipo_pessoa }} {{ form.tipo_pessoa.errors }}
+        </div>
+
+        <div style="grid-column: 1 / -1;">
+            {{ form.nome.label_tag }}<br>
+            {{ form.nome }} {{ form.nome.errors }}
+        </div>
+
+        <div>
+            {{ form.documento.label_tag }}<br>
+            {{ form.documento }} {{ form.documento.errors }}
+        </div>
+
+        <div>
+            {{ form.telefone.label_tag }}<br>
+            {{ form.telefone }} {{ form.telefone.errors }}
+        </div>
+
+        <div style="grid-column: 1 / -1;">
+            {{ form.email.label_tag }}<br>
+            {{ form.email }} {{ form.email.errors }}
+        </div>
+    </div>
+
+    <hr style="margin: 8px 0 12px; border: none; border-top: 1px solid #e2e8f0;">
+
+    <h3 style="margin: 0 0 8px; font-size: 14px;">Endereço</h3>
+
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 8px 12px; margin-bottom: 12px;">
+        <div>
+            {{ form.logradouro.label_tag }}<br>
+            {{ form.logradouro }} {{ form.logradouro.errors }}
+        </div>
+        <div>
+            {{ form.numero.label_tag }}<br>
+            {{ form.numero }} {{ form.numero.errors }}
+        </div>
+        <div>
+            {{ form.bairro.label_tag }}<br>
+            {{ form.bairro }} {{ form.bairro.errors }}
+        </div>
+        <div>
+            {{ form.cep.label_tag }}<br>
+            {{ form.cep }} {{ form.cep.errors }}
+        </div>
+        <div>
+            {{ form.cidade.label_tag }}<br>
+            {{ form.cidade }} {{ form.cidade.errors }}
+        </div>
+        <div>
+            {{ form.uf.label_tag }}<br>
+            {{ form.uf }} {{ form.uf.errors }}
+        </div>
+    </div>
+
+    <div style="margin-bottom: 12px;">
+        {{ form.observacoes.label_tag }}<br>
+        {{ form.observacoes }} {{ form.observacoes.errors }}
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top: 8px;">
+        <button type="button"
+                onclick="closeModal()"
+                style="padding:6px 12px; border-radius:6px; border:1px solid #cbd5f5; background:#fff; cursor:pointer;">
+            Cancelar
+        </button>
+        <button type="submit"
+                style="padding:6px 14px; border-radius:6px; border:none; background:#2563eb; color:#fff; cursor:pointer;">
+            Salvar
+        </button>
+    </div>
+</form>

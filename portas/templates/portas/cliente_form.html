@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if cliente %}Editar{% else %}Cadastrar{% endif %} Cliente</title>
+</head>
+<body>
+<h1>{% if cliente %}Editar{% else %}Cadastrar{% endif %} Cliente</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <p>{{ form.tipo_pessoa.label_tag }} {{ form.tipo_pessoa }} {{ form.tipo_pessoa.errors }}</p>
+    <p>{{ form.nome.label_tag }} {{ form.nome }} {{ form.nome.errors }}</p>
+    <p>{{ form.documento.label_tag }} {{ form.documento }} {{ form.documento.errors }}</p>
+    <p>{{ form.telefone.label_tag }} {{ form.telefone }} {{ form.telefone.errors }}</p>
+    <p>{{ form.email.label_tag }} {{ form.email }} {{ form.email.errors }}</p>
+
+    <h3>Endereço</h3>
+    <p>{{ form.logradouro.label_tag }} {{ form.logradouro }} {{ form.logradouro.errors }}</p>
+    <p>{{ form.numero.label_tag }} {{ form.numero }} {{ form.numero.errors }}</p>
+    <p>{{ form.bairro.label_tag }} {{ form.bairro }} {{ form.bairro.errors }}</p>
+    <p>{{ form.cidade.label_tag }} {{ form.cidade }} {{ form.cidade.errors }}</p>
+    <p>{{ form.uf.label_tag }} {{ form.uf }} {{ form.uf.errors }}</p>
+    <p>{{ form.cep.label_tag }} {{ form.cep }} {{ form.cep.errors }}</p>
+
+    <p>{{ form.observacoes.label_tag }} {{ form.observacoes }} {{ form.observacoes.errors }}</p>
+
+    <button type="submit">Salvar</button>
+    <a href="{% url 'lista_clientes' %}">Cancelar</a>
+</form>
+</body>
+</html>

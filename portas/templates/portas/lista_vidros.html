@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Vidros</title>
+</head>
+<body>
+<h1>Vidros</h1>
+
+<p><a href="{% url 'cadastrar_vidro' %}">+ Cadastrar novo vidro</a></p>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Espessura</th>
+        <th>Preço</th>
+        <th>Ações</th>
+    </tr>
+    {% for v in vidros %}
+        <tr>
+            <td>{{ v.codigo }}</td>
+            <td>{{ v.descricao }}</td>
+            <td>{{ v.espessura }}</td>
+            <td>R$ {{ v.preco }}</td>
+            <td><a href="{% url 'editar_vidro' v.pk %}">Editar</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="5">Nenhum vidro cadastrado.</td></tr>
+    {% endfor %}
+</table>
+
+<p>
+    <a href="{% url 'lista_espessuras' %}">Espessuras</a> |
+    <a href="{% url 'lista_perfis' %}">Perfis Estrutura</a>
+</p>
+</body>
+</html>

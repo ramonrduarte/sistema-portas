@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if perfil %}Editar{% else %}Cadastrar{% endif %} Perfil</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+<h1>{% if perfil %}Editar{% else %}Cadastrar{% endif %} Perfil</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {% if perfil %}
+        <input type="hidden" name="perfil_id" value="{{ perfil.id }}">
+    {% endif %}
+    {{ form.non_field_errors }}
+
+    <p>{{ form.codigo.label_tag }} {{ form.codigo }} {{ form.codigo.errors }}</p>
+    <p>{{ form.descricao.label_tag }} {{ form.descricao }} {{ form.descricao.errors }}</p>
+    <p>{{ form.preco.label_tag }} {{ form.preco }} {{ form.preco.errors }}</p>
+
+    <p>{{ form.tipo.label_tag }} {{ form.tipo }} {{ form.tipo.errors }}</p>
+    <p>{{ form.modelo.label_tag }} {{ form.modelo }} {{ form.modelo.errors }}</p>
+
+    <p>
+        {{ form.acabamento.label_tag }}
+        <select
+            name="{{ form.acabamento.name }}"
+            id="{{ form.acabamento.id_for_label }}"
+            hx-get="{% url 'perfil_opcoes_combinacoes' %}"
+            hx-target="#combinacoes-container"
+            hx-trigger="change"
+            hx-include="closest form"
+        >
+            {% for opt in form.acabamento.field.choices %}
+                <option value="{{ opt.0 }}"
+                    {% if opt.0 == form.acabamento.value %}selected{% endif %}>
+                    {{ opt.1 }}
+                </option>
+            {% endfor %}
+        </select>
+        {{ form.acabamento.errors }}
+        &nbsp;
+        <a href="{% url 'cadastrar_acabamento' %}" target="_blank">+ Novo acabamento</a>
+    </p>
+
+    {# Bloco inteiro de combinações (puxadores + espessura + vidros) #}
+    <div id="combinacoes-container">
+        {% include "portas/_perfil_combinacoes.html" %}
+    </div>
+
+    <button type="submit">Salvar</button>
+    <a href="{% url 'lista_perfis' %}">Cancelar</a>
+</form>
+</body>
+</html>
