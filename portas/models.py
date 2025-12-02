@@ -141,6 +141,14 @@ class Orcamento(models.Model):
         ('VIDRO', 'Vidros'),
     )
 
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orcamentos",
+    )
+
     cliente_nome = models.CharField(max_length=255, blank=True, null=True)
     tipo_porta = models.CharField(max_length=20, choices=TIPO_PORTA_CHOICES)
     data_criacao = models.DateTimeField(auto_now_add=True)
