@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from .views import ClienteListView, ClienteCreateView, ClienteUpdateView, ClienteDeleteView
+
 
 urlpatterns = [
     # Porta 1p
@@ -76,7 +78,8 @@ urlpatterns = [
     path("divisores/<int:pk>/editar/", views.cadastrar_divisor, name="editar_divisor"),
 
     # Clientes
-    path("clientes/", views.lista_clientes, name="lista_clientes"),
-    path("clientes/novo/", views.cadastrar_cliente, name="cadastrar_cliente"),
-    path("clientes/<int:pk>/editar/", views.cadastrar_cliente, name="editar_cliente"),
+    path("clientes/", ClienteListView.as_view(), name="clientes_lista"),
+    path("clientes/novo/", ClienteCreateView.as_view(), name="clientes_novo"),
+    path("clientes/<int:pk>/editar/", ClienteUpdateView.as_view(), name="clientes_editar"),
+    path("clientes/<int:pk>/excluir/", ClienteDeleteView.as_view(), name="clientes_excluir"),
 ]

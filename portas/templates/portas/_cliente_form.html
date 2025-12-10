@@ -18,6 +18,8 @@
         <div style="grid-column: 1 / -1;">
             {{ form.tipo_pessoa.label_tag }}<br>
             {{ form.tipo_pessoa }} {{ form.tipo_pessoa.errors }}
+            {{ form.ativo }}
+            <label class="form-check-label" for="{{ form.ativo.id_for_label }}">Cliente ativo?</label>
         </div>
 
         <div style="grid-column: 1 / -1;">

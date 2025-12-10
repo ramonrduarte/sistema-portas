@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Clientes</h3>
+    <button class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#clienteModal"
+            data-url="{% url 'clientes_novo' %}">
+      + Novo cliente
+    </button>
+  </div>
+
+  <table class="table table-hover table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Cód.</th>
+        <th>Nome</th>
+        <th>CPF/CNPJ</th>
+        <th>Telefone</th>
+        <th>E-mail</th>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cliente in clientes %}
+        <tr class="{% if not cliente.ativo %}table-secondary text-muted{% endif %}">
+          <td>{{ cliente.codigo|default_if_none:"" }}</td>
+          <td>{{ cliente.nome }}</td>
+          <td>{{ cliente.cpf_cnpj }}</td>
+          <td>{{ cliente.telefone }}</td>
+          <td>{{ cliente.email }}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#clienteModal"
+                    data-url="{% url 'clientes_editar' cliente.pk %}">
+              Editar
+            </button>
+            <button class="btn btn-sm btn-outline-danger ms-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#confirmDeleteModal"
+                    data-url="{% url 'clientes_excluir' cliente.pk %}"
+                    data-nome="{{ cliente.nome }}">
+              Excluir
+            </button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted">Nenhum cliente cadastrado.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Modal de cadastro/edição #}
+<div class="modal fade" id="clienteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="clienteModalBody">
+        <!-- Form será carregado aqui -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button type="submit" class="btn btn-primary" form="cliente-form">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Modal de confirmação de exclusão #}
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="delete-form">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar exclusão</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Tem certeza que deseja excluir o cliente
+            <strong id="delete-nome"></strong>?
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ---------- Modal de criar/editar ----------
+  const clienteModal = document.getElementById('clienteModal');
+  const clienteModalBody = document.getElementById('clienteModalBody');
+
+  // Quando abrir o modal, carrega o formulário
+  clienteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const url = button.getAttribute('data-url');
+
+    fetch(url)
+      .then(response => response.text())
+      .then(html => {
+        clienteModalBody.innerHTML = html;
+      });
+  });
+
+  // Intercepta o submit do formulário de cliente dentro do modal
+  document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (form.id !== 'cliente-form') {
+      return; // não é o form de cliente
+    }
+
+    e.preventDefault(); // não deixa navegar para a página do form
+
+    const url = form.getAttribute('action') || window.location.href;
+    const formData = new FormData(form);
+
+    fetch(url, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(async (response) => {
+      const contentType = response.headers.get('Content-Type') || '';
+
+      if (contentType.indexOf('application/json') !== -1) {
+        // Sucesso: view retornou JSON (form_valid)
+        const data = await response.json();
+
+        // Fecha o modal
+        const bsModal = bootstrap.Modal.getInstance(clienteModal);
+        bsModal.hide();
+
+        // Recarrega a página para atualizar a lista
+        window.location.reload();
+      } else {
+        // Erro de validação: veio HTML do form com mensagens de erro
+        const html = await response.text();
+        clienteModalBody.innerHTML = html;
+      }
+    })
+    .catch((error) => {
+      console.error('Erro ao enviar formulário de cliente:', error);
+      alert('Ocorreu um erro ao salvar o cliente.');
+    });
+  });
+
+  // Máscara CPF/CNPJ quando o modal estiver totalmente aberto
+  clienteModal.addEventListener('shown.bs.modal', function () {
+    const tipoRadios = $('input[name="tipo_pessoa"]');
+    const docInput = $('#id_cpf_cnpj');
+
+    if (!tipoRadios.length || !docInput.length) {
+      return;
+    }
+
+    function aplicarMascara() {
+      const tipo = tipoRadios.filter(':checked').val();
+      docInput.unmask();
+
+      if (tipo === 'PF') {
+        docInput.mask('000.000.000-00');
+      } else if (tipo === 'PJ') {
+        docInput.mask('00.000.000/0000-00');
+      }
+    }
+
+    aplicarMascara();
+    tipoRadios.off('change.mascara').on('change.mascara', aplicarMascara);
+  });
+
+  // ---------- Modal de exclusão ----------
+  const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+  const deleteForm = document.getElementById('delete-form');
+  const deleteNome = document.getElementById('delete-nome');
+
+  confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const url = button.getAttribute('data-url');   // /clientes/<pk>/excluir/
+    const nome = button.getAttribute('data-nome'); // nome do cliente
+
+    deleteForm.action = url;
+    deleteNome.textContent = nome || '';
+  });
+</script>
+{% endblock %}

@@ -1,4 +1,8 @@
 from django import forms
+from django.core.exceptions import ValidationError
+import re
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Row, Column, Field
 from .models import (
     Perfil,
     PerfilPuxador,
@@ -226,20 +230,87 @@ class VidroBaseForm(forms.ModelForm):
         ]
 
 class ClienteForm(forms.ModelForm):
+    # Campo sobrescrito → dois rádios PF / PJ
+    tipo_pessoa = forms.ChoiceField(
+        choices=[("PF", "PF"), ("PJ", "PJ")],
+        widget=forms.RadioSelect,
+        label="Tipo",
+    )
+
     class Meta:
         model = Cliente
-        fields = [
-            "tipo_pessoa",
-            "nome",
-            "documento",
-            "telefone",
-            "email",
-            "logradouro",
-            "numero",
-            "bairro",
-            "cidade",
-            "uf",
-            "cep",
-            "observacoes",
-        ]
+        fields = ["codigo", "tipo_pessoa", "ativo", "cpf_cnpj", "nome", "telefone", "email"]
+        widgets = {
+            "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "cpf_cnpj": forms.TextInput(attrs={"class": "form-control"}),
+            "nome": forms.TextInput(attrs={"class": "form-control"}),
+            "telefone": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "codigo": "Código*",
+            "cpf_cnpj": "CPF/CNPJ*",
+            "ativo": "Ativo",
+        }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # obrigatórios
+        self.fields["codigo"].required = True
+        self.fields["nome"].required = True
+        self.fields["tipo_pessoa"].required = True
+        self.fields["cpf_cnpj"].required = True
+
+        self.helper = FormHelper()
+        self.helper.form_show_labels = True
+        # importante: como já existe <form> no template, não deixa o crispy criar outro
+        self.helper.form_tag = False
+
+        # 🚩 AQUI está a ordem das linhas 🚩
+        self.helper.layout = Layout(
+            # 1ª linha → Tipo (PF/PJ) + Ativo à direita
+            Row(
+                Column("tipo_pessoa", css_class="col-md-8"),
+                Column(
+                    "ativo",
+                    css_class="col-md-4 d-flex align-items-center justify-content-end"
+                ),
+            ),
+
+            # 2ª linha → Código
+            Row(
+                Column("codigo", css_class="col-md-4"),
+            ),
+
+            # 3ª linha → CPF/CNPJ + Nome
+            Row(
+                Column("cpf_cnpj", css_class="col-md-4"),
+                Column("nome", css_class="col-md-8"),
+            ),
+
+            # 4ª linha → Telefone + Email
+            Row(
+                Column("telefone", css_class="col-md-4"),
+                Column("email", css_class="col-md-8"),
+            ),
+        )
+
+    def clean_cpf_cnpj(self):
+        """Validação simples de quantidade de dígitos conforme PF/PJ."""
+        tipo = self.cleaned_data.get("tipo_pessoa")
+        valor = self.cleaned_data.get("cpf_cnpj") or ""
+        apenas_numeros = re.sub(r"\D", "", valor)
+
+        if not tipo:
+            raise ValidationError("Informe se o cliente é PF ou PJ.")
+
+        if tipo == "PF":
+            if len(apenas_numeros) != 11:
+                raise ValidationError("CPF deve ter 11 dígitos.")
+        elif tipo == "PJ":
+            if len(apenas_numeros) != 14:
+                raise ValidationError("CNPJ deve ter 14 dígitos.")
+
+        return valor

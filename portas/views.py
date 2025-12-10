@@ -1,7 +1,11 @@
+from django.views.generic import ListView, CreateView, UpdateView
+from django.views import View
+from .views_base import AtivoQuerysetMixin, BaseCRUDMixin
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Orcamento, Perfil, Acabamento, PerfilPuxador, Puxador, EspessuraVidro, VidroBase, Divisor, Cliente
 from .forms import Porta1PuxadorForm, PerfilForm, AcabamentoForm, PerfilPuxadorForm, PuxadorForm, EspessuraVidroForm, VidroBaseForm, DivisorForm, ClienteForm
 from .services.calculo import calcular_porta_1x_puxador
+from django.http import JsonResponse
 
 
 # === JÁ EXISTIA: tela de orçamento ===
@@ -337,6 +341,56 @@ def cadastrar_cliente(request, pk=None):
 
 
 
+class ClienteListView(AtivoQuerysetMixin, ListView):
+    model = Cliente
+    template_name = "clientes/lista.html"
+    context_object_name = "clientes"
+    only_active = False
+
+
+class ClienteCreateView(BaseCRUDMixin, CreateView):
+    model = Cliente
+    form_class = ClienteForm
+    template_name = "clientes/form.html"
+    success_url_name = "clientes_lista"
+
+    def form_invalid(self, form):
+        # Se veio via fetch (AJAX), devolve só o HTML do form com erros
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return render(self.request, "clientes/form.html", {"form": form})
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Se veio via fetch (AJAX), devolve um JSON dizendo que deu certo
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"ok": True})
+        return response
+
+
+class ClienteUpdateView(BaseCRUDMixin, UpdateView):
+    model = Cliente
+    form_class = ClienteForm
+    template_name = "clientes/form.html"
+    success_url_name = "clientes_lista"
+
+    def form_invalid(self, form):
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return render(self.request, "clientes/form.html", {"form": form})
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"ok": True})
+        return response
+
+class ClienteDeleteView(View):
+    """Exclui cliente via POST e volta para a lista."""
+    def post(self, request, pk):
+        cliente = get_object_or_404(Cliente, pk=pk)
+        cliente.delete()
+        return redirect("clientes_lista")    
 
 
 

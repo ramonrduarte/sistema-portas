@@ -96,39 +96,65 @@ class VidroBase(models.Model):
 class ExtraServico(ProdutoBase):
     pass
 
-class Cliente(models.Model):
+from django.db import models
+
+
+class AtivoModel(models.Model):
+    """Base para qualquer cadastro que tenha ativo/inativo e timestamps."""
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True  # não cria tabela, só serve como base
+
+
+class PessoaBase(AtivoModel):
+    """Base para cadastros de pessoas/entidades simples."""
+    nome = models.CharField(max_length=255)
+    telefone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.nome
+
+
+# portas/models.py
+
+class Cliente(PessoaBase):
     TIPO_PESSOA_CHOICES = [
         ("PF", "Pessoa Física"),
         ("PJ", "Pessoa Jurídica"),
     ]
 
+    codigo = models.CharField(
+        max_length=20,
+        blank=True,  # deixa True pra facilitar migração; o form vai exigir
+        null=True,
+        unique=False,  # se quiser bloquear código repetido, pode mudar pra True depois
+        verbose_name="Código (sistema externo)",
+    )
     tipo_pessoa = models.CharField(
         max_length=2,
         choices=TIPO_PESSOA_CHOICES,
-        default="PF",
-    )
-    nome = models.CharField(max_length=255)
-    documento = models.CharField(
-        max_length=20,
         blank=True,
         null=True,
-        help_text="CPF ou CNPJ (somente números ou formatado).",
+        verbose_name="Tipo de pessoa",
     )
-    telefone = models.CharField(max_length=30, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
+    cpf_cnpj = models.CharField(
+        max_length=18,  # “000.000.000-00” ou “00.000.000/0000-00”
+        blank=True,
+        null=True,
+        verbose_name="CPF/CNPJ",
+    )
 
-    # endereço (bem simples por enquanto)
-    logradouro = models.CharField(max_length=255, blank=True, null=True)
-    numero = models.CharField(max_length=20, blank=True, null=True)
-    bairro = models.CharField(max_length=100, blank=True, null=True)
-    cidade = models.CharField(max_length=100, blank=True, null=True)
-    uf = models.CharField(max_length=2, blank=True, null=True)
-    cep = models.CharField(max_length=10, blank=True, null=True)
+    class Meta:
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
 
-    observacoes = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return self.nome
 
 
 

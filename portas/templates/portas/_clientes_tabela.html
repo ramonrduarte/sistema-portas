@@ -1,6 +1,6 @@
 <div id="clientes-list">
     <table border="1" cellpadding="4">
-        <tr>
+        <tr class="{% if not cliente.ativo %}cliente-inativo{% endif %}">
             <th>Nome</th>
             <th>Tipo</th>
             <th>Documento</th>
