@@ -1,38 +1,245 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Vidros</title>
-</head>
-<body>
-<h1>Vidros</h1>
+{% extends "base.html" %}
 
-<p><a href="{% url 'cadastrar_vidro' %}">+ Cadastrar novo vidro</a></p>
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Vidros</h3>
+    <button class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#vidroModal"
+            data-url="{% url 'cadastrar_vidro' %}">
+      + Novo vidro
+    </button>
+  </div>
 
-<table border="1" cellpadding="5">
-    <tr>
+  <table class="table table-hover table-sm align-middle">
+    <thead>
+      <tr>
         <th>Código</th>
         <th>Descrição</th>
         <th>Espessura</th>
         <th>Preço</th>
-        <th>Ações</th>
-    </tr>
-    {% for v in vidros %}
-        <tr>
-            <td>{{ v.codigo }}</td>
-            <td>{{ v.descricao }}</td>
-            <td>{{ v.espessura }}</td>
-            <td>R$ {{ v.preco }}</td>
-            <td><a href="{% url 'editar_vidro' v.pk %}">Editar</a></td>
-        </tr>
-    {% empty %}
-        <tr><td colspan="5">Nenhum vidro cadastrado.</td></tr>
-    {% endfor %}
-</table>
+        <th class="text-end">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in vidros %}
+      <tr>
+        <td>{{ v.codigo }}</td>
+        <td>{{ v.descricao }}</td>
+        <td>{{ v.espessura }}</td>
+        <td>R$ {{ v.preco|floatformat:2 }}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#vidroModal"
+                  data-url="{% url 'editar_vidro' v.pk %}">
+            Editar
+          </button>
 
-<p>
-    <a href="{% url 'lista_espessuras' %}">Espessuras</a> |
-    <a href="{% url 'lista_perfis' %}">Perfis Estrutura</a>
-</p>
-</body>
-</html>
+          <button class="btn btn-sm btn-outline-danger ms-1"
+                  data-bs-toggle="modal"
+                  data-bs-target="#confirmDeleteVidroModal"
+                  data-url="{% url 'excluir_vidro' v.pk %}"
+                  data-nome="{{ v.descricao }}">
+            Excluir
+          </button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center text-muted">Nenhum vidro cadastrado.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Modal de cadastro/edição de vidro #}
+<div class="modal fade" id="vidroModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Vidro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="vidroModalBody">
+        <!-- Form será carregado aqui -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button type="submit" class="btn btn-primary" form="vidro-form">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Modal de confirmação de exclusão de vidro #}
+<div class="modal fade" id="confirmDeleteVidroModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="vidro-delete-form">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar exclusão</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          Tem certeza que deseja excluir o vidro
+          <strong id="vidro-delete-codigo"></strong>
+          <strong id="vidro-delete-nome"></strong>?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Modal de cadastro de espessura (chamado de dentro do form de vidro) #}
+<div class="modal fade" id="espessuraModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nova espessura</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="espessuraModalBody">
+        <!-- Form de espessura será carregado aqui -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button type="submit" class="btn btn-primary" form="espessura-form">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ---------- Modal de criar/editar vidro ----------
+  const vidroModal = document.getElementById('vidroModal');
+  const vidroModalBody = document.getElementById('vidroModalBody');
+
+  vidroModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const url = button.getAttribute('data-url');
+
+    fetch(url)
+      .then(response => response.text())
+      .then(html => {
+        vidroModalBody.innerHTML = html;
+      });
+  });
+
+  // ---------- Modal de exclusão de vidro ----------
+  const confirmDeleteVidroModal = document.getElementById('confirmDeleteVidroModal');
+  const vidroDeleteForm = document.getElementById('vidro-delete-form');
+  const vidroDeleteNome = document.getElementById('vidro-delete-nome');
+
+  confirmDeleteVidroModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const url = button.getAttribute('data-url');
+    const nome = button.getAttribute('data-nome');
+
+    vidroDeleteForm.action = url;
+    vidroDeleteNome.textContent = nome || '';
+  });
+
+  // ---------- Modal de criar espessura (dentro do modal de vidro) ----------
+  const espessuraModal = document.getElementById('espessuraModal');
+  const espessuraModalBody = document.getElementById('espessuraModalBody');
+
+  if (espessuraModal) {
+    espessuraModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      const url = button.getAttribute('data-url');
+
+      fetch(url)
+        .then(response => response.text())
+        .then(html => {
+          espessuraModalBody.innerHTML = html;
+        });
+    });
+  }
+
+  // ---------- Interceptar submits ----------
+  document.addEventListener('submit', function (e) {
+    const form = e.target;
+
+    // Form de vidro
+    if (form.id === 'vidro-form') {
+      e.preventDefault();
+
+      const url = form.getAttribute('action') || window.location.href;
+      const formData = new FormData(form);
+
+      fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(async (response) => {
+        const contentType = response.headers.get('Content-Type') || '';
+
+        if (contentType.indexOf('application/json') !== -1) {
+          await response.json();
+          const bsModal = bootstrap.Modal.getInstance(vidroModal);
+          bsModal.hide();
+          window.location.reload();
+        } else {
+          const html = await response.text();
+          vidroModalBody.innerHTML = html;
+        }
+      })
+      .catch((error) => {
+        console.error('Erro ao salvar vidro:', error);
+        alert('Ocorreu um erro ao salvar o vidro.');
+      });
+
+      return;
+    }
+
+    // Form de espessura
+    if (form.id === 'espessura-form') {
+      e.preventDefault();
+
+      const url = form.getAttribute('action') || window.location.href;
+      const formData = new FormData(form);
+
+      fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(async (response) => {
+        const contentType = response.headers.get('Content-Type') || '';
+
+        if (contentType.indexOf('application/json') !== -1) {
+          await response.json();
+          const bsEspessuraModal = bootstrap.Modal.getInstance(espessuraModal);
+          bsEspessuraModal.hide();
+          // solução simples: recarrega tudo (lista + selects)
+          window.location.reload();
+        } else {
+          const html = await response.text();
+          espessuraModalBody.innerHTML = html;
+        }
+      })
+      .catch((error) => {
+        console.error('Erro ao salvar espessura:', error);
+        alert('Ocorreu um erro ao salvar a espessura.');
+      });
+
+      return;
+    }
+  });
+</script>
+{% endblock %}

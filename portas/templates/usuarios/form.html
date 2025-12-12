@@ -1,0 +1,6 @@
+{% load crispy_forms_tags %}
+
+<form method="post" id="usuario-form" action="{{ request.path }}">
+  {% csrf_token %}
+  {% crispy form %}
+</form>

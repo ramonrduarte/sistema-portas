@@ -1,6 +1,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import re
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Field
 from .models import (
@@ -12,12 +14,34 @@ from .models import (
     Acabamento,
     Divisor,
     Cliente,
+    UsuarioPerfil,
 )
 
 class AcabamentoForm(forms.ModelForm):
     class Meta:
         model = Acabamento
         fields = ["nome"]
+        widgets = {
+            "nome": forms.TextInput(attrs={
+                "class": "form-control",
+            })
+        }
+
+    def clean_nome(self):
+        nome = (self.cleaned_data.get("nome") or "").strip()
+
+        if not nome:
+            raise ValidationError("Informe o nome do acabamento.")
+
+        # evita duplicidade ignorando maiúsculas/minúsculas
+        qs = Acabamento.objects.filter(nome__iexact=nome)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise ValidationError("Este acabamento já está cadastrado.")
+
+        return nome
 
 class PerfilPuxadorForm(forms.ModelForm):
     class Meta:
@@ -35,14 +59,43 @@ class PerfilPuxadorForm(forms.ModelForm):
 class PuxadorForm(forms.ModelForm):
     class Meta:
         model = Puxador
-        fields = [
-            "codigo",
-            "descricao",
-            "preco",
-            "acabamento",
-            "tipo",
-            "modelo",
-        ]
+        fields = ["codigo", "descricao", "preco", "acabamento", "tipo", "modelo"]
+        widgets = {
+            "codigo": forms.TextInput(attrs={
+                "class": "form-control",
+                "maxlength": "6",
+                "inputmode": "numeric",
+            }),
+            "descricao": forms.TextInput(attrs={"class": "form-control"}),
+            "preco": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "acabamento": forms.Select(attrs={"class": "form-select"}),
+            "tipo": forms.TextInput(attrs={"class": "form-control"}),
+            "modelo": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+    def clean_codigo(self):
+        codigo = (self.cleaned_data.get("codigo") or "").strip()
+
+        # aceita somente números
+        if not codigo.isdigit():
+            raise ValidationError("O código deve conter apenas números.")
+
+        # no máximo 6 dígitos
+        if len(codigo) > 6:
+            raise ValidationError("O código deve ter no máximo 6 dígitos.")
+
+        # completa com zeros à esquerda
+        codigo = codigo.zfill(6)
+
+        # evita duplicidade (ignorando o próprio registro na edição)
+        qs = Puxador.objects.filter(codigo=codigo)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise ValidationError("Já existe um puxador com este código.")
+
+        return codigo
 
 class DivisorForm(forms.ModelForm):
     class Meta:
@@ -222,12 +275,28 @@ class EspessuraVidroForm(forms.ModelForm):
 class VidroBaseForm(forms.ModelForm):
     class Meta:
         model = VidroBase
-        fields = [
-            "codigo",
-            "descricao",
-            "preco",
-            "espessura",  # 👈 escolhe a espessura aqui
-        ]
+        fields = ["codigo", "descricao", "preco", "espessura"]
+        widgets = {
+            "codigo": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex: 000001",
+                }
+            ),
+            "descricao": forms.TextInput(
+                attrs={"class": "form-control"}
+            ),
+            "preco": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                }
+            ),
+            "espessura": forms.Select(
+                attrs={"class": "form-select"}
+            ),
+        }
+
 
 class ClienteForm(forms.ModelForm):
     # Campo sobrescrito → dois rádios PF / PJ
@@ -241,9 +310,17 @@ class ClienteForm(forms.ModelForm):
         model = Cliente
         fields = ["codigo", "tipo_pessoa", "ativo", "cpf_cnpj", "nome", "telefone", "email"]
         widgets = {
-            "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "codigo": forms.TextInput(attrs={
+                "class": "form-control",
+                "maxlength": "6",
+                "inputmode": "numeric",
+                "placeholder": "Ex: 000123",
+            }),
             "cpf_cnpj": forms.TextInput(attrs={"class": "form-control"}),
-            "nome": forms.TextInput(attrs={"class": "form-control"}),
+            "nome": forms.TextInput(attrs={
+                "class": "form-control",
+                "style": "text-transform: uppercase;",  # 👈 aparece em maiúsculo no front
+            }),
             "telefone": forms.TextInput(attrs={"class": "form-control"}),
             "email": forms.EmailInput(attrs={"class": "form-control"}),
             "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -279,15 +356,15 @@ class ClienteForm(forms.ModelForm):
                 ),
             ),
 
-            # 2ª linha → Código
+            # 2ª linha → Código + CPF/CNPJ (lado a lado)
             Row(
-                Column("codigo", css_class="col-md-4"),
+                Column("codigo", css_class="col-md-6"),
+                Column("cpf_cnpj", css_class="col-md-6"),
             ),
 
-            # 3ª linha → CPF/CNPJ + Nome
+            # 3ª linha → Nome sozinho
             Row(
-                Column("cpf_cnpj", css_class="col-md-4"),
-                Column("nome", css_class="col-md-8"),
+                Column("nome", css_class="col-md-12"),
             ),
 
             # 4ª linha → Telefone + Email
@@ -297,6 +374,24 @@ class ClienteForm(forms.ModelForm):
             ),
         )
 
+    def clean_codigo(self):
+        codigo = self.cleaned_data.get("codigo") or ""
+        apenas_numeros = re.sub(r"\D", "", codigo)
+
+        if not apenas_numeros:
+            raise ValidationError("Informe o código do cliente.")
+
+        if len(apenas_numeros) > 6:
+            raise ValidationError("Código deve ter no máximo 6 dígitos.")
+
+        # já devolve com zeros à esquerda
+        return apenas_numeros.zfill(6)
+
+    def clean_nome(self):
+        nome = self.cleaned_data.get("nome") or ""
+        return nome.upper()
+
+    
     def clean_cpf_cnpj(self):
         """Validação simples de quantidade de dígitos conforme PF/PJ."""
         tipo = self.cleaned_data.get("tipo_pessoa")
@@ -314,3 +409,143 @@ class ClienteForm(forms.ModelForm):
                 raise ValidationError("CNPJ deve ter 14 dígitos.")
 
         return valor
+
+
+class UsuarioPerfilForm(forms.ModelForm):
+    username = forms.CharField(
+        label="Nome de usuário",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    nome = forms.CharField(
+        label="Nome",
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "style": "text-transform: uppercase;"}
+        ),
+    )
+    password1 = forms.CharField(
+        label="Senha",
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        required=False,
+    )
+    password2 = forms.CharField(
+        label="Confirmar senha",
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        required=False,
+    )
+
+    class Meta:
+        model = UsuarioPerfil
+        fields = ["codigo", "tipo_usuario", "ativo"]
+        widgets = {
+            "codigo": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "maxlength": "6",
+                    "placeholder": "Ex: 000001",
+                }
+            ),
+            "tipo_usuario": forms.Select(attrs={"class": "form-select"}),
+            "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # edição → preenche campos com dados do User
+        if self.instance and self.instance.pk:
+            user = self.instance.user
+            self.fields["username"].initial = user.username
+            self.fields["nome"].initial = user.first_name or user.get_full_name()
+
+        self.helper = FormHelper()
+        self.helper.form_show_labels = True
+        self.helper.form_tag = False  # form já vem do template
+
+        self.helper.layout = Layout(
+        # 1ª linha → somente "Ativo" à direita
+            Row(
+                Column(
+                    "ativo",
+                    css_class="col-12 d-flex justify-content-end align-items-center",
+                ),
+            ),
+
+            # 2ª linha → Código, Nome de usuário, Tipo usuário
+            Row(
+                Column("codigo", css_class="col-md-3"),
+                Column("username", css_class="col-md-4"),
+                Column("tipo_usuario", css_class="col-md-5"),
+            ),
+
+            # 3ª linha → Nome
+            Row(
+                Column("nome", css_class="col-md-12"),
+            ),
+
+            # 4ª linha → Senha / Confirmar senha
+            Row(
+                Column("password1", css_class="col-md-6"),
+                Column("password2", css_class="col-md-6"),
+            ),
+        )
+
+
+    def clean_codigo(self):
+        codigo = self.cleaned_data.get("codigo") or ""
+        num = re.sub(r"\D", "", codigo)
+        if not num:
+            raise ValidationError("Informe o código.")
+        if len(num) > 6:
+            raise ValidationError("Código deve ter no máximo 6 dígitos.")
+        return num.zfill(6)
+
+    def clean_nome(self):
+        nome = self.cleaned_data.get("nome") or ""
+        return nome.upper()
+
+    def clean(self):
+        cleaned = super().clean()
+        pw1 = cleaned.get("password1")
+        pw2 = cleaned.get("password2")
+
+        if self.instance.pk:
+            # edição → senha opcional
+            if pw1 or pw2:
+                if pw1 != pw2:
+                    raise ValidationError("As senhas não conferem.")
+        else:
+            # cadastro → senha obrigatória
+            if not pw1 or not pw2:
+                raise ValidationError("Informe a senha duas vezes.")
+            if pw1 != pw2:
+                raise ValidationError("As senhas não conferem.")
+        return cleaned
+
+    def save(self, commit=True):
+        perfil = super().save(commit=False)
+        data = self.cleaned_data
+
+        if perfil.pk:
+            user = perfil.user
+        else:
+            user = User()
+
+        user.username = data["username"]
+        user.first_name = data["nome"]
+
+        # define se é admin (staff)
+        if data["tipo_usuario"] == "ADMIN":
+            user.is_staff = True
+        else:
+            user.is_staff = False
+
+        pw1 = data.get("password1")
+        if pw1:
+            user.set_password(pw1)
+
+        if commit:
+            user.save()
+            perfil.user = user
+            perfil.save()
+
+        return perfil

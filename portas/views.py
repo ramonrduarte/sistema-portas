@@ -1,11 +1,13 @@
 from django.views.generic import ListView, CreateView, UpdateView
+from django.contrib.auth.decorators import login_required, permission_required
 from django.views import View
 from .views_base import AtivoQuerysetMixin, BaseCRUDMixin
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Orcamento, Perfil, Acabamento, PerfilPuxador, Puxador, EspessuraVidro, VidroBase, Divisor, Cliente
-from .forms import Porta1PuxadorForm, PerfilForm, AcabamentoForm, PerfilPuxadorForm, PuxadorForm, EspessuraVidroForm, VidroBaseForm, DivisorForm, ClienteForm
+from .models import Orcamento, Perfil, Acabamento, PerfilPuxador, Puxador, EspessuraVidro, VidroBase, Divisor, Cliente, UsuarioPerfil
+from .forms import Porta1PuxadorForm, PerfilForm, AcabamentoForm, PerfilPuxadorForm, PuxadorForm, EspessuraVidroForm, VidroBaseForm, DivisorForm, ClienteForm, UsuarioPerfilForm
 from .services.calculo import calcular_porta_1x_puxador
 from django.http import JsonResponse
+from django.db.models import ProtectedError
 
 
 # === JÁ EXISTIA: tela de orçamento ===
@@ -90,20 +92,67 @@ def lista_acabamentos(request):
 
 
 def cadastrar_acabamento(request, pk=None):
-    if pk:
-        acabamento = get_object_or_404(Acabamento, pk=pk)
-    else:
-        acabamento = None
+    acabamento = get_object_or_404(Acabamento, pk=pk) if pk else None
+    origem = request.GET.get("origem")
 
     if request.method == "POST":
         form = AcabamentoForm(request.POST, instance=acabamento)
-        if form.is_valid():
-            form.save()
-            return redirect("lista_acabamentos")
-    else:
-        form = AcabamentoForm(instance=acabamento)
 
-    return render(request, "portas/acabamento_form.html", {"form": form, "acabamento": acabamento})
+        if form.is_valid():
+            acabamento = form.save()
+
+            # HTMX
+            if request.headers.get("HX-Request") == "true":
+                if origem == "puxador":
+                    return render(
+                        request,
+                        "portas/_acabamento_criado_oob.html",
+                        {
+                            "acabamento": acabamento,
+                            "acabamentos": Acabamento.objects.all().order_by("nome"),
+                            "origem": origem,
+                        },
+                    )
+
+                return render(
+                    request,
+                    "portas/_acabamentos_tabela.html",
+                    {"acabamentos": Acabamento.objects.all().order_by("nome")},
+                )
+
+            return redirect("lista_acabamentos")
+
+        # ❗️POST com erro: se for HTMX, devolve o formulário DO MODAL com os erros
+        if request.headers.get("HX-Request") == "true":
+            return render(
+                request,
+                "portas/_acabamento_form.html",
+                {"form": form, "acabamento": acabamento, "origem": origem},
+            )
+
+        # POST com erro sem HTMX: página normal
+        return render(
+            request,
+            "portas/acabamento_form.html",
+            {"form": form, "acabamento": acabamento},
+        )
+
+    # GET
+    form = AcabamentoForm(instance=acabamento)
+
+    if request.headers.get("HX-Request") == "true":
+        return render(
+            request,
+            "portas/_acabamento_form.html",
+            {"form": form, "acabamento": acabamento, "origem": origem},
+        )
+
+    return render(
+        request,
+        "portas/acabamento_form.html",
+        {"form": form, "acabamento": acabamento},
+    )
+
 
 
 # ==== PERFIL PUxADOR ====
@@ -147,25 +196,31 @@ def lista_puxadores(request):
     return render(request, "portas/lista_puxadores.html", {"puxadores": puxadores})
 
 
+# views.py
 def cadastrar_puxador(request, pk=None):
-    if pk:
-        puxador = get_object_or_404(Puxador, pk=pk)
-    else:
-        puxador = None
+    puxador = get_object_or_404(Puxador, pk=pk) if pk else None
 
     if request.method == "POST":
         form = PuxadorForm(request.POST, instance=puxador)
         if form.is_valid():
             form.save()
+
+            puxadores = Puxador.objects.select_related("acabamento").all().order_by("descricao")
+
+            # Se veio do HTMX, devolve só a tabela atualizada
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/_puxadores_tabela.html", {"puxadores": puxadores})
+
             return redirect("lista_puxadores")
     else:
         form = PuxadorForm(instance=puxador)
 
-    return render(
-        request,
-        "portas/puxador_form.html",
-        {"form": form, "puxador": puxador},
-    )
+    # GET via HTMX -> devolve só o formulário (para o modal)
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/_puxador_form.html", {"form": form, "puxador": puxador})
+
+    # GET normal -> página inteira
+    return render(request, "portas/puxador_form.html", {"form": form, "puxador": puxador})
 
 def carregar_combinacoes_perfil(request):
     """
@@ -203,10 +258,17 @@ def cadastrar_espessura(request, pk=None):
         form = EspessuraVidroForm(request.POST, instance=espessura)
         if form.is_valid():
             form.save()
+
+            # Se veio do modal (AJAX)
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"ok": True})
+
+            # Acesso direto pela URL (sem modal)
             return redirect("lista_espessuras")
     else:
         form = EspessuraVidroForm(instance=espessura)
 
+    # Sempre renderiza o mesmo template
     return render(
         request,
         "portas/espessura_form.html",
@@ -235,15 +297,30 @@ def cadastrar_vidro(request, pk=None):
         form = VidroBaseForm(request.POST, instance=vidro)
         if form.is_valid():
             form.save()
+            # Se vier via AJAX (fetch no modal), devolve JSON de sucesso
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"ok": True})
             return redirect("lista_vidros")
     else:
         form = VidroBaseForm(instance=vidro)
 
+    # GET ou POST com erro → devolve HTML do form
     return render(
         request,
         "portas/vidro_form.html",
         {"form": form, "vidro": vidro},
     )
+
+
+def excluir_vidro(request, pk):
+    vidro = get_object_or_404(VidroBase, pk=pk)
+
+    if request.method == "POST":
+        vidro.delete()
+        return redirect("lista_vidros")
+
+    # se alguém acessar via GET, só volta pra lista
+    return redirect("lista_vidros")
 
 def carregar_vidros_por_espessura(request):
     """
@@ -289,8 +366,6 @@ def cadastrar_divisor(request, pk=None):
         {"form": form, "divisor": divisor},
     )
 
-
-# ==== CLIENTES ====
 
 # ==== CLIENTES ====
 
@@ -393,8 +468,108 @@ class ClienteDeleteView(View):
         return redirect("clientes_lista")    
 
 
+# ==== USUÁRIOS ====
+
+class UsuarioListView(AtivoQuerysetMixin, ListView):
+    model = UsuarioPerfil
+    template_name = "usuarios/lista.html"
+    context_object_name = "usuarios"
+    only_active = False
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related("user")
+        return qs.order_by("codigo")
+
+
+class UsuarioCreateView(BaseCRUDMixin, CreateView):
+    model = UsuarioPerfil
+    form_class = UsuarioPerfilForm
+    template_name = "usuarios/form.html"
+    success_url_name = "usuarios_lista"
+
+    def form_invalid(self, form):
+        # Se veio via fetch (AJAX), devolve só o HTML do form com erros
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return render(self.request, "usuarios/form.html", {"form": form})
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Se veio via fetch (AJAX), devolve um JSON dizendo que deu certo
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"ok": True})
+        return response
+
+
+class UsuarioUpdateView(BaseCRUDMixin, UpdateView):
+    model = UsuarioPerfil
+    form_class = UsuarioPerfilForm
+    template_name = "usuarios/form.html"
+    success_url_name = "usuarios_lista"
+
+    def form_invalid(self, form):
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return render(self.request, "usuarios/form.html", {"form": form})
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"ok": True})
+        return response
 
 
 
+class UsuarioDeleteView(View):
+    def post(self, request, pk):
+        perfil = get_object_or_404(UsuarioPerfil, pk=pk)
+        user = perfil.user
+        user.delete()
+        return redirect("usuarios_lista")
+
+
+def excluir_puxador(request, pk):
+    puxador = get_object_or_404(Puxador, pk=pk)
+
+    if request.method == "POST":
+        puxador.delete()
+        # HTMX: devolve a tabela atualizada
+        puxadores = Puxador.objects.select_related("acabamento").all().order_by("descricao")
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "portas/_puxadores_tabela.html", {"puxadores": puxadores})
+        return redirect("lista_puxadores")
+
+    # GET: devolve o corpo do modal de confirmação
+    return render(request, "portas/_confirmar_exclusao_modal.html", {
+        "titulo": "Excluir puxador",
+        "texto": f"Tem certeza que deseja excluir o puxador “{puxador}”?",
+        "post_url": "excluir_puxador",
+        "obj_id": puxador.pk,
+    })
+
+
+def excluir_acabamento(request, pk):
+    acabamento = get_object_or_404(Acabamento, pk=pk)
+
+    if request.method == "POST":
+        try:
+            acabamento.delete()
+        except ProtectedError:
+            # se estiver em uso
+            return render(request, "portas/_mensagem_erro.html", {
+                "mensagem": "Este acabamento está em uso e não pode ser excluído."
+            })
+
+        acabamentos = Acabamento.objects.all().order_by("nome")
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "portas/_acabamentos_tabela.html", {"acabamentos": acabamentos})
+        return redirect("lista_acabamentos")
+
+    return render(request, "portas/_confirmar_exclusao_modal.html", {
+        "titulo": "Excluir acabamento",
+        "texto": f"Tem certeza que deseja excluir o acabamento “{acabamento}”?",
+        "post_url": "excluir_acabamento",
+        "obj_id": acabamento.pk,
+    })
 
 

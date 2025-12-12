@@ -1,25 +1,20 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>{% if espessura %}Editar{% else %}Cadastrar{% endif %} Espessura</title>
-</head>
-<body>
-<h1>{% if espessura %}Editar{% else %}Cadastrar{% endif %} Espessura</h1>
+{% load static %}
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.non_field_errors }}
+<form method="post" id="espessura-form" action="{{ request.path }}">
+  {% csrf_token %}
 
-    <p>
-        {{ form.valor_mm.label_tag }}
-        {{ form.valor_mm }}
-        {{ form.valor_mm.errors }}
-        <span>mm</span>
-    </p>
+  {{ form.non_field_errors }}
 
-    <button type="submit">Salvar</button>
-    <a href="{% url 'lista_espessuras' %}">Cancelar</a>
+  <div class="mb-3">
+    <label class="form-label">{{ form.valor_mm.label }}</label>
+
+    <div class="input-group">
+      {{ form.valor_mm }}
+      <span class="input-group-text">mm</span>
+    </div>
+
+    <div class="text-danger small">
+      {{ form.valor_mm.errors }}
+    </div>
+  </div>
 </form>
-</body>
-</html>

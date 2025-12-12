@@ -1,0 +1,34 @@
+<form method="post"
+      hx-post="{% url 'cadastrar_acabamento' %}{% if origem %}?origem={{ origem }}{% endif %}"
+      hx-target="#modalConteudo"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  <h5 class="mb-3">{% if acabamento %}Editar{% else %}Cadastrar{% endif %} acabamento</h5>
+
+  <div class="mb-3">
+    <label class="form-label">Nome</label>
+    {{ form.nome }}
+    <div class="text-danger small">{{ form.nome.errors }}</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">
+      Salvar acabamento
+    </button>
+
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      Cancelar
+    </button>
+
+    {% if origem == "puxador" %}
+      <button type="button"
+              class="btn btn-outline-secondary ms-auto"
+              hx-get="{% url 'cadastrar_puxador' %}"
+              hx-target="#modalConteudo"
+              hx-swap="innerHTML">
+        Voltar para o puxador
+      </button>
+    {% endif %}
+  </div>
+</form>

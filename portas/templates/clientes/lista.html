@@ -30,7 +30,7 @@
         <tr class="{% if not cliente.ativo %}table-secondary text-muted{% endif %}">
           <td>{{ cliente.codigo|default_if_none:"" }}</td>
           <td>{{ cliente.nome }}</td>
-          <td>{{ cliente.cpf_cnpj }}</td>
+          <td>{{ cliente.cpf_cnpj_formatado }}</td>
           <td>{{ cliente.telefone }}</td>
           <td>{{ cliente.email }}</td>
           <td class="text-end">
@@ -40,6 +40,7 @@
                     data-url="{% url 'clientes_editar' cliente.pk %}">
               Editar
             </button>
+            {% if perms.portas.delete_cliente %}
             <button class="btn btn-sm btn-outline-danger ms-1"
                     data-bs-toggle="modal"
                     data-bs-target="#confirmDeleteModal"
@@ -47,6 +48,7 @@
                     data-nome="{{ cliente.nome }}">
               Excluir
             </button>
+            {% endif %}
           </td>
         </tr>
       {% empty %}

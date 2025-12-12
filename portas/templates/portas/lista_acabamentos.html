@@ -1,35 +1,43 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Acabamentos</title>
-</head>
-<body>
-<h1>Acabamentos</h1>
+{% extends "base.html" %}
+{% block content %}
 
-<p><a href="{% url 'cadastrar_acabamento' %}">+ Cadastrar novo acabamento</a></p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Acabamentos</h3>
 
-<table border="1" cellpadding="5">
-    <tr>
-        <th>ID</th>
-        <th>Nome</th>
-        <th>Ações</th>
-    </tr>
-    {% for ac in acabamentos %}
-        <tr>
-            <td>{{ ac.id }}</td>
-            <td>{{ ac.nome }}</td>
-            <td>
-                <a href="{% url 'editar_acabamento' ac.pk %}">Editar</a>
-            </td>
-        </tr>
-    {% empty %}
-        <tr>
-            <td colspan="3">Nenhum acabamento cadastrado.</td>
-        </tr>
-    {% endfor %}
-</table>
+  <button class="btn btn-primary"
+          hx-get="{% url 'cadastrar_acabamento' %}"
+          hx-target="#modalConteudo"
+          data-bs-toggle="modal"
+          data-bs-target="#modalCadastro">
+    + Cadastrar Acabamento
+  </button>
+</div>
 
-<p><a href="{% url 'lista_perfis' %}">Voltar para perfis</a></p>
-</body>
-</html>
+<div id="conteudoTabela">
+  {% include "portas/_acabamentos_tabela.html" %}
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="modalCadastro" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cadastro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalConteudo"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.body.addEventListener("htmx:afterSwap", function(e){
+    if (e.target && e.target.id === "conteudoTabela") {
+      const modalEl = document.getElementById("modalCadastro");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    }
+  });
+</script>
+
+{% endblock %}

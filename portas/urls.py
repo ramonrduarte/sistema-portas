@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import ClienteListView, ClienteCreateView, ClienteUpdateView, ClienteDeleteView
+from .views import ClienteListView, ClienteCreateView, ClienteUpdateView, ClienteDeleteView, UsuarioListView, UsuarioCreateView, UsuarioUpdateView, UsuarioDeleteView
 
 
 urlpatterns = [
@@ -20,11 +20,8 @@ urlpatterns = [
     # Acabamentos
     path("acabamentos/", views.lista_acabamentos, name="lista_acabamentos"),
     path("acabamentos/novo/", views.cadastrar_acabamento, name="cadastrar_acabamento"),
-    path(
-        "acabamentos/<int:pk>/editar/",
-        views.cadastrar_acabamento,
-        name="editar_acabamento",
-    ),
+    path("acabamentos/<int:pk>/editar/", views.cadastrar_acabamento, name="editar_acabamento",),
+    path("acabamentos/<int:pk>/excluir/", views.excluir_acabamento, name="excluir_acabamento"),
 
     # Perfil Puxador
     path("perfis-puxador/", views.lista_perfis_puxador, name="lista_perfis_puxador"),
@@ -42,11 +39,8 @@ urlpatterns = [
     # Puxadores simples
     path("puxadores/", views.lista_puxadores, name="lista_puxadores"),
     path("puxadores/novo/", views.cadastrar_puxador, name="cadastrar_puxador"),
-    path(
-        "puxadores/<int:pk>/editar/",
-        views.cadastrar_puxador,
-        name="editar_puxador",
-    ),
+    path("puxadores/<int:pk>/editar/",views.cadastrar_puxador,name="editar_puxador",),
+    path("puxadores/<int:pk>/excluir/", views.excluir_puxador, name="excluir_puxador"),
 
     # HTMX - combinações completas (puxadores + espessura + vidros)
     path(
@@ -71,6 +65,7 @@ urlpatterns = [
     path("vidros/", views.lista_vidros, name="lista_vidros"),
     path("vidros/novo/", views.cadastrar_vidro, name="cadastrar_vidro"),
     path("vidros/<int:pk>/editar/", views.cadastrar_vidro, name="editar_vidro"),
+    path("vidros/<int:pk>/excluir/", views.excluir_vidro, name="excluir_vidro"),
 
     # Divisores
     path("divisores/", views.lista_divisores, name="lista_divisores"),
@@ -82,4 +77,11 @@ urlpatterns = [
     path("clientes/novo/", ClienteCreateView.as_view(), name="clientes_novo"),
     path("clientes/<int:pk>/editar/", ClienteUpdateView.as_view(), name="clientes_editar"),
     path("clientes/<int:pk>/excluir/", ClienteDeleteView.as_view(), name="clientes_excluir"),
+
+    # Usuarios
+    path("usuarios/", UsuarioListView.as_view(), name="usuarios_lista"),
+    path("usuarios/novo/", UsuarioCreateView.as_view(), name="usuarios_novo"),
+    path("usuarios/<int:pk>/editar/", UsuarioUpdateView.as_view(), name="usuarios_editar"),
+    path("usuarios/<int:pk>/excluir/", UsuarioDeleteView.as_view(), name="usuarios_excluir"),
+
 ]

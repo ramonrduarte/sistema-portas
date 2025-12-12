@@ -1,15 +1,17 @@
 from django.db import models
 from decimal import Decimal
+from django.conf import settings
+from django.contrib.auth.models import User
+import re
 
 
+# models.py
 class Acabamento(models.Model):
-    nome = models.CharField(max_length=100, unique=True)
-
-    # opcionalmente você pode ter um código interno
-    # codigo = models.CharField(max_length=50, unique=True)
+    nome = models.CharField(max_length=100)
 
     def __str__(self):
         return self.nome
+
     
 class EspessuraVidro(models.Model):
     valor_mm = models.DecimalField(max_digits=4, decimal_places=1)
@@ -64,8 +66,20 @@ class PerfilPuxador(ProdutoBase):
     pass
 
 
-class Puxador(ProdutoBase):
-    pass
+class Puxador(models.Model):
+    codigo = models.CharField(max_length=6, unique=True)
+    descricao = models.CharField(max_length=200)
+    preco = models.DecimalField(max_digits=10, decimal_places=2)
+    acabamento = models.ForeignKey(Acabamento, on_delete=models.PROTECT)
+    tipo = models.CharField(max_length=100, blank=True)
+    modelo = models.CharField(max_length=100, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.codigo:
+            self.codigo = self.codigo.strip()
+            if self.codigo.isdigit():
+                self.codigo = self.codigo.zfill(6)
+        super().save(*args, **kwargs)
 
 
 class Divisor(ProdutoBase):
@@ -131,10 +145,10 @@ class Cliente(PessoaBase):
     ]
 
     codigo = models.CharField(
-        max_length=20,
-        blank=True,  # deixa True pra facilitar migração; o form vai exigir
+        max_length=6,  # 👈 agora limitado a 6 caracteres
+        blank=True,
         null=True,
-        unique=False,  # se quiser bloquear código repetido, pode mudar pra True depois
+        unique=False,
         verbose_name="Código (sistema externo)",
     )
     tipo_pessoa = models.CharField(
@@ -145,7 +159,7 @@ class Cliente(PessoaBase):
         verbose_name="Tipo de pessoa",
     )
     cpf_cnpj = models.CharField(
-        max_length=18,  # “000.000.000-00” ou “00.000.000/0000-00”
+        max_length=18,  # suficiente pra armazenar com ou sem máscara
         blank=True,
         null=True,
         verbose_name="CPF/CNPJ",
@@ -154,6 +168,42 @@ class Cliente(PessoaBase):
     class Meta:
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
+
+    def save(self, *args, **kwargs):
+        # --- Código: só números + 6 dígitos com zero à esquerda ---
+        if self.codigo:
+            apenas_numeros = re.sub(r"\D", "", str(self.codigo))
+            self.codigo = apenas_numeros.zfill(6)
+
+        # --- Nome sempre maiúsculo ---
+        if self.nome:
+            self.nome = self.nome.upper()
+
+        # --- CPF/CNPJ: guarda só números no banco ---
+        if self.cpf_cnpj:
+            self.cpf_cnpj = re.sub(r"\D", "", str(self.cpf_cnpj))
+
+        super().save(*args, **kwargs)
+
+    @property
+    def cpf_cnpj_formatado(self):
+        """
+        Devolve CPF/CNPJ com máscara só para exibição.
+        """
+        if not self.cpf_cnpj:
+            return ""
+
+        numeros = re.sub(r"\D", "", self.cpf_cnpj)
+
+        if len(numeros) == 11:
+            # CPF → 000.000.000-00
+            return f"{numeros[0:3]}.{numeros[3:6]}.{numeros[6:9]}-{numeros[9:11]}"
+        elif len(numeros) == 14:
+            # CNPJ → 00.000.000/0000-00
+            return f"{numeros[0:2]}.{numeros[2:5]}.{numeros[5:8]}/{numeros[8:12]}-{numeros[12:14]}"
+        else:
+            # Se estiver estranho, devolve como está
+            return self.cpf_cnpj
 
 
 
@@ -200,3 +250,31 @@ class ItemOrcamento(models.Model):
 
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
+
+
+class UsuarioPerfil(AtivoModel):
+    TIPO_USUARIO_CHOICES = [
+        ("ADMIN", "Administrador"),
+        ("COMUM", "Usuário comum"),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="perfil",
+    )
+    codigo = models.CharField(max_length=6, unique=True)
+    tipo_usuario = models.CharField(
+        max_length=10,
+        choices=TIPO_USUARIO_CHOICES,
+        default="COMUM",
+    )
+
+    def save(self, *args, **kwargs):
+        if self.codigo:
+            num = re.sub(r"\D", "", str(self.codigo))
+            self.codigo = num.zfill(6)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.codigo} - {self.user.get_full_name() or self.user.username}"

@@ -1,29 +1,49 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>{% if vidro %}Editar{% else %}Cadastrar{% endif %} Vidro</title>
-</head>
-<body>
-<h1>{% if vidro %}Editar{% else %}Cadastrar{% endif %} Vidro</h1>
+{% load static %}
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.non_field_errors }}
+<form method="post" id="vidro-form" action="{{ request.path }}">
+  {% csrf_token %}
 
-    <p>{{ form.codigo.label_tag }} {{ form.codigo }} {{ form.codigo.errors }}</p>
-    <p>{{ form.descricao.label_tag }} {{ form.descricao }} {{ form.descricao.errors }}</p>
-    <p>{{ form.preco.label_tag }} {{ form.preco }} {{ form.preco.errors }}</p>
-    <p>
-        {{ form.espessura.label_tag }}
+  {{ form.non_field_errors }}
+
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label class="form-label">{{ form.codigo.label }}</label>
+      {{ form.codigo }}
+      <div class="text-danger small">{{ form.codigo.errors }}</div>
+    </div>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-8">
+      <label class="form-label">{{ form.descricao.label }}</label>
+      {{ form.descricao }}
+      <div class="text-danger small">{{ form.descricao.errors }}</div>
+    </div>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label class="form-label">{{ form.espessura.label }}</label>
+      <div class="d-flex gap-2">
         {{ form.espessura }}
-        {{ form.espessura.errors }}
-        &nbsp;
-        <a href="{% url 'cadastrar_espessura' %}" target="_blank">+ Nova espessura</a>
-    </p>
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#espessuraModal"
+                data-url="{% url 'cadastrar_espessura' %}">
+          + Nova espessura
+        </button>
+      </div>
+      <div class="text-danger small">{{ form.espessura.errors }}</div>
+    </div>
 
-    <button type="submit">Salvar</button>
-    <a href="{% url 'lista_vidros' %}">Cancelar</a>
+    <div class="col-md-4">
+      <label class="form-label">{{ form.preco.label }}</label>
+      <div class="input-group">
+        <span class="input-group-text">R$</span>
+        {{ form.preco }}
+      </div>
+      <div class="text-danger small">{{ form.preco.errors }}</div>
+    </div>
+  </div>
 </form>
-</body>
-</html>

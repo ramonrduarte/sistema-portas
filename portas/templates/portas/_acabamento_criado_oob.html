@@ -1,0 +1,20 @@
+<div class="alert alert-success">
+    Acabamento <strong>{{ acabamento.nome }}</strong> cadastrado!
+  </div>
+  
+  <div hx-swap-oob="true" id="wrapAcabamentoSelect">
+    <select name="acabamento" id="id_acabamento" class="form-select">
+      <option value="">---------</option>
+      {% for a in acabamentos %}
+        <option value="{{ a.id }}" {% if a.id == acabamento.id %}selected{% endif %}>{{ a.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  
+  <button type="button"
+          class="btn btn-outline-primary"
+          hx-get="{% url 'cadastrar_puxador' %}"
+          hx-target="#modalConteudo">
+    Voltar para o puxador
+  </button>
+  
