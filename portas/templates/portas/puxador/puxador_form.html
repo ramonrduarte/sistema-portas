@@ -1,0 +1,60 @@
+<span id="modalTitulo" hx-swap-oob="true">
+  {% if puxador %}Editar Puxador{% else %}Cadastrar Puxador{% endif %}
+</span>
+<form method="post"
+      hx-post="{% if puxador %}{% url 'editar_puxador' puxador.pk %}{% else %}{% url 'cadastrar_puxador' %}{% endif %}"
+      hx-target="#conteudoTabela"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  <div class="row g-3">
+
+    <div class="col-12 d-flex justify-content-end">
+      <div class="form-check">
+        {{ form.ativo }}
+        <label class="form-check-label" for="{{ form.ativo.id_for_label }}">Ativo</label>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <label class="form-label">Código</label>
+      {{ form.codigo }}
+      <div class="text-danger small">{{ form.codigo.errors }}</div>
+    </div>
+
+    <div class="col-md-9">
+      <label class="form-label">Descrição</label>
+      {{ form.descricao }}
+      <div class="text-danger small">{{ form.descricao.errors }}</div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Preço</label>
+      {{ form.preco }}
+      <div class="text-danger small">{{ form.preco.errors }}</div>
+    </div>
+
+    <div class="col-md-8">
+      <label class="form-label">Acabamento</label>
+      {{ form.acabamento }}
+      <div class="text-danger small">{{ form.acabamento.errors }}</div>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Abatimento (mm)</label>
+      {{ form.abatimento_mm }}
+      <div class="text-danger small">{{ form.abatimento_mm.errors }}</div>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Modelo</label>
+      {{ form.modelo }}
+      <div class="text-danger small">{{ form.modelo.errors }}</div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <button class="btn btn-primary" type="submit">Salvar</button>
+    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+  </div>
+</form>

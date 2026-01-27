@@ -1,35 +1,64 @@
-<h3>Combinações</h3>
-
-<p><strong>Perfis Puxadores compatíveis:</strong><br>
-    {{ form.puxadores_compativeis }}
-</p>
-
-<p><strong>Puxadores compatíveis:</strong><br>
-    {{ form.puxadores_simples_compativeis }}
-</p>
-
-<p><strong>Divisores compatíveis:</strong><br>
-    {{ form.divisores_compativeis }}
-</p>
-
-<p><strong>Espessura do vidro:</strong><br>
-    <select
-        name="{{ form.espessura_vidro.name }}"
-        id="{{ form.espessura_vidro.id_for_label }}"
-        hx-get="{% url 'perfil_vidros_por_espessura' %}"
-        hx-target="#perfil-vidros"
-        hx-trigger="change"
-        hx-include="[name='espessura_vidro'], [name='perfil_id']"
-    >
-        {% for opt in form.espessura_vidro.field.choices %}
-            <option value="{{ opt.0 }}"
-                {% if opt.0|stringformat:'s' == form.espessura_vidro.value|stringformat:'s' %}selected{% endif %}>
-                {{ opt.1 }}
-            </option>
-        {% endfor %}
-    </select>
-</p>
-
-<div id="perfil-vidros">
-    {% include "portas/_perfil_vidros.html" %}
-</div>
+<div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Espessura do vidro</label>
+      {{ form.espessura_vidro }}
+      <div class="text-danger small">{{ form.espessura_vidro.errors }}</div>
+    </div>
+  </div>
+  
+  <div class="mt-3">
+    <label class="form-label fw-semibold">Vidros</label>
+    <div class="border rounded p-2" style="max-height:160px; overflow:auto;">
+      {% for cb in form.vidros_compativeis %}
+        <div class="form-check">
+          {{ cb.tag }}
+          <label class="form-check-label">{{ cb.choice_label }}</label>
+        </div>
+      {% empty %}
+        <div class="text-muted small">Selecione um acabamento/espessura para carregar os vidros.</div>
+      {% endfor %}
+    </div>
+  </div>
+  
+  <div class="mt-3">
+    <label class="form-label fw-semibold">Perfis puxadores</label>
+    <div class="border rounded p-2" style="max-height:160px; overflow:auto;">
+      {% for cb in form.puxadores_compativeis %}
+        <div class="form-check">
+          {{ cb.tag }}
+          <label class="form-check-label">{{ cb.choice_label }}</label>
+        </div>
+      {% empty %}
+        <div class="text-muted small">Selecione um acabamento para carregar os puxadores.</div>
+      {% endfor %}
+    </div>
+  </div>
+  
+  <div class="mt-3">
+    <label class="form-label fw-semibold">Puxadores</label>
+    <div class="border rounded p-2" style="max-height:160px; overflow:auto;">
+      {% for cb in form.puxadores_simples_compativeis %}
+        <div class="form-check">
+          {{ cb.tag }}
+          <label class="form-check-label">{{ cb.choice_label }}</label>
+        </div>
+      {% empty %}
+        <div class="text-muted small">Selecione um acabamento para carregar os puxadores simples.</div>
+      {% endfor %}
+    </div>
+  </div>
+  
+  <div class="mt-3">
+    <label class="form-label fw-semibold">Divisores</label>
+    <div class="border rounded p-2" style="max-height:160px; overflow:auto;">
+      {% for cb in form.divisores_compativeis %}
+        <div class="form-check">
+          {{ cb.tag }}
+          <label class="form-check-label">{{ cb.choice_label }}</label>
+        </div>
+      {% empty %}
+        <div class="text-muted small">Selecione um acabamento para carregar os divisores.</div>
+      {% endfor %}
+    </div>
+  </div>
+  

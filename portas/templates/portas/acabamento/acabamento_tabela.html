@@ -1,0 +1,34 @@
+<table class="table table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>Nome</th>
+      <th style="width:200px;">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in acabamentos %}
+      <tr>
+        <td>{{ a.nome }}</td>
+        <td class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary"
+                  hx-get="{% url 'editar_acabamento' a.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Editar
+          </button>
+
+          <button class="btn btn-sm btn-outline-danger"
+                  hx-get="{% url 'excluir_acabamento' a.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Excluir
+          </button>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="2" class="text-center text-muted py-4">Nenhum acabamento cadastrado.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

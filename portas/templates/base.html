@@ -17,9 +17,21 @@
       /* Deixa as opções PF / PJ lado a lado no campo tipo_pessoa */
       #div_id_tipo_pessoa .form-check {
         display: inline-block;
-        margin-right: 1.5rem; /* espaçamento entre PF e PJ */
+        margin-right: 1.5rem;
+      }
+    
+      /* ===== ITENS INATIVOS (clientes, perfis, puxadores, etc) ===== */
+      .item-inativo td {
+        opacity: 0.45;
+        filter: grayscale(100%);
+      }
+    
+      /* opcional: evita hover “forte” em item inativo */
+      tr.item-inativo:hover td {
+        background-color: inherit !important;
       }
     </style>
+    
 
     {% block extra_head %}{% endblock %}
 </head>
@@ -68,5 +80,36 @@
         
 
 {% block extra_js %}{% endblock %}
+{% include "modais/modal_produto.html" %}
+{% include "modais/modal_aux.html" %}
+
+<script>
+  function abrirModalAux() {
+    const modalAuxEl = document.getElementById('modalAux');
+    const modalAux = bootstrap.Modal.getOrCreateInstance(modalAuxEl);
+
+    // NÃO fecha o modal principal
+    modalAux.show();
+  }
+
+  function fecharModalAux() {
+    const modalAuxEl = document.getElementById('modalAux');
+    const modalAux = bootstrap.Modal.getOrCreateInstance(modalAuxEl);
+    modalAux.hide();
+
+    // limpa conteúdo
+    const body = document.getElementById('modalAuxBody');
+    if (body) body.innerHTML = '';
+  }
+</script>
+
+<script>
+  document.body.addEventListener("espessura-salva", function () {
+    fecharModalAux();
+  });
+</script>
+
+
+
 </body>
 </html>

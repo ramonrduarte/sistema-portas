@@ -1,0 +1,95 @@
+<form
+  hx-post="{% if perfil %}{% url 'editar_perfil' perfil.pk %}{% else %}{% url 'cadastrar_perfil' %}{% endif %}"
+  hx-target="#tabelaPerfis"
+  hx-swap="innerHTML"
+>
+  {% csrf_token %}
+  {% if perfil %}
+    <input type="hidden" name="perfil_id" value="{{ perfil.id }}">
+  {% endif %}
+
+  <div class="modal-header">
+    <h5 class="modal-title">
+      {% if perfil %}Editar Perfil{% else %}Novo Perfil{% endif %}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  </div>
+
+  <div class="modal-body">
+    {{ form.non_field_errors }}
+
+    <!-- Linha 1 -->
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">Código</label>
+        {{ form.codigo }}
+        <div class="text-danger small">{{ form.codigo.errors }}</div>
+      </div>
+
+      <div class="col-md-9">
+        <label class="form-label">Descrição</label>
+        {{ form.descricao }}
+        <div class="text-danger small">{{ form.descricao.errors }}</div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Preço</label>
+        {{ form.preco }}
+        <div class="text-danger small">{{ form.preco.errors }}</div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Acabamento</label>
+
+        <select
+            name="{{ form.acabamento.name }}"
+            id="{{ form.acabamento.id_for_label }}"
+            class="form-select"
+            hx-get="{% url 'perfil_compativeis_por_acabamento' %}"
+            hx-target="#bloco-compativeis"
+            hx-swap="outerHTML"
+            hx-trigger="change"
+            hx-include="closest form"
+            >
+            {% for opt in form.acabamento.field.choices %}
+                <option value="{{ opt.0 }}" {% if opt.0|stringformat:"s" == form.acabamento.value|stringformat:"s" %}selected{% endif %}>
+                {{ opt.1 }}
+                </option>
+            {% endfor %}
+        </select>
+
+
+        <div class="text-danger small">{{ form.acabamento.errors }}</div>
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label">Abatimento (mm)</label>
+        {{ form.abatimento_mm }}
+        <div class="text-danger small">{{ form.abatimento_mm.errors }}</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Modelo</label>
+        {{ form.modelo }}
+        <div class="text-danger small">{{ form.modelo.errors }}</div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Combinações (puxadores/vidros/divisores) -->
+    <div id="combinacoes-container">
+        {% include "portas/_perfil_vidros_por_espessura.html" %}
+        {% include "portas/_perfil_compativeis_por_acabamento.html" %}        
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      Cancelar
+    </button>
+    <button type="submit" class="btn btn-primary">
+      Salvar
+    </button>
+  </div>
+</form>

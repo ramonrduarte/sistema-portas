@@ -1,10 +1,22 @@
+<span id="modalTitulo" hx-swap-oob="true">
+  {% if vidro %}Editar Vidro{% else %}Cadastrar Vidro{% endif %}
+</span>
+
 <form method="post"
-      hx-post="{% if puxador %}{% url 'editar_puxador' puxador.pk %}{% else %}{% url 'cadastrar_puxador' %}{% endif %}"
+      hx-post="{% if vidro %}{% url 'editar_vidro' vidro.pk %}{% else %}{% url 'cadastrar_vidro' %}{% endif %}"
       hx-target="#conteudoTabela"
       hx-swap="innerHTML">
   {% csrf_token %}
 
   <div class="row g-3">
+
+    <div class="d-flex justify-content-end mb-3">
+      <div class="form-check">
+        {{ form.ativo }}
+        <label class="form-check-label" for="{{ form.ativo.id_for_label }}">Ativo</label>
+      </div>
+    </div>
+
     <div class="col-md-3">
       <label class="form-label">Código</label>
       {{ form.codigo }}
@@ -25,34 +37,24 @@
 
     <div class="col-md-8">
       <div class="d-flex justify-content-between align-items-center">
-        <label class="form-label mb-0">Acabamento</label>
+        <label class="form-label mb-0">Espessura</label>
 
         <button type="button"
-                class="btn btn-sm btn-outline-secondary"
-                hx-get="{% url 'cadastrar_acabamento' %}?origem=puxador"
-                hx-target="#modalConteudo">
-        + Novo acabamento
-        </button>
+              class="btn btn-sm btn-outline-secondary"
+              hx-get="{% url 'cadastrar_espessura' %}?origem=vidro"
+              hx-target="#modalAuxBody"
+              onclick="abrirModalAux();">
+        + Nova espessura
+      </button>
       </div>
 
-      <div id="wrapAcabamentoSelect" class="mt-1">
-        {{ form.acabamento }}
+      <div id="wrapEspessuraSelect" class="mt-1">
+        {{ form.espessura }}
       </div>
 
-      <div class="text-danger small">{{ form.acabamento.errors }}</div>
+      <div class="text-danger small">{{ form.espessura.errors }}</div>
     </div>
 
-    <div class="col-md-6">
-      <label class="form-label">Tipo</label>
-      {{ form.tipo }}
-      <div class="text-danger small">{{ form.tipo.errors }}</div>
-    </div>
-
-    <div class="col-md-6">
-      <label class="form-label">Modelo</label>
-      {{ form.modelo }}
-      <div class="text-danger small">{{ form.modelo.errors }}</div>
-    </div>
   </div>
 
   <div class="d-flex gap-2 mt-4">

@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.models import User
 import re
+from django.core.exceptions import ValidationError
 
 
 # models.py
@@ -19,18 +20,43 @@ class EspessuraVidro(models.Model):
     def __str__(self):
         return f"{self.valor_mm} mm"
     
+class AtivoModel(models.Model):
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        abstract = True
+    
 
-class ProdutoBase(models.Model):
-    codigo = models.CharField(max_length=50)
+class ProdutoBase(AtivoModel):
+    codigo = models.CharField(max_length=6)
     descricao = models.CharField(max_length=255)
     preco = models.DecimalField(max_digits=10, decimal_places=2)
     acabamento = models.ForeignKey("Acabamento", on_delete=models.PROTECT, null=True, blank=True)
-    tipo = models.CharField(max_length=50, blank=True, null=True)
+    abatimento_mm = models.IntegerField(default=0, help_text="Abate em mm na metragem do cálculo")
     modelo = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        if self.codigo:
+            codigo = str(self.codigo).strip()
+
+            # remove tudo que não for número
+            codigo = re.sub(r"\D", "", codigo)
+
+            if not codigo:
+                raise ValidationError("Código deve conter apenas números.")
+
+            if len(codigo) > 6:
+                raise ValidationError("Código deve ter no máximo 6 dígitos.")
+
+            # completa com zeros à esquerda
+            self.codigo = codigo.zfill(6)
+
+        super().save(*args, **kwargs)    
 
     def __str__(self):
         if self.acabamento:
@@ -63,23 +89,27 @@ class Perfil(ProdutoBase):
 
 
 class PerfilPuxador(ProdutoBase):
-    pass
+    FIXACAO_VIDRO_CHOICES = [
+        ("face", "Face"),
+        ("canto", "Canto"),
+    ]
+
+    fixacao_vidro = models.CharField(
+        max_length=10,
+        choices=FIXACAO_VIDRO_CHOICES,
+        default="canto",
+        verbose_name="Fixação do vidro",
+    )
 
 
-class Puxador(models.Model):
+class Puxador(ProdutoBase):
     codigo = models.CharField(max_length=6, unique=True)
-    descricao = models.CharField(max_length=200)
-    preco = models.DecimalField(max_digits=10, decimal_places=2)
     acabamento = models.ForeignKey(Acabamento, on_delete=models.PROTECT)
-    tipo = models.CharField(max_length=100, blank=True)
     modelo = models.CharField(max_length=100, blank=True)
 
-    def save(self, *args, **kwargs):
-        if self.codigo:
-            self.codigo = self.codigo.strip()
-            if self.codigo.isdigit():
-                self.codigo = self.codigo.zfill(6)
-        super().save(*args, **kwargs)
+    def __str__(self):
+        return self.descricao
+    
 
 
 class Divisor(ProdutoBase):
@@ -97,10 +127,20 @@ class Divisor(ProdutoBase):
 
 
 class VidroBase(models.Model):
-    codigo = models.CharField(max_length=50)
+    ativo = models.BooleanField(default=True)
+    codigo = models.CharField(max_length=6)
     descricao = models.CharField(max_length=200)
     preco = models.DecimalField(max_digits=10, decimal_places=2)
     espessura = models.ForeignKey(EspessuraVidro, on_delete=models.PROTECT)
+
+    def save(self, *args, **kwargs):
+        if self.codigo:
+            codigo = re.sub(r"\D", "", str(self.codigo))
+            if len(codigo) > 6:
+                raise ValueError("Código deve ter no máximo 6 dígitos.")
+            self.codigo = codigo.zfill(6)
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.descricao} - {self.espessura}"
@@ -110,17 +150,6 @@ class VidroBase(models.Model):
 class ExtraServico(ProdutoBase):
     pass
 
-from django.db import models
-
-
-class AtivoModel(models.Model):
-    """Base para qualquer cadastro que tenha ativo/inativo e timestamps."""
-    ativo = models.BooleanField(default=True)
-    criado_em = models.DateTimeField(auto_now_add=True)
-    atualizado_em = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True  # não cria tabela, só serve como base
 
 
 class PessoaBase(AtivoModel):

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Perfis Puxador</h3>
+
+  <button class="btn btn-primary"
+          hx-get="{% url 'cadastrar_perfil_puxador' %}"
+          hx-target="#modalConteudo"
+          data-bs-toggle="modal"
+          data-bs-target="#modalCadastro">
+    + Novo Perfil Puxador
+  </button>
+</div>
+
+<div id="conteudoTabela">
+  {% include "portas/perfil_puxador/perfil_puxador_tabela.html" %}
+</div>
+
+{% endblock %}

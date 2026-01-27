@@ -1,0 +1,32 @@
+{# título OOB: vai para o modal correto #}
+{% if origem == 'vidro' %}
+  <span id="modalTituloAux" hx-swap-oob="true">
+    {% if espessura %}Editar Espessura{% else %}Cadastrar Espessura{% endif %}
+  </span>
+{% else %}
+  <span id="modalTitulo" hx-swap-oob="true">
+    {% if espessura %}Editar Espessura{% else %}Cadastrar Espessura{% endif %}
+  </span>
+{% endif %}
+
+<form method="post"
+      hx-post="{% if espessura %}{% url 'editar_espessura' espessura.pk %}{% else %}{% url 'cadastrar_espessura' %}{% endif %}{% if origem %}?origem={{ origem }}{% endif %}"
+      hx-target="{% if origem == 'vidro' %}#modalAuxBody{% else %}#conteudoTabela{% endif %}"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  <input type="hidden" name="origem" value="{{ origem|default:'' }}">
+
+  <div class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label">Valor (mm)</label>
+      {{ form.valor_mm }}
+      <div class="text-danger small">{{ form.valor_mm.errors }}</div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <button class="btn btn-primary" type="submit">Salvar</button>
+    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+  </div>
+</form>

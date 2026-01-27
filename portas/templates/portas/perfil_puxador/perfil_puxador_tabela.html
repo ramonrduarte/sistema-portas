@@ -1,0 +1,55 @@
+<table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th style="width:120px;">Código</th>
+        <th>Descrição</th>
+        <th style="width:160px;">Acabamento</th>
+        <th style="width:140px;">Preço</th>
+        <th style="width:200px;">Ações</th>
+      </tr>
+    </thead>
+  
+    <tbody>
+        {% for p in perfis_puxador %}
+          <tr class="{% if not p.ativo %}item-inativo{% endif %}">
+            <td>{{ p.codigo }}</td>
+            <td>{{ p.descricao }}</td>
+            <td>
+              {% if p.acabamento %}
+                {{ p.acabamento.nome }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>R$ {{ p.preco }}</td>
+            <td class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary"
+                      hx-get="{% url 'editar_perfil_puxador' p.pk %}"
+                      hx-target="#modalConteudo"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalCadastro">
+                Editar
+              </button>
+      
+              <button class="btn btn-sm btn-outline-danger"
+                      hx-get="{% url 'excluir_perfil_puxador' p.pk %}"
+                      hx-target="#modalConteudo"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalCadastro">
+                Excluir
+              </button>
+      
+
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-muted">
+              Nenhum perfil puxador cadastrado.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>      
+  </table>
+  

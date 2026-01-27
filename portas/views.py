@@ -6,11 +6,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import Orcamento, Perfil, Acabamento, PerfilPuxador, Puxador, EspessuraVidro, VidroBase, Divisor, Cliente, UsuarioPerfil
 from .forms import Porta1PuxadorForm, PerfilForm, AcabamentoForm, PerfilPuxadorForm, PuxadorForm, EspessuraVidroForm, VidroBaseForm, DivisorForm, ClienteForm, UsuarioPerfilForm
 from .services.calculo import calcular_porta_1x_puxador
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db.models import ProtectedError
+from django.template.loader import render_to_string
 
 
-# === JÁ EXISTIA: tela de orçamento ===
 def calcular_porta_1p_view(request):
     orcamento = None
     resultado = None
@@ -41,162 +41,283 @@ def calcular_porta_1p_view(request):
         "resultado": resultado,
     })
 
-
-# === NOVO: lista de perfis ===
-def lista_perfis(request):
-    perfis = Perfil.objects.all().order_by("descricao")
-    return render(request, "portas/lista_perfis.html", {"perfis": perfis})
-
-
-def cadastrar_perfil(request, pk=None):
-    if pk:
-        perfil = get_object_or_404(Perfil, pk=pk)
-    else:
-        perfil = None
-
+def cadastrar_perfil_modal(request):
     if request.method == "POST":
-        form = PerfilForm(request.POST, instance=perfil)
+        form = PerfilForm(request.POST)
         if form.is_valid():
             perfil = form.save()
+            # Se você faz regras extras (espessura/vidros) aqui, mantenha:
             esp = form.cleaned_data.get("espessura_vidro")
             if esp:
                 perfil.espessuras_vidro_compativeis.set([esp])
             else:
                 perfil.espessuras_vidro_compativeis.clear()
+
             vidros_sel = form.cleaned_data.get("vidros_compativeis")
             if vidros_sel:
                 perfil.vidros_compativeis.set(vidros_sel)
             else:
                 perfil.vidros_compativeis.clear()
-            return redirect("lista_perfis")
-    else:
-        form = PerfilForm(instance=perfil)
 
-    return render(request, "portas/perfil_form.html", {"form": form, "perfil": perfil})
+            perfis = Perfil.objects.select_related("acabamento").all().order_by("descricao")
+            return render(request, "portas/perfil/perfil_tabela.html", {"perfis": perfis})
 
+        return render(request, "portas/perfil/perfil_form.html", {"form": form, "perfil": None})
 
+    form = PerfilForm()
+    return render(request, "portas/perfil/perfil_form.html", {"form": form, "perfil": None})
 
-def carregar_opcoes_compativeis(request):
-    """
-    Usada pelo HTMX: recebe o id do perfil_estrutura via GET
-    e devolve só o pedaço do formulário com os selects filtrados.
-    """
-    perfil_id = request.GET.get("perfil_estrutura")
-    form = Porta1PuxadorForm(perfil_id=perfil_id)
-    return render(request, "portas/_opcoes_compativeis.html", {"form": form})
-
-
-def lista_acabamentos(request):
-    acabamentos = Acabamento.objects.all().order_by("nome")
-    return render(request, "portas/lista_acabamentos.html", {"acabamentos": acabamentos})
-
-
-def cadastrar_acabamento(request, pk=None):
-    acabamento = get_object_or_404(Acabamento, pk=pk) if pk else None
-    origem = request.GET.get("origem")
+def editar_perfil_modal(request, pk):
+    perfil = get_object_or_404(Perfil, pk=pk)
 
     if request.method == "POST":
-        form = AcabamentoForm(request.POST, instance=acabamento)
-
+        form = PerfilForm(request.POST, instance=perfil)
         if form.is_valid():
-            acabamento = form.save()
+            perfil = form.save()
 
-            # HTMX
-            if request.headers.get("HX-Request") == "true":
-                if origem == "puxador":
-                    return render(
-                        request,
-                        "portas/_acabamento_criado_oob.html",
-                        {
-                            "acabamento": acabamento,
-                            "acabamentos": Acabamento.objects.all().order_by("nome"),
-                            "origem": origem,
-                        },
-                    )
+            esp = form.cleaned_data.get("espessura_vidro")
+            if esp:
+                perfil.espessuras_vidro_compativeis.set([esp])
+            else:
+                perfil.espessuras_vidro_compativeis.clear()
 
-                return render(
-                    request,
-                    "portas/_acabamentos_tabela.html",
-                    {"acabamentos": Acabamento.objects.all().order_by("nome")},
-                )
+            vidros_sel = form.cleaned_data.get("vidros_compativeis")
+            if vidros_sel:
+                perfil.vidros_compativeis.set(vidros_sel)
+            else:
+                perfil.vidros_compativeis.clear()
 
-            return redirect("lista_acabamentos")
+            perfis = Perfil.objects.select_related("acabamento").all().order_by("descricao")
+            return render(request, "portas/perfil/perfil_tabela.html", {"perfis": perfis})
 
-        # ❗️POST com erro: se for HTMX, devolve o formulário DO MODAL com os erros
-        if request.headers.get("HX-Request") == "true":
-            return render(
-                request,
-                "portas/_acabamento_form.html",
-                {"form": form, "acabamento": acabamento, "origem": origem},
-            )
+        return render(request, "portas/perfil/perfil_form.html", {"form": form, "perfil": perfil})
 
-        # POST com erro sem HTMX: página normal
-        return render(
-            request,
-            "portas/acabamento_form.html",
-            {"form": form, "acabamento": acabamento},
-        )
-
-    # GET
-    form = AcabamentoForm(instance=acabamento)
-
-    if request.headers.get("HX-Request") == "true":
-        return render(
-            request,
-            "portas/_acabamento_form.html",
-            {"form": form, "acabamento": acabamento, "origem": origem},
-        )
-
-    return render(
-        request,
-        "portas/acabamento_form.html",
-        {"form": form, "acabamento": acabamento},
-    )
+    form = PerfilForm(instance=perfil)
+    return render(request, "portas/perfil/perfil_form.html", {"form": form, "perfil": perfil})
 
 
 
-# ==== PERFIL PUxADOR ====
-
+# ==== PERFIL PUXADOR ==== #
 def lista_perfis_puxador(request):
-    perfis_puxador = PerfilPuxador.objects.select_related("acabamento").all().order_by(
-        "descricao"
+    perfis_puxador = (
+        PerfilPuxador.objects
+        .select_related("acabamento")
+        .all()
+        .order_by("descricao")
     )
     return render(
         request,
-        "portas/lista_perfis_puxador.html",
+        "portas/perfil_puxador/perfil_puxador_lista.html",
         {"perfis_puxador": perfis_puxador},
     )
 
-
 def cadastrar_perfil_puxador(request, pk=None):
-    if pk:
-        perfil_puxador = get_object_or_404(PerfilPuxador, pk=pk)
-    else:
-        perfil_puxador = None
+    perfil = get_object_or_404(PerfilPuxador, pk=pk) if pk else None
 
     if request.method == "POST":
-        form = PerfilPuxadorForm(request.POST, instance=perfil_puxador)
+        form = PerfilPuxadorForm(request.POST, instance=perfil)
         if form.is_valid():
             form.save()
-            return redirect("lista_perfis_puxador")
-    else:
-        form = PerfilPuxadorForm(instance=perfil_puxador)
 
+            perfis_puxador = (
+                PerfilPuxador.objects
+                .select_related("acabamento")
+                .all()
+                .order_by("descricao")
+            )
+
+            if request.headers.get("HX-Request") == "true":
+                return render(
+                    request,
+                    "portas/perfil_puxador/perfil_puxador_tabela.html",
+                    {"perfis_puxador": perfis_puxador},
+                )
+
+            return redirect("lista_perfis_puxador")
+
+        return render(
+            request,
+            "portas/perfil_puxador/perfil_puxador_form.html",
+            {"form": form, "perfil": perfil},
+        )
+
+    form = PerfilPuxadorForm(instance=perfil)
     return render(
         request,
-        "portas/perfil_puxador_form.html",
-        {"form": form, "perfil_puxador": perfil_puxador},
+        "portas/perfil_puxador/perfil_puxador_form.html",
+        {"form": form, "perfil": perfil},
     )
 
+def excluir_perfil_puxador(request, pk):
+    perfil = get_object_or_404(PerfilPuxador, pk=pk)
 
-# ==== PUXADOR SIMPLES ====
+    if request.method == "POST":
+        try:
+            perfil.delete()
+        except ProtectedError:
+            return render(request, "portas/_mensagem_erro.html", {
+                "mensagem": "Este perfil puxador está em uso e não pode ser excluído."
+            })
 
+        perfis_puxador = (
+            PerfilPuxador.objects
+            .select_related("acabamento")
+            .all()
+            .order_by("descricao")
+        )
+
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "portas/perfil_puxador/perfil_puxador_tabela.html", {
+                "perfis_puxador": perfis_puxador
+            })
+
+        return redirect("lista_perfis_puxador")
+
+    # GET (abre modal)
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Confirmar exclusão",
+        "texto": f'Tem certeza que deseja excluir o perfil puxador <strong>({perfil.codigo}) {perfil.descricao}</strong>?',
+        "post_url": "excluir_perfil_puxador",
+        "obj_id": perfil.pk,
+        "target_id": "#conteudoTabela",   # ✅ padrão
+    })
+
+
+# ==== ACABAMENTO ==== # ok
+def lista_acabamentos(request):
+    acabamentos = Acabamento.objects.all().order_by("nome")
+    return render(request, "portas/acabamento/acabamento_lista.html", {"acabamentos": acabamentos})
+
+def cadastrar_acabamento(request, pk=None):
+    acabamento = get_object_or_404(Acabamento, pk=pk) if pk else None
+
+    if request.method == "POST":
+        form = AcabamentoForm(request.POST, instance=acabamento)
+        if form.is_valid():
+            form.save()
+
+            acabamentos = Acabamento.objects.all().order_by("nome")
+
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/acabamento/acabamento_tabela.html", {"acabamentos": acabamentos})
+
+            return redirect("lista_acabamentos")
+    else:
+        form = AcabamentoForm(instance=acabamento)
+
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/acabamento/acabamento_form.html", {"form": form, "acabamento": acabamento})
+
+    return render(request, "portas/acabamento/acabamento_form.html", {"form": form, "acabamento": acabamento})
+
+def excluir_acabamento(request, pk):
+    acabamento = get_object_or_404(Acabamento, pk=pk)
+
+    if request.method == "POST":
+        try:
+            acabamento.delete()
+        except ProtectedError:
+            # se estiver em uso
+            return render(request, "portas/_mensagem_erro.html", {
+                "mensagem": "Este acabamento está em uso e não pode ser excluído."
+            })
+
+        acabamentos = Acabamento.objects.all().order_by("nome")
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "portas/acabamento/acabamento_tabela.html", {"acabamentos": acabamentos})
+        return redirect("lista_acabamentos")
+
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Excluir acabamento",
+        "texto": f"Tem certeza que deseja excluir o acabamento <strong>“{acabamento}”</strong>?",
+        "post_url": "excluir_acabamento",
+        "obj_id": acabamento.pk,
+    })
+
+
+# ==== PERFIL ==== #
+def lista_perfis(request):
+    perfis = (
+        Perfil.objects
+        .select_related("acabamento")
+        .prefetch_related("puxadores_compativeis", "puxadores_simples_compativeis", "divisores_compativeis", "vidros_compativeis", "espessuras_vidro_compativeis")
+        .all()
+        .order_by("descricao")
+    )
+    return render(request, "portas/perfil/perfil_lista.html", {"perfis": perfis})
+
+def cadastrar_perfil(request, pk=None):
+    perfil = get_object_or_404(Perfil, pk=pk) if pk else None
+
+    if request.method == "POST":
+        form = PerfilForm(request.POST, instance=perfil)
+        if form.is_valid():
+            perfil = form.save()
+
+            # (sua regra) salva 1 espessura via campo "espessura_vidro"
+            esp = form.cleaned_data.get("espessura_vidro")
+            if esp:
+                perfil.espessuras_vidro_compativeis.set([esp])
+            else:
+                perfil.espessuras_vidro_compativeis.clear()
+
+            # (sua regra) salva vidros compatíveis do campo extra "vidros_compativeis"
+            vidros_sel = form.cleaned_data.get("vidros_compativeis")
+            if vidros_sel:
+                perfil.vidros_compativeis.set(vidros_sel)
+            else:
+                perfil.vidros_compativeis.clear()
+
+            perfis = (
+                Perfil.objects
+                .select_related("acabamento")
+                .prefetch_related("puxadores_compativeis", "puxadores_simples_compativeis", "divisores_compativeis", "vidros_compativeis", "espessuras_vidro_compativeis")
+                .all()
+                .order_by("descricao")
+            )
+
+            # HTMX -> devolve só a tabela
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/perfil/perfil_tabela.html", {"perfis": perfis})
+
+            return redirect("lista_perfis")
+
+        # POST com erro -> devolve o modal com erros
+        return render(request, "portas/perfil/perfil_form.html", {"form": form, "perfil": perfil})
+
+    # GET -> devolve o formulário pro modal
+    form = PerfilForm(instance=perfil)
+    return render(request, "portas/perfil/perfil_form.html", {"form": form, "perfil": perfil})
+
+def excluir_perfil(request, pk):
+    perfil = get_object_or_404(Perfil, pk=pk)
+
+    if request.method == "POST":
+        try:
+            perfil.delete()
+        except ProtectedError:
+            return render(request, "portas/_mensagem_erro.html", {
+                "mensagem": "Este perfil está em uso e não pode ser excluído."
+            })
+
+        perfis = Perfil.objects.select_related("acabamento").all().order_by("descricao")
+        return render(request, "portas/perfil/perfil_tabela.html", {"perfis": perfis})
+
+    # GET: modal de confirmação
+    return render(request, "portas/_confirmar_exclusao_modal.html", {
+        "titulo": "Excluir perfil",
+        "texto": f"Tem certeza que deseja excluir o perfil <strong>({perfil.codigo}) {perfil.descricao}</strong>?",
+        "post_url": "excluir_perfil",
+        "obj_id": perfil.pk,
+        "target_id": "#tabelaPerfis",
+    })
+
+
+# ==== PUXADOR ==== # ok
 def lista_puxadores(request):
     puxadores = Puxador.objects.select_related("acabamento").all().order_by("descricao")
-    return render(request, "portas/lista_puxadores.html", {"puxadores": puxadores})
+    return render(request, "portas/puxador/puxador_lista.html", {"puxadores": puxadores})
 
-
-# views.py
 def cadastrar_puxador(request, pk=None):
     puxador = get_object_or_404(Puxador, pk=pk) if pk else None
 
@@ -209,7 +330,7 @@ def cadastrar_puxador(request, pk=None):
 
             # Se veio do HTMX, devolve só a tabela atualizada
             if request.headers.get("HX-Request") == "true":
-                return render(request, "portas/_puxadores_tabela.html", {"puxadores": puxadores})
+                return render(request, "portas/puxador/puxador_tabela.html", {"puxadores": puxadores})
 
             return redirect("lista_puxadores")
     else:
@@ -217,162 +338,221 @@ def cadastrar_puxador(request, pk=None):
 
     # GET via HTMX -> devolve só o formulário (para o modal)
     if request.headers.get("HX-Request") == "true":
-        return render(request, "portas/_puxador_form.html", {"form": form, "puxador": puxador})
+        return render(request, "portas/puxador/puxador_form.html", {"form": form, "puxador": puxador})
 
     # GET normal -> página inteira
-    return render(request, "portas/puxador_form.html", {"form": form, "puxador": puxador})
+    return render(request, "portas/puxador/puxador_form.html", {"form": form, "puxador": puxador})
 
-def carregar_combinacoes_perfil(request):
-    """
-    HTMX no cadastro de Perfil:
-    recebe acabamento (e possivelmente outros campos) e
-    devolve o HTML das combinações completas.
-    """
-    perfil_id = request.GET.get("perfil_id")
-    instance = None
-    if perfil_id:
-        instance = Perfil.objects.filter(pk=perfil_id).first()
+def excluir_puxador(request, pk):
+    puxador = get_object_or_404(Puxador, pk=pk)
 
-    form = PerfilForm(data=request.GET, instance=instance)
-    return render(request, "portas/_perfil_combinacoes.html", {"form": form})
+    if request.method == "POST":
+        puxador.delete()
+        puxadores = Puxador.objects.select_related("acabamento").all().order_by("descricao")
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "portas/puxador/puxador_tabela.html", {"puxadores": puxadores})
+        return redirect("lista_puxadores")
+
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Excluir puxador",
+        "texto": f"Tem certeza que deseja excluir o puxador <STRONG>“({puxador.codigo}) {puxador.descricao}”</STRONG>?",
+        "post_url": "excluir_puxador",
+        "obj_id": puxador.pk,
+    })
 
 
-
-
+# ==== ESPESSURA ==== # ok
 def lista_espessuras(request):
-    espessuras = EspessuraVidro.objects.all().order_by("valor_mm")
-    return render(
-        request,
-        "portas/lista_espessuras.html",
-        {"espessuras": espessuras},
-    )
-
+    espessuras = EspessuraVidro.objects.all().order_by('valor_mm')
+    return render(request, 'portas/espessura/espessura_lista.html', {'espessuras': espessuras})
 
 def cadastrar_espessura(request, pk=None):
-    if pk:
-        espessura = get_object_or_404(EspessuraVidro, pk=pk)
-    else:
-        espessura = None
+    espessura = get_object_or_404(EspessuraVidro, pk=pk) if pk else None
+    origem = request.GET.get("origem") or request.POST.get("origem")
 
     if request.method == "POST":
         form = EspessuraVidroForm(request.POST, instance=espessura)
         if form.is_valid():
-            form.save()
+            nova = form.save()
 
-            # Se veio do modal (AJAX)
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse({"ok": True})
+            if origem == "vidro" and request.headers.get("HX-Request") == "true":
+                nova = form.save()
 
-            # Acesso direto pela URL (sem modal)
+                vidro_form = VidroBaseForm(initial={"espessura": nova.pk})
+                html = render_to_string(
+                    "portas/vidro/espessura_select_oob.html",
+                    {"vidro_form": vidro_form},
+                    request=request
+                )
+
+                response = HttpResponse(html)
+                response["HX-Trigger"] = "espessura-salva"
+                return response
+
+            espessuras = EspessuraVidro.objects.all().order_by("valor_mm")
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/espessura/espessura_tabela.html", {"espessuras": espessuras})
+
             return redirect("lista_espessuras")
     else:
         form = EspessuraVidroForm(instance=espessura)
 
-    # Sempre renderiza o mesmo template
-    return render(
-        request,
-        "portas/espessura_form.html",
-        {"form": form, "espessura": espessura},
-    )
+    # HTMX: devolve só o form (pro modal)
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/espessura/espessura_form.html", {
+            "form": form,
+            "espessura": espessura,
+            "origem": origem,  # manda pro template
+        })
 
+    return render(request, "portas/espessura/espessura_form.html", {"form": form, "espessura": espessura})
 
-def lista_vidros(request):
-    vidros = VidroBase.objects.select_related("espessura").all().order_by(
-        "descricao"
-    )
-    return render(
-        request,
-        "portas/lista_vidros.html",
-        {"vidros": vidros},
-    )
-
-
-def cadastrar_vidro(request, pk=None):
-    if pk:
-        vidro = get_object_or_404(VidroBase, pk=pk)
-    else:
-        vidro = None
+def excluir_espessura(request, pk):
+    espessura = get_object_or_404(EspessuraVidro, pk=pk)
 
     if request.method == "POST":
-        form = VidroBaseForm(request.POST, instance=vidro)
+        espessura.delete()
+        espessuras = EspessuraVidro.objects.all().order_by('valor_mm')
+        if request.headers.get("HX-Request") == "true":
+            return render(request, 'portas/espessura/espessura_tabela.html', {'espessuras': espessuras})
+        return redirect("lista_espessuras")
+        
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Excluir espessura",
+        "texto": f"Tem certeza que deseja excluir a espessura <STRONG>“{espessura.valor_mm}mm”</STRONG>?",
+        "post_url": "excluir_espessura",
+        "obj_id": espessura.pk,
+    })
+
+
+# ==== VIDROS ==== # ok
+def lista_vidros(request):
+    vidros = VidroBase.objects.select_related("espessura").all().order_by("descricao")
+    return render(request, "portas/vidro/vidro_lista.html", {"vidros": vidros})
+
+def cadastrar_vidro(request, pk=None):
+    vidrobase = get_object_or_404(VidroBase, pk=pk) if pk else None
+
+    if request.method == "POST":
+        form = VidroBaseForm(request.POST, instance=vidrobase)
         if form.is_valid():
             form.save()
-            # Se vier via AJAX (fetch no modal), devolve JSON de sucesso
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse({"ok": True})
+
+            vidros = VidroBase.objects.select_related("espessura").all().order_by("descricao")
+
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/vidro/vidro_tabela.html", {"vidros": vidros})
+
             return redirect("lista_vidros")
     else:
-        form = VidroBaseForm(instance=vidro)
+        form = VidroBaseForm(instance=vidrobase)
 
-    # GET ou POST com erro → devolve HTML do form
-    return render(
-        request,
-        "portas/vidro_form.html",
-        {"form": form, "vidro": vidro},
-    )
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/vidro/vidro_form.html", {"form": form, "vidro": vidrobase})
 
+    # GET normal -> página inteira
+    return render(request, "portas/vidro/vidro_form.html", {"form": form, "vidro": vidrobase})
 
 def excluir_vidro(request, pk):
     vidro = get_object_or_404(VidroBase, pk=pk)
 
     if request.method == "POST":
         vidro.delete()
+        vidros = VidroBase.objects.all()
+        if request.headers.get("HX-Request") == "true":
+            return render(request, 'portas/vidro/vidro_tabela.html', {'vidros': vidros})
         return redirect("lista_vidros")
+        
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Excluir vidro",
+        "texto": f"Tem certeza que deseja excluir o vidro <STRONG>({vidro.codigo}) {vidro.descricao} - {vidro.espessura}</STRONG>?",
+        "post_url": "excluir_vidro",
+        "obj_id": vidro.pk,
+    })
 
-    # se alguém acessar via GET, só volta pra lista
-    return redirect("lista_vidros")
 
+# ==== FUNCOES ==== #
 def carregar_vidros_por_espessura(request):
-    """
-    HTMX: ao mudar a espessura, atualiza só os vidros compatíveis.
-    """
     perfil_id = request.GET.get("perfil_id")
-    instance = None
-    if perfil_id:
-        instance = Perfil.objects.filter(pk=perfil_id).first()
+    instance = Perfil.objects.filter(pk=perfil_id).first() if perfil_id else None
 
     form = PerfilForm(data=request.GET, instance=instance)
-    return render(request, "portas/_perfil_vidros.html", {"form": form})
+    return render(request, "portas/_perfil_vidros_por_espessura.html", {"form": form})
 
-# ==== DIVISOR ====
+def carregar_compativeis_por_acabamento(request):
+    perfil_id = request.GET.get("perfil_id")
+    instance = Perfil.objects.filter(pk=perfil_id).first() if perfil_id else None
+
+    form = PerfilForm(data=request.GET, instance=instance)
+    return render(request, "portas/_perfil_compativeis_por_acabamento.html", {"form": form})
+
+def carregar_combinacoes_perfil(request):
+    perfil_id = request.GET.get("perfil_id")
+    instance = Perfil.objects.filter(pk=perfil_id).first() if perfil_id else None
+    form = PerfilForm(data=request.GET, instance=instance)
+    return render(request, "portas/_perfil_combinacoes.html", {"form": form})
+
+def carregar_opcoes_compativeis(request):
+    """
+    Usada pelo HTMX: recebe o id do perfil_estrutura via GET
+    e devolve só o pedaço do formulário com os selects filtrados.
+    """
+    perfil_id = request.GET.get("perfil_estrutura")
+    form = Porta1PuxadorForm(perfil_id=perfil_id)
+    return render(request, "portas/_opcoes_compativeis.html", {"form": form})
 
 
+# ==== DIVISOR ==== ok
 def lista_divisores(request):
     divisores = Divisor.objects.select_related("acabamento").all().order_by("descricao")
-    return render(
-        request,
-        "portas/lista_divisores.html",
-        {"divisores": divisores},
-    )
-
+    return render(request, "portas/divisor/divisor_lista.html", {"divisores": divisores})
 
 def cadastrar_divisor(request, pk=None):
-    if pk:
-        divisor = get_object_or_404(Divisor, pk=pk)
-    else:
-        divisor = None
+    divisor = get_object_or_404(Divisor, pk=pk) if pk else None
 
     if request.method == "POST":
         form = DivisorForm(request.POST, instance=divisor)
         if form.is_valid():
             form.save()
+
+            divisores = Divisor.objects.select_related("acabamento").all().order_by("descricao")
+
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/divisor/divisor_tabela.html", {"divisores": divisores})
+
             return redirect("lista_divisores")
     else:
         form = DivisorForm(instance=divisor)
 
-    return render(
-        request,
-        "portas/divisor_form.html",
-        {"form": form, "divisor": divisor},
-    )
+    # GET (ou POST inválido) via HTMX -> devolve form pro modal
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/divisor/divisor_form.html", {"form": form, "divisor": divisor})
+
+    # Se abrir sem HTMX (não é o padrão), pode redirecionar pra lista
+    return render(request, "portas/divisor/divisor_form.html", {"form": form, "divisor": divisor})
+
+def excluir_divisor(request, pk):
+    divisor = get_object_or_404(Divisor, pk=pk)
+
+    if request.method == "POST":
+        divisor.delete()
+        divisores = Divisor.objects.all()
+        if request.headers.get("HX-Request") == "true":
+            return render(request, 'portas/divisor/divisor_tabela.html', {'divisores': divisores})
+        return redirect("lista_vidros")
+        
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Excluir divisor",
+        "texto": f"Tem certeza que deseja excluir o divisor <STRONG>({divisor.codigo}) {divisor.descricao}</STRONG>?",
+        "post_url": "excluir_divisor",
+        "obj_id": divisor.pk,
+    })
 
 
-# ==== CLIENTES ====
-
+# ==== CLIENTES ==== #
 def lista_clientes(request):
     clientes = Cliente.objects.all().order_by("nome")
     return render(request, "portas/lista_clientes.html", {"clientes": clientes})
-
 
 def cadastrar_cliente(request, pk=None):
     if pk:
@@ -414,14 +594,11 @@ def cadastrar_cliente(request, pk=None):
         {"form": form, "cliente": cliente},
     )
 
-
-
 class ClienteListView(AtivoQuerysetMixin, ListView):
     model = Cliente
     template_name = "clientes/lista.html"
     context_object_name = "clientes"
     only_active = False
-
 
 class ClienteCreateView(BaseCRUDMixin, CreateView):
     model = Cliente
@@ -441,7 +618,6 @@ class ClienteCreateView(BaseCRUDMixin, CreateView):
         if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": True})
         return response
-
 
 class ClienteUpdateView(BaseCRUDMixin, UpdateView):
     model = Cliente
@@ -468,8 +644,7 @@ class ClienteDeleteView(View):
         return redirect("clientes_lista")    
 
 
-# ==== USUÁRIOS ====
-
+# ==== USUÁRIOS ==== #
 class UsuarioListView(AtivoQuerysetMixin, ListView):
     model = UsuarioPerfil
     template_name = "usuarios/lista.html"
@@ -479,7 +654,6 @@ class UsuarioListView(AtivoQuerysetMixin, ListView):
     def get_queryset(self):
         qs = super().get_queryset().select_related("user")
         return qs.order_by("codigo")
-
 
 class UsuarioCreateView(BaseCRUDMixin, CreateView):
     model = UsuarioPerfil
@@ -500,7 +674,6 @@ class UsuarioCreateView(BaseCRUDMixin, CreateView):
             return JsonResponse({"ok": True})
         return response
 
-
 class UsuarioUpdateView(BaseCRUDMixin, UpdateView):
     model = UsuarioPerfil
     form_class = UsuarioPerfilForm
@@ -518,58 +691,9 @@ class UsuarioUpdateView(BaseCRUDMixin, UpdateView):
             return JsonResponse({"ok": True})
         return response
 
-
-
 class UsuarioDeleteView(View):
     def post(self, request, pk):
         perfil = get_object_or_404(UsuarioPerfil, pk=pk)
         user = perfil.user
         user.delete()
         return redirect("usuarios_lista")
-
-
-def excluir_puxador(request, pk):
-    puxador = get_object_or_404(Puxador, pk=pk)
-
-    if request.method == "POST":
-        puxador.delete()
-        # HTMX: devolve a tabela atualizada
-        puxadores = Puxador.objects.select_related("acabamento").all().order_by("descricao")
-        if request.headers.get("HX-Request") == "true":
-            return render(request, "portas/_puxadores_tabela.html", {"puxadores": puxadores})
-        return redirect("lista_puxadores")
-
-    # GET: devolve o corpo do modal de confirmação
-    return render(request, "portas/_confirmar_exclusao_modal.html", {
-        "titulo": "Excluir puxador",
-        "texto": f"Tem certeza que deseja excluir o puxador “{puxador}”?",
-        "post_url": "excluir_puxador",
-        "obj_id": puxador.pk,
-    })
-
-
-def excluir_acabamento(request, pk):
-    acabamento = get_object_or_404(Acabamento, pk=pk)
-
-    if request.method == "POST":
-        try:
-            acabamento.delete()
-        except ProtectedError:
-            # se estiver em uso
-            return render(request, "portas/_mensagem_erro.html", {
-                "mensagem": "Este acabamento está em uso e não pode ser excluído."
-            })
-
-        acabamentos = Acabamento.objects.all().order_by("nome")
-        if request.headers.get("HX-Request") == "true":
-            return render(request, "portas/_acabamentos_tabela.html", {"acabamentos": acabamentos})
-        return redirect("lista_acabamentos")
-
-    return render(request, "portas/_confirmar_exclusao_modal.html", {
-        "titulo": "Excluir acabamento",
-        "texto": f"Tem certeza que deseja excluir o acabamento “{acabamento}”?",
-        "post_url": "excluir_acabamento",
-        "obj_id": acabamento.pk,
-    })
-
-

@@ -1,0 +1,35 @@
+<!-- Modal CRUD Global -->
+<div class="modal fade" id="modalCadastro" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+  
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <span id="modalTitulo">Cadastro</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+  
+        <div class="modal-body" id="modalConteudo"></div>
+  
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Fecha o modal quando a tabela/lista for atualizada
+    document.body.addEventListener("htmx:afterSwap", function(e){
+      if (e.target && e.target.id === "conteudoTabela") {
+        const modalEl = document.getElementById("modalCadastro");
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+      }
+    });
+  
+    // Limpa o conteúdo do modal ao fechar
+    document.getElementById("modalCadastro").addEventListener("hidden.bs.modal", function(){
+      const corpo = document.getElementById("modalConteudo");
+      if (corpo) corpo.innerHTML = "";
+    });
+  </script>
+  

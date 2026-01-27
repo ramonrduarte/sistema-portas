@@ -1,3 +1,5 @@
+print(">>> CARREGOU portas/forms.py DO CAMINHO:", __file__)
+
 from django import forms
 from django.core.exceptions import ValidationError
 import re
@@ -46,21 +48,50 @@ class AcabamentoForm(forms.ModelForm):
 class PerfilPuxadorForm(forms.ModelForm):
     class Meta:
         model = PerfilPuxador
-        fields = [
-            "codigo",
-            "descricao",
-            "preco",
-            "acabamento",
-            "tipo",
-            "modelo",
-        ]
+        fields = ["ativo","codigo", "descricao", "preco", "acabamento", "abatimento_mm", "modelo", "fixacao_vidro"]
+        widgets = {
+            "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "codigo": forms.TextInput(attrs={"class": "form-control", "maxlength": "6", "inputmode": "numeric"}),
+            "descricao": forms.TextInput(attrs={"class": "form-control"}),
+            "preco": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "acabamento": forms.Select(attrs={"class": "form-select"}),
+            "abatimento_mm": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
+            "modelo": forms.TextInput(attrs={"class": "form-control"}),
+            "fixacao_vidro": forms.Select(attrs={"class": "form-select"}),
+        }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # se for novo, deixa ativo marcado por padrão
+        if not self.instance.pk:
+            self.fields["ativo"].initial = True
 
+    def clean_codigo(self):
+        codigo = (self.cleaned_data.get("codigo") or "").strip()
+
+        # aceita somente números
+        codigo = re.sub(r"\D", "", codigo)
+        if not codigo:
+            raise ValidationError("Informe o código.")
+        if len(codigo) > 6:
+            raise ValidationError("O código deve ter no máximo 6 dígitos.")
+
+        codigo = codigo.zfill(6)
+
+        # evita duplicidade no cadastro (mesmo esquema do Puxador)
+        qs = PerfilPuxador.objects.filter(codigo=codigo)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("Já existe um Perfil Puxador com este código.")
+
+        return codigo
 
 class PuxadorForm(forms.ModelForm):
     class Meta:
         model = Puxador
-        fields = ["codigo", "descricao", "preco", "acabamento", "tipo", "modelo"]
+        fields = ["ativo","codigo", "descricao", "preco", "acabamento", "abatimento_mm", "modelo"]
         widgets = {
+            "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "codigo": forms.TextInput(attrs={
                 "class": "form-control",
                 "maxlength": "6",
@@ -69,7 +100,7 @@ class PuxadorForm(forms.ModelForm):
             "descricao": forms.TextInput(attrs={"class": "form-control"}),
             "preco": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
             "acabamento": forms.Select(attrs={"class": "form-select"}),
-            "tipo": forms.TextInput(attrs={"class": "form-control"}),
+            "abatimento_mm": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "modelo": forms.TextInput(attrs={"class": "form-control"}),
         }
 
@@ -100,17 +131,15 @@ class PuxadorForm(forms.ModelForm):
 class DivisorForm(forms.ModelForm):
     class Meta:
         model = Divisor
-        fields = [
-            "codigo",
-            "descricao",
-            "preco",
-            "acabamento",
-            "tipo",
-            "modelo",
-            "encaixe",
-        ]
-
-
+        fields = ["ativo","codigo", "descricao", "preco", "acabamento", "encaixe"]
+        widgets = {
+            "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "descricao": forms.TextInput(attrs={"class": "form-control"}),
+            "preco": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "acabamento": forms.Select(attrs={"class": "form-select"}),
+            "encaixe": forms.Select(attrs={"class": "form-select"}),
+        }
 
 class Porta1PuxadorForm(forms.Form):
     cliente_nome = forms.CharField(label="Cliente", required=False)
@@ -160,7 +189,6 @@ class Porta1PuxadorForm(forms.Form):
             self.fields["perfil_puxador"].queryset = PerfilPuxador.objects.all()
             self.fields["vidro_base"].queryset = VidroBase.objects.all()
 
-
 class PerfilForm(forms.ModelForm):
     puxadores_compativeis = forms.ModelMultipleChoiceField(
         label="Perfis Puxadores compatíveis (mesmo acabamento)",
@@ -200,7 +228,7 @@ class PerfilForm(forms.ModelForm):
             "descricao",
             "preco",
             "acabamento",
-            "tipo",
+            "abatimento_mm",
             "modelo",
             "puxadores_compativeis",
             "puxadores_simples_compativeis",
@@ -265,18 +293,20 @@ class PerfilForm(forms.ModelForm):
                 list(self.instance.vidros_compativeis.values_list("id", flat=True)),
             )
 
-
 class EspessuraVidroForm(forms.ModelForm):
     class Meta:
         model = EspessuraVidro
-        fields = ["valor_mm"]
-
+        fields = ['valor_mm']
+        widgets = {
+            'valor_mm': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'})
+        }
 
 class VidroBaseForm(forms.ModelForm):
     class Meta:
         model = VidroBase
-        fields = ["codigo", "descricao", "preco", "espessura"]
+        fields = ["ativo", "codigo", "descricao", "preco", "espessura"]
         widgets = {
+            "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "codigo": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -296,7 +326,6 @@ class VidroBaseForm(forms.ModelForm):
                 attrs={"class": "form-select"}
             ),
         }
-
 
 class ClienteForm(forms.ModelForm):
     # Campo sobrescrito → dois rádios PF / PJ
@@ -409,7 +438,6 @@ class ClienteForm(forms.ModelForm):
                 raise ValidationError("CNPJ deve ter 14 dígitos.")
 
         return valor
-
 
 class UsuarioPerfilForm(forms.ModelForm):
     username = forms.CharField(
