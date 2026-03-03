@@ -1,0 +1,27 @@
+<span id="modalTitulo" hx-swap-oob="true">Excluir pedido</span>
+
+<div hx-swap-oob="true" id="modalDialogClass">
+  modal-dialog modal-dialog-centered
+</div>
+
+<div class="mb-4">
+  <p class="mb-1">Deseja excluir o pedido <strong>#{{ pedido.numero }}</strong>?</p>
+  <p class="text-muted small mb-0">
+    {{ pedido.data|date:"d/m/Y" }} &bull; {{ pedido.cliente.codigo }} – {{ pedido.cliente.nome }}
+  </p>
+  <div class="alert alert-warning mt-3 mb-0 small py-2">
+    Esta ação é irreversível. Todos os itens do pedido serão removidos.
+  </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+  <button class="btn btn-danger"
+          hx-post="{% url 'pedido_excluir' pedido.id %}"
+          hx-target="#conteudoTabela"
+          hx-swap="innerHTML"
+          hx-include="[name=csrfmiddlewaretoken]">
+    Excluir pedido
+  </button>
+</div>
+{% csrf_token %}

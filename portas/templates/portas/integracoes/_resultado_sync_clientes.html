@@ -1,0 +1,44 @@
+{% if resultado.status == "inativo" %}
+<div class="alert alert-warning py-2 mb-0">
+  Integração desativada. Ative-a nas configurações para sincronizar.
+</div>
+
+{% elif resultado.status == "erro_config" %}
+<div class="alert alert-warning py-2 mb-0">
+  <strong>Configuração incompleta:</strong> {{ resultado.msg }}
+</div>
+
+{% elif resultado.status == "erro_auth" %}
+<div class="alert alert-danger py-2 mb-0">
+  <strong>Erro de autenticação:</strong> {{ resultado.msg }}
+</div>
+
+{% elif resultado.status == "erro_api" %}
+<div class="alert alert-danger py-2 mb-0">
+  <strong>Erro na API do Bimer:</strong> {{ resultado.msg }}
+</div>
+
+{% elif resultado.importados == 0 and resultado.ignorados == 0 and not resultado.erros %}
+<div class="alert alert-info py-2 mb-0">
+  Nenhum cliente encontrado para importar. Verifique se o identificador da característica está correto e se há clientes vinculados a ela no Bimer.
+  {% if config.ultima_sincronizacao_clientes %}
+  <br><small class="text-muted">{{ config.ultima_sincronizacao_clientes|date:"d/m/Y H:i" }}</small>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="alert {% if resultado.erros %}alert-warning{% else %}alert-success{% endif %} py-2 mb-0">
+  <strong>{{ resultado.importados }}</strong> cliente{{ resultado.importados|pluralize:"s" }} importado{{ resultado.importados|pluralize:"s" }}.
+  <strong>{{ resultado.ignorados }}</strong> já existente{{ resultado.ignorados|pluralize:"s" }}.
+  {% if resultado.erros %}
+  <br><small>{{ resultado.erros|length }} erro{{ resultado.erros|length|pluralize:"s" }} — veja o log abaixo.</small>
+  {% endif %}
+  {% if config.ultima_sincronizacao_clientes %}
+  <br><small class="text-muted">{{ config.ultima_sincronizacao_clientes|date:"d/m/Y H:i" }}</small>
+  {% endif %}
+</div>
+{% if resultado.erros %}
+<pre class="mt-2 p-2 small bg-light border rounded" style="max-height:150px;overflow-y:auto;">{% for e in resultado.erros %}{{ e }}
+{% endfor %}</pre>
+{% endif %}
+{% endif %}

@@ -1,35 +1,67 @@
 <!-- Modal CRUD Global -->
 <div class="modal fade" id="modalCadastro" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-  
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <span id="modalTitulo">Cadastro</span>
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-  
-        <div class="modal-body" id="modalConteudo"></div>
-  
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" id="modalDialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <span id="modalTitulo">Cadastro</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
+
+      <div class="modal-body" id="modalConteudo"></div>
+
     </div>
   </div>
-  
-  <script>
-    // Fecha o modal quando a tabela/lista for atualizada
-    document.body.addEventListener("htmx:afterSwap", function(e){
-      if (e.target && e.target.id === "conteudoTabela") {
-        const modalEl = document.getElementById("modalCadastro");
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-      }
-    });
-  
-    // Limpa o conteúdo do modal ao fechar
-    document.getElementById("modalCadastro").addEventListener("hidden.bs.modal", function(){
-      const corpo = document.getElementById("modalConteudo");
-      if (corpo) corpo.innerHTML = "";
-    });
-  </script>
-  
+</div>
+
+<!-- ✅ PLACEHOLDER FIXO (OBRIGATÓRIO) -->
+<div id="modalDialogClass" class="d-none"></div>
+
+<script>
+  document.body.addEventListener("htmx:afterSwap", function(e){
+    if (e.target && e.target.id === "conteudoTabela") {
+      const modalEl = document.getElementById("modalCadastro");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    }
+  });
+
+  document.body.addEventListener("htmx:afterSwap", function(e){
+    if (!(e.target && e.target.id === "modalConteudo")) return;
+
+    const dialog = document.getElementById("modalDialog");
+    if (!dialog) return;
+
+    const el = document.getElementById("modalDialogClass");
+    const cls = (el ? el.textContent.trim() : "");
+
+    if (cls) {
+      dialog.className = cls;
+      el.textContent = "";
+    } else {
+      dialog.className = "modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable";
+    }
+  });
+
+  document.getElementById("modalCadastro").addEventListener("hidden.bs.modal", function(){
+    const corpo = document.getElementById("modalConteudo");
+    if (corpo) corpo.innerHTML = "";
+
+    const dialog = document.getElementById("modalDialog");
+    if (dialog) dialog.className = "modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable";
+
+    const titulo = document.getElementById("modalTitulo");
+    if (titulo) titulo.innerText = "Cadastro";
+
+    const el = document.getElementById("modalDialogClass");
+    if (el) el.textContent = "";
+  });
+
+  document.body.addEventListener("fecharModalCadastro", function () {
+    const modalEl = document.getElementById("modalCadastro");
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+  });
+</script>

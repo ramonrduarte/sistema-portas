@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Insumos para Produção{% endblock %}
+
+{% block extra_head %}
+<style>
+  @media print {
+    .d-print-none { display: none !important; }
+    body { font-size: 12px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+  <h4 class="mb-0">Insumos para Produção</h4>
+  <div class="d-flex gap-2">
+    {% if ids_param %}
+    <a href="{% url 'pedido_plano_corte' %}?ids={{ ids_param }}" class="btn btn-outline-primary btn-sm">
+      Plano de corte
+    </a>
+    {% endif %}
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">Imprimir</button>
+    <a href="{% url 'pedido_controle' %}" class="btn btn-sm btn-outline-secondary">← Controle</a>
+  </div>
+</div>
+
+{# Pedidos incluídos #}
+<div class="mb-3">
+  <strong>Pedidos:</strong>
+  {% for p in pedidos %}
+    <span class="badge bg-secondary me-1">#{{ p.numero }} – {{ p.cliente.nome }}</span>
+  {% empty %}
+    <span class="text-muted">Nenhum pedido selecionado.</span>
+  {% endfor %}
+</div>
+
+{% if not insumos %}
+<div class="alert alert-warning">Nenhum item encontrado nos pedidos selecionados.</div>
+{% else %}
+
+{# Total de portas #}
+<div class="alert alert-info py-2 mb-3">
+  <strong>Total de portas:</strong> {{ insumos.total_portas }} unidade{{ insumos.total_portas|pluralize:"s" }}
+</div>
+
+{# Perfis estruturais #}
+{% if insumos.perfis %}
+<h6 class="mt-3 border-bottom pb-1">Perfis Estruturais</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Perfil</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.perfis %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Perfis puxadores #}
+{% if insumos.pps %}
+<h6 class="mt-3 border-bottom pb-1">Perfis Puxadores</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Perfil Puxador</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.pps %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Puxadores simples #}
+{% if insumos.puxadores %}
+<h6 class="mt-3 border-bottom pb-1">Puxadores</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Puxador</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.puxadores %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Divisores #}
+{% if insumos.divisores %}
+<h6 class="mt-3 border-bottom pb-1">Divisores</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Divisor</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.divisores %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# Vidros #}
+{% if insumos.vidros %}
+<h6 class="mt-3 border-bottom pb-1">Vidros</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Vidro</th><th class="text-end">Área (m²)</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.vidros %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.area_m2|floatformat:3 }} m²</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% endif %}
+{% endblock %}

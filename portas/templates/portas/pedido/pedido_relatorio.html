@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de Produção{% endblock %}
+
+{% block extra_head %}
+<style>
+  @media print {
+    .d-print-none { display: none !important; }
+    body { font-size: 12px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+  <h4 class="mb-0">Relatório de Produção</h4>
+  <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">Imprimir</button>
+</div>
+
+{# Filtros #}
+<form method="get" class="card card-body mb-4 d-print-none">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label mb-1">Data início</label>
+      <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Data fim</label>
+      <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label mb-1">Cliente</label>
+      <select name="cliente_id" class="form-select form-select-sm">
+        <option value="">Todos os clientes</option>
+        {% for c in clientes %}
+        <option value="{{ c.pk }}" {% if cliente_id == c.pk|stringformat:"s" %}selected{% endif %}>
+          {{ c.codigo }} – {{ c.nome }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100">Filtrar</button>
+    </div>
+  </div>
+</form>
+
+{% if not pedidos %}
+<div class="alert alert-info">Nenhum pedido concluído encontrado com os filtros selecionados.</div>
+{% else %}
+
+{# Resumo geral #}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center border-success">
+      <div class="card-body py-2">
+        <div class="fs-4 fw-bold text-success">{{ pedidos|length }}</div>
+        <div class="small text-muted">Pedido{{ pedidos|length|pluralize:"s" }}</div>
+      </div>
+    </div>
+  </div>
+  {% if insumos.total_portas %}
+  <div class="col-md-3">
+    <div class="card text-center border-primary">
+      <div class="card-body py-2">
+        <div class="fs-4 fw-bold text-primary">{{ insumos.total_portas }}</div>
+        <div class="small text-muted">Porta{{ insumos.total_portas|pluralize:"s" }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# Lista de pedidos #}
+<h6 class="border-bottom pb-1 mt-2">Pedidos concluídos</h6>
+<table class="table table-sm table-bordered mb-4">
+  <thead class="table-light">
+    <tr>
+      <th>#</th>
+      <th>Data</th>
+      <th>Cliente</th>
+      <th>Usuário</th>
+      <th class="text-center">Itens</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in pedidos %}
+    <tr>
+      <td>{{ p.numero }}</td>
+      <td>{{ p.data|date:"d/m/Y" }}</td>
+      <td>{{ p.cliente.nome }}</td>
+      <td>{% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}–{% endif %}</td>
+      <td class="text-center">{{ p.nr_itens }}</td>
+      <td><a href="{% url 'pedido_detalhe' p.pk %}" class="btn btn-outline-secondary btn-sm py-0">Ver</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# Insumos totais #}
+<h5 class="border-bottom pb-1 mt-4">Insumos consolidados</h5>
+
+{% if insumos.perfis %}
+<h6 class="mt-3">Perfis Estruturais</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Perfil</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.perfis %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if insumos.pps %}
+<h6 class="mt-3">Perfis Puxadores</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Perfil Puxador</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.pps %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if insumos.puxadores %}
+<h6 class="mt-3">Puxadores</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Puxador</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.puxadores %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if insumos.divisores %}
+<h6 class="mt-3">Divisores</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Divisor</th><th class="text-end">Metros</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.divisores %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.metros|floatformat:2 }} m</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if insumos.vidros %}
+<h6 class="mt-3">Vidros</h6>
+<table class="table table-sm table-bordered mb-3">
+  <thead class="table-light">
+    <tr><th>Vidro</th><th class="text-end">Área (m²)</th></tr>
+  </thead>
+  <tbody>
+    {% for row in insumos.vidros %}
+    <tr>
+      <td>{{ row.obj }}</td>
+      <td class="text-end">{{ row.area_m2|floatformat:3 }} m²</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% endif %}
+{% endblock %}

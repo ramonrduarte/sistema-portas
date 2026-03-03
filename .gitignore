@@ -11,7 +11,17 @@ env/
 db.sqlite3
 
 # Configs sensíveis
+.env
 *.env
 
 # Arquivos do VSCode
 .vscode/
+
+# Mídia enviada pelos usuários (logos, uploads)
+media/
+
+# Arquivos do Claude Code
+.claude/
+
+# Logo local (não versionado)
+logo.jpg

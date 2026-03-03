@@ -4,21 +4,27 @@ from django.conf import settings
 from django.contrib.auth.models import User
 import re
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 # models.py
 class Acabamento(models.Model):
-    nome = models.CharField(max_length=100)
+    nome = models.CharField(max_length=100, unique=True)
 
+    def save(self, *args, **kwargs):
+        if self.nome:
+            self.nome = self.nome.strip().capitalize()
+        super().save(*args, **kwargs)
+        
     def __str__(self):
         return self.nome
-
     
 class EspessuraVidro(models.Model):
-    valor_mm = models.DecimalField(max_digits=4, decimal_places=1)
+    valor_mm = models.DecimalField(max_digits=4, decimal_places=1, unique=True)
 
     def __str__(self):
         return f"{self.valor_mm} mm"
+    
     
 class AtivoModel(models.Model):
     ativo = models.BooleanField(default=True)
@@ -30,12 +36,17 @@ class AtivoModel(models.Model):
     
 
 class ProdutoBase(AtivoModel):
-    codigo = models.CharField(max_length=6)
+    codigo = models.CharField(max_length=6, unique=True)
     descricao = models.CharField(max_length=255)
     preco = models.DecimalField(max_digits=10, decimal_places=2)
-    acabamento = models.ForeignKey("Acabamento", on_delete=models.PROTECT, null=True, blank=True)
+    acabamento = models.ForeignKey("Acabamento", on_delete=models.PROTECT)
     abatimento_mm = models.IntegerField(default=0, help_text="Abate em mm na metragem do cálculo")
     modelo = models.CharField(max_length=50, blank=True, null=True)
+    bimer_id = models.CharField(
+        max_length=20, blank=True,
+        verbose_name="ID interno Bimer",
+        help_text="Identificador interno obtido automaticamente via API Bimer",
+    )
 
     class Meta:
         abstract = True
@@ -64,8 +75,19 @@ class ProdutoBase(AtivoModel):
         return f"{self.codigo} - {self.descricao}"
 
 
-
 class Perfil(ProdutoBase):
+
+    FIXACAO_VIDRO_CHOICES = [
+        ("face", "Face"),
+        ("canto", "Canto"),
+    ]
+
+    fixacao_vidro = models.CharField(
+        max_length=10,
+        choices=FIXACAO_VIDRO_CHOICES,
+        default="canto",
+        verbose_name="Fixação do vidro",
+    )
 
     puxadores_compativeis = models.ManyToManyField(
         'PerfilPuxador', blank=True, related_name='perfis_estrutura_compativeis'
@@ -89,27 +111,11 @@ class Perfil(ProdutoBase):
 
 
 class PerfilPuxador(ProdutoBase):
-    FIXACAO_VIDRO_CHOICES = [
-        ("face", "Face"),
-        ("canto", "Canto"),
-    ]
-
-    fixacao_vidro = models.CharField(
-        max_length=10,
-        choices=FIXACAO_VIDRO_CHOICES,
-        default="canto",
-        verbose_name="Fixação do vidro",
-    )
+    pass
 
 
 class Puxador(ProdutoBase):
-    codigo = models.CharField(max_length=6, unique=True)
-    acabamento = models.ForeignKey(Acabamento, on_delete=models.PROTECT)
-    modelo = models.CharField(max_length=100, blank=True)
-
-    def __str__(self):
-        return self.descricao
-    
+    pass
 
 
 class Divisor(ProdutoBase):
@@ -120,18 +126,20 @@ class Divisor(ProdutoBase):
 
     encaixe = models.CharField(max_length=20, choices=ENCAIXE_CHOICES)
 
-    def __str__(self):
-        if self.acabamento:
-            return f"{self.codigo} - {self.descricao} ({self.acabamento.nome})"
-        return f"{self.codigo} - {self.descricao}"
-
 
 class VidroBase(models.Model):
     ativo = models.BooleanField(default=True)
-    codigo = models.CharField(max_length=6)
+    codigo = models.CharField(max_length=6, unique=True)
     descricao = models.CharField(max_length=200)
     preco = models.DecimalField(max_digits=10, decimal_places=2)
     espessura = models.ForeignKey(EspessuraVidro, on_delete=models.PROTECT)
+    chapa_largura_mm = models.IntegerField(default=3000, verbose_name="Largura da chapa (mm)")
+    chapa_altura_mm = models.IntegerField(default=2000, verbose_name="Altura da chapa (mm)")
+    bimer_id = models.CharField(
+        max_length=20, blank=True,
+        verbose_name="ID interno Bimer",
+        help_text="Identificador interno obtido automaticamente via API Bimer",
+    )
 
     def save(self, *args, **kwargs):
         if self.codigo:
@@ -143,13 +151,11 @@ class VidroBase(models.Model):
 
 
     def __str__(self):
-        return f"{self.descricao} - {self.espessura}"
-
+        return f"{self.codigo} - {self.descricao} ({self.espessura})"
 
 
 class ExtraServico(ProdutoBase):
     pass
-
 
 
 class PessoaBase(AtivoModel):
@@ -164,8 +170,6 @@ class PessoaBase(AtivoModel):
     def __str__(self):
         return self.nome
 
-
-# portas/models.py
 
 class Cliente(PessoaBase):
     TIPO_PESSOA_CHOICES = [
@@ -193,6 +197,11 @@ class Cliente(PessoaBase):
         null=True,
         verbose_name="CPF/CNPJ",
     )
+    bimer_id = models.CharField(
+        max_length=20, blank=True,
+        verbose_name="ID interno Bimer",
+        help_text="Identificador obtido automaticamente via sincronização com o Bimer",
+    )
 
     class Meta:
         verbose_name = "Cliente"
@@ -206,7 +215,7 @@ class Cliente(PessoaBase):
 
         # --- Nome sempre maiúsculo ---
         if self.nome:
-            self.nome = self.nome.upper()
+            self.nome = self.nome.capitalize()
 
         # --- CPF/CNPJ: guarda só números no banco ---
         if self.cpf_cnpj:
@@ -233,8 +242,6 @@ class Cliente(PessoaBase):
         else:
             # Se estiver estranho, devolve como está
             return self.cpf_cnpj
-
-
 
 
 class Orcamento(models.Model):
@@ -299,6 +306,24 @@ class UsuarioPerfil(AtivoModel):
         default="COMUM",
     )
 
+    # ── Permissões granulares ─────────────────────────────────────────
+    # Pedidos
+    perm_pedidos_ver     = models.BooleanField(default=True,  verbose_name="Ver pedidos")
+    perm_pedidos_criar   = models.BooleanField(default=True,  verbose_name="Criar pedidos")
+    perm_pedidos_editar  = models.BooleanField(default=True,  verbose_name="Editar pedidos")
+    perm_pedidos_excluir = models.BooleanField(default=False, verbose_name="Excluir pedidos")
+    # Produção
+    perm_producao_ver            = models.BooleanField(default=True,  verbose_name="Ver produção")
+    perm_producao_alterar_status = models.BooleanField(default=False, verbose_name="Alterar status")
+    # Clientes
+    perm_clientes_ver     = models.BooleanField(default=True,  verbose_name="Ver clientes")
+    perm_clientes_editar  = models.BooleanField(default=True,  verbose_name="Criar/editar clientes")
+    perm_clientes_excluir = models.BooleanField(default=False, verbose_name="Excluir clientes")
+    # Cadastros
+    perm_cadastros_ver     = models.BooleanField(default=False, verbose_name="Ver cadastros")
+    perm_cadastros_editar  = models.BooleanField(default=False, verbose_name="Criar/editar cadastros")
+    perm_cadastros_excluir = models.BooleanField(default=False, verbose_name="Excluir cadastros")
+
     def save(self, *args, **kwargs):
         if self.codigo:
             num = re.sub(r"\D", "", str(self.codigo))
@@ -307,3 +332,272 @@ class UsuarioPerfil(AtivoModel):
 
     def __str__(self):
         return f"{self.codigo} - {self.user.get_full_name() or self.user.username}"
+
+
+class Pedido(models.Model):
+    STATUS_CHOICES = [
+        ("aberto", "Aberto"),
+        ("cancelado", "Cancelado"),
+        ("producao", "Em produção"),
+        ("concluido", "Concluído"),
+    ]
+
+    data = models.DateField(auto_now_add=True)
+    cliente = models.ForeignKey(
+        "Cliente",
+        on_delete=models.PROTECT,
+        related_name="pedidos"
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pedidos",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="aberto"
+    )
+
+    def __str__(self):
+        return f"Pedido #{self.id}"
+
+    @property
+    def numero(self):
+        return f"{self.id:06d}"
+
+
+class PedidoItem(models.Model):
+    pedido = models.ForeignKey(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name="itens"
+    )
+
+    # Medidas
+    largura_mm = models.PositiveIntegerField()
+    altura_mm = models.PositiveIntegerField()
+    quantidade = models.PositiveIntegerField(default=1)
+
+    # Estrutura
+    acabamento = models.ForeignKey("Acabamento", on_delete=models.PROTECT)
+    perfil = models.ForeignKey("Perfil", on_delete=models.PROTECT)
+
+    # Opcionais (regras que você descreveu)
+    perfil_puxador = models.ForeignKey(
+        "PerfilPuxador",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+    qtd_perfil_puxador = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    puxador = models.ForeignKey(
+        "Puxador",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+    qtd_puxador = models.PositiveSmallIntegerField(null=True, blank=True)
+    puxador_tamanho_mm = models.PositiveIntegerField(null=True, blank=True)
+
+    vidro = models.ForeignKey(
+        "VidroBase",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+
+    divisor = models.ForeignKey(
+        "Divisor",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+    qtd_divisor = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    # Adicionais livres (até 4 itens avulsos por item do pedido)
+    adicional_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional_obs   = models.CharField(max_length=255, blank=True, default="")
+    adicional2_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional2_obs   = models.CharField(max_length=255, blank=True, default="")
+    adicional3_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional3_obs   = models.CharField(max_length=255, blank=True, default="")
+    adicional4_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional4_obs   = models.CharField(max_length=255, blank=True, default="")
+
+    # Valores
+    valor_unitario = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+    valor_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    @property
+    def adicionais_list(self):
+        """Retorna lista de (valor, obs) para todos os adicionais preenchidos."""
+        result = []
+        for val, obs in [
+            (self.adicional_valor,  self.adicional_obs),
+            (self.adicional2_valor, self.adicional2_obs),
+            (self.adicional3_valor, self.adicional3_obs),
+            (self.adicional4_valor, self.adicional4_obs),
+        ]:
+            if val:
+                result.append((val, obs))
+        return result
+
+    @property
+    def descricao(self):
+        """Porta modelo1/modelo2 Acabamento LxA Vidro"""
+        modelos = [m for m in [
+            self.perfil.modelo,
+            self.perfil_puxador.modelo if self.perfil_puxador_id else None,
+            self.puxador.modelo if self.puxador_id else None,
+            self.divisor.modelo if self.divisor_id else None,
+        ] if m]
+        desc = "Porta " + "/".join(modelos)
+        desc += " " + self.acabamento.nome
+        desc += " " + f"{self.largura_mm}×{self.altura_mm}"
+        if self.vidro_id:
+            desc += " " + self.vidro.descricao
+        return desc
+
+    def __str__(self):
+        return f"Item {self.id} do Pedido {self.pedido.id}"
+
+
+# ── Integração Bimer ──────────────────────────────────────────────────────────
+
+class BimerConfig(models.Model):
+    """
+    Configuração singleton para integração com a API do Bimer (Alterdata).
+    Apenas um registro (pk=1) é permitido.
+    Credenciais sensíveis nunca são exibidas no template.
+    """
+    base_url  = models.URLField(verbose_name="URL base da API", blank=True)
+    username  = models.CharField(max_length=255, blank=True, verbose_name="Usuário")
+    _password = models.CharField(max_length=255, blank=True, db_column="password",
+                                 verbose_name="Senha")
+
+    # Tokens gerenciados automaticamente — nunca exibir no template
+    access_token     = models.TextField(blank=True)
+    refresh_token    = models.TextField(blank=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Agendamento automático
+    sync_horarios    = models.CharField(
+        max_length=100, default="7,14",
+        verbose_name="Horários",
+        help_text="Horas do dia separadas por vírgula (ex: 7,14 = 07:00 e 14:00)",
+    )
+    sync_dias_semana = models.CharField(
+        max_length=100, default="mon,tue,wed,thu,fri,sat,sun",
+        verbose_name="Dias da semana",
+        help_text="Abreviações separadas por vírgula: mon tue wed thu fri sat sun",
+    )
+
+    # Parâmetros de clientes
+    identificador_caracteristica_clientes = models.CharField(
+        max_length=50, blank=True,
+        verbose_name="Identificador da característica (clientes)",
+        help_text="Filtra pessoas no Bimer por esta característica para importar como clientes",
+    )
+    ultima_sincronizacao_clientes = models.DateTimeField(null=True, blank=True)
+    log_sync_clientes             = models.TextField(blank=True)
+
+    # Parâmetros de preço
+    identificador_empresa      = models.CharField(
+        max_length=50, blank=True,
+        verbose_name="Identificador da empresa",
+        help_text="Código da empresa no Bimer (parâmetro identificadorEmpresa)",
+    )
+    identificador_tabela_precos = models.CharField(
+        max_length=50, blank=True,
+        verbose_name="Identificador da tabela de preços",
+        help_text="Código da tabela de preços no Bimer (parâmetro identificadorTabelaPrecos)",
+    )
+
+    # Status
+    ativo                = models.BooleanField(default=False, verbose_name="Integração ativa")
+    ultima_sincronizacao = models.DateTimeField(null=True, blank=True)
+    log_sync             = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Configuração Bimer"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # garante singleton
+        super().save(*args, **kwargs)
+        # Reagenda o job no APScheduler com os novos horários/dias
+        from portas import scheduler as _sched
+        _sched.reagendar(self.sync_horarios, self.sync_dias_semana)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def password(self):
+        return self._password
+
+    @password.setter
+    def password(self, value):
+        self._password = value
+
+    def senha_configurada(self):
+        return bool(self._password)
+
+    def token_valido(self):
+        if not self.access_token:
+            return False
+        if self.token_expires_at:
+            from django.utils import timezone
+            return self.token_expires_at > timezone.now()
+        return True
+
+    def __str__(self):
+        return "Configuração Bimer"
+
+
+# ── Configuração da Empresa ────────────────────────────────────────────────────
+
+class ConfiguracaoEmpresa(models.Model):
+    """
+    Configuração singleton com nome e logo da empresa.
+    Apenas um registro (pk=1) é permitido.
+    """
+    nome_empresa = models.CharField(
+        max_length=100,
+        default="Sistema Portas",
+        verbose_name="Nome da empresa",
+    )
+    logo = models.ImageField(
+        upload_to="empresa/",
+        blank=True,
+        null=True,
+        verbose_name="Logo",
+    )
+
+    class Meta:
+        verbose_name = "Configuração da Empresa"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1, defaults={"nome_empresa": "Sistema Portas"})
+        return obj
+
+    def __str__(self):
+        return self.nome_empresa

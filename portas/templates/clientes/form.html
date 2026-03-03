@@ -1,6 +1,26 @@
 {% load crispy_forms_tags %}
 
-<form method="post" id="cliente-form" action="{{ request.path }}">
+<span id="modalTitulo" hx-swap-oob="true">
+  {% if object %}Editar Cliente{% else %}Novo Cliente{% endif %}
+</span>
+
+<form
+  hx-post="{% if object %}{% url 'clientes_editar' object.pk %}{% else %}{% url 'clientes_novo' %}{% endif %}"
+  hx-target="#conteudoTabela"
+  hx-swap="innerHTML"
+>
   {% csrf_token %}
-  {% crispy form %}
+
+  <div class="py-2">
+    {% crispy form %}
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mt-3">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      Cancelar
+    </button>
+    <button type="submit" class="btn btn-primary">
+      Salvar
+    </button>
+  </div>
 </form>

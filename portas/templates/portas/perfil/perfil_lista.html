@@ -1,49 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Perfis</h3>
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Perfis</h4>
-
-    <button class="btn btn-primary"
-            hx-get="{% url 'cadastrar_perfil' %}"
-            hx-target="#modalConteudo"
-            hx-swap="innerHTML"
-            data-bs-toggle="modal"
-            data-bs-target="#modalCadastro">
-      + Novo perfil
-    </button>
-  </div>
-
-  <div id="tabelaPerfis">
-    {% include "portas/perfil/perfil_tabela.html" %}
-  </div>
-
+  <button class="btn btn-primary"
+          hx-get="{% url 'cadastrar_perfil' %}"
+          hx-target="#modalConteudo"
+          data-bs-toggle="modal"
+          data-bs-target="#modalCadastro">
+    + Cadastrar perfil
+  </button>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="modalCadastro" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content" id="modalConteudo">
-      <!-- Conteúdo carregado via HTMX -->
-    </div>
-  </div>
+<div id="conteudoTabela">
+  {% include "portas/perfil/perfil_tabela.html" %}
 </div>
-
-<script>
-  // Fecha o modal quando a tabela for atualizada por HTMX
-  document.body.addEventListener("htmx:afterSwap", function(e){
-    if (e.target && e.target.id === "tabelaPerfis") {
-      const modalEl = document.getElementById("modalCadastro");
-      const modal = bootstrap.Modal.getInstance(modalEl);
-      if (modal) modal.hide();
-    }
-  });
-
-  // Limpa conteúdo ao fechar
-  document.getElementById("modalCadastro").addEventListener("hidden.bs.modal", function(){
-    const corpo = document.getElementById("modalConteudo");
-    if (corpo) corpo.innerHTML = "";
-  });
-</script>
 {% endblock %}

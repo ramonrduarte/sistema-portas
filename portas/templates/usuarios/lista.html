@@ -1,167 +1,21 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
 
 {% block content %}
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Usuários</h3>
+
     <button class="btn btn-primary"
+            hx-get="{% url 'usuarios_novo' %}"
+            hx-target="#modalConteudo"
             data-bs-toggle="modal"
-            data-bs-target="#usuarioModal"
-            data-url="{% url 'usuarios_novo' %}">
+            data-bs-target="#modalCadastro">
       + Novo usuário
     </button>
   </div>
 
-  <table class="table table-hover table-sm align-middle">
-    <thead>
-      <tr>
-        <th>Cód.</th>
-        <th>Nome</th>
-        <th>Usuário</th>
-        <th>Tipo</th>
-        <th class="text-end">Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for u in usuarios %}
-      <tr class="{% if not u.ativo %}table-secondary text-muted{% endif %}">
-        <td>{{ u.codigo }}</td>
-        <td>{{ u.user.first_name|default:u.user.username }}</td>
-        <td>{{ u.user.username }}</td>
-        <td>{{ u.get_tipo_usuario_display }}</td>
-        <td class="text-end">
-          <button class="btn btn-sm btn-outline-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#usuarioModal"
-                  data-url="{% url 'usuarios_editar' u.pk %}">
-            Editar
-          </button>
-
-          {% if perms.auth.delete_user %}
-          <button class="btn btn-sm btn-outline-danger ms-1"
-                  data-bs-toggle="modal"
-                  data-bs-target="#confirmUsuarioDeleteModal"
-                  data-url="{% url 'usuarios_excluir' u.pk %}"
-                  data-nome="{{ u.user.username }}">
-            Excluir
-          </button>
-          {% endif %}
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="5" class="text-center text-muted">Nenhum usuário cadastrado.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-{# Modal de cadastro/edição #}
-<div class="modal fade" id="usuarioModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Usuário</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body" id="usuarioModalBody">
-        <!-- Form será carregado aqui -->
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-        <button type="submit" class="btn btn-primary" form="usuario-form">Salvar</button>
-      </div>
-    </div>
+  <div id="conteudoTabela">
+    {% include "usuarios/_tabela.html" %}
   </div>
 </div>
-
-{# Modal confirmação exclusão #}
-<div class="modal fade" id="confirmUsuarioDeleteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="post" id="usuario-delete-form">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title">Confirmar exclusão</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          Tem certeza que deseja excluir o usuário
-          <strong id="usuario-delete-nome"></strong>?
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger">Excluir</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  // ---------- Modal de criar/editar usuário ----------
-  const usuarioModal = document.getElementById('usuarioModal');
-  const usuarioModalBody = document.getElementById('usuarioModalBody');
-
-  usuarioModal.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const url = button.getAttribute('data-url');
-
-    fetch(url)
-      .then(response => response.text())
-      .then(html => {
-        usuarioModalBody.innerHTML = html;
-      });
-  });
-
-  document.addEventListener('submit', function (e) {
-    const form = e.target;
-    if (form.id !== 'usuario-form') return;
-
-    e.preventDefault();
-
-    const url = form.getAttribute('action') || window.location.href;
-    const formData = new FormData(form);
-
-    fetch(url, {
-      method: 'POST',
-      body: formData,
-      headers: {'X-Requested-With': 'XMLHttpRequest'}
-    })
-    .then(async (response) => {
-      const contentType = response.headers.get('Content-Type') || '';
-      if (contentType.indexOf('application/json') !== -1) {
-        await response.json();
-        const bsModal = bootstrap.Modal.getInstance(usuarioModal);
-        bsModal.hide();
-        window.location.reload();
-      } else {
-        const html = await response.text();
-        usuarioModalBody.innerHTML = html;
-      }
-    })
-    .catch((error) => {
-      console.error('Erro ao salvar usuário:', error);
-      alert('Ocorreu um erro ao salvar o usuário.');
-    });
-  });
-
-  // ---------- Modal de exclusão ----------
-  const confirmUsuarioDeleteModal = document.getElementById('confirmUsuarioDeleteModal');
-  const usuarioDeleteForm = document.getElementById('usuario-delete-form');
-  const usuarioDeleteNome = document.getElementById('usuario-delete-nome');
-
-  confirmUsuarioDeleteModal.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const url = button.getAttribute('data-url');
-    const nome = button.getAttribute('data-nome');
-
-    usuarioDeleteForm.action = url;
-    usuarioDeleteNome.textContent = nome || '';
-  });
-</script>
 {% endblock %}

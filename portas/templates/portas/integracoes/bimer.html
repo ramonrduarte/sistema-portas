@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Integração Bimer{% endblock %}
+
+{% block extra_head %}
+<style>
+  .check-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .check-grid label {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border: 1px solid #dee2e6; border-radius: 6px;
+    cursor: pointer; font-size: 0.85rem; user-select: none;
+  }
+  .check-grid input[type=checkbox]:checked + span {
+    font-weight: 600;
+  }
+  .check-grid label:has(input:checked) {
+    background: #0d6efd22; border-color: #0d6efd;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">Integração Bimer</h4>
+</div>
+
+{% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endif %}
+
+<div class="row g-4">
+
+  {# ── Coluna esquerda: Credenciais + Agendamento ─────────────────────────── #}
+  <div class="col-lg-6">
+
+    {# Credenciais #}
+    <div class="card mb-3">
+      <div class="card-header"><strong>Credenciais da API</strong></div>
+      <div class="card-body">
+        <form method="post" id="form-bimer">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.base_url.id_for_label }}">{{ form.base_url.label }}</label>
+            {{ form.base_url }}
+            {% if form.base_url.errors %}<div class="text-danger small mt-1">{{ form.base_url.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+            {{ form.username }}
+            {% if form.username.errors %}<div class="text-danger small mt-1">{{ form.username.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.password.id_for_label }}">
+              {{ form.password.label }}
+              {% if config.senha_configurada %}<span class="badge bg-secondary ms-1" style="font-size:10px">configurada</span>{% endif %}
+            </label>
+            {{ form.password }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.identificador_empresa.id_for_label }}">
+              {{ form.identificador_empresa.label }}
+            </label>
+            {{ form.identificador_empresa }}
+            <div class="form-text">{{ form.identificador_empresa.field.help_text }}</div>
+            {% if form.identificador_empresa.errors %}<div class="text-danger small mt-1">{{ form.identificador_empresa.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.identificador_tabela_precos.id_for_label }}">
+              {{ form.identificador_tabela_precos.label }}
+            </label>
+            {{ form.identificador_tabela_precos }}
+            <div class="form-text">{{ form.identificador_tabela_precos.field.help_text }}</div>
+            {% if form.identificador_tabela_precos.errors %}<div class="text-danger small mt-1">{{ form.identificador_tabela_precos.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.identificador_caracteristica_clientes.id_for_label }}">
+              {{ form.identificador_caracteristica_clientes.label }}
+            </label>
+            {{ form.identificador_caracteristica_clientes }}
+            <div class="form-text">{{ form.identificador_caracteristica_clientes.field.help_text }}</div>
+            {% if form.identificador_caracteristica_clientes.errors %}<div class="text-danger small mt-1">{{ form.identificador_caracteristica_clientes.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3 form-check">
+            {{ form.ativo }}
+            <label class="form-check-label" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <button type="button" class="btn btn-outline-secondary"
+                    hx-post="{% url 'bimer_testar_conexao' %}"
+                    hx-target="#status-conexao"
+                    hx-swap="innerHTML"
+                    hx-indicator="#spinner-testar">
+              Testar conexão
+              <span id="spinner-testar" class="htmx-indicator spinner-border spinner-border-sm ms-1"></span>
+            </button>
+          </div>
+        </form>
+        <div id="status-conexao" class="mt-3"></div>
+      </div>
+    </div>
+
+    {# Agendamento #}
+    <div class="card">
+      <div class="card-header"><strong>Agendamento automático</strong></div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.sync_dias.label }}</label>
+            <div class="check-grid">
+              {% for value, label in form.sync_dias.field.choices %}
+              <label>
+                <input type="checkbox" name="sync_dias" value="{{ value }}"
+                  {% if value in form.sync_dias.initial or value in form.sync_dias.value %}checked{% endif %}>
+                <span>{{ label }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.sync_horas.label }}</label>
+            <div class="check-grid">
+              {% for value, label in form.sync_horas.field.choices %}
+              <label>
+                <input type="checkbox" name="sync_horas" value="{{ value }}"
+                  {% if value in form.sync_horas.initial or value in form.sync_horas.value %}checked{% endif %}>
+                <span>{{ label }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <div class="form-text">Selecione os horários em que a sincronização deve rodar automaticamente.</div>
+          </div>
+
+          <button type="submit" class="btn btn-outline-primary btn-sm">Salvar agendamento</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Coluna direita: Status e Sincronização ─────────────────────────────── #}
+  <div class="col-lg-6">
+
+    {# Status #}
+    <div class="card mb-3">
+      <div class="card-header"><strong>Status</strong></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Integração</dt>
+          <dd class="col-sm-7">
+            {% if config.ativo %}<span class="badge bg-success">Ativa</span>
+            {% else %}<span class="badge bg-secondary">Inativa</span>{% endif %}
+          </dd>
+
+          <dt class="col-sm-5">Token</dt>
+          <dd class="col-sm-7">
+            {% if config.token_valido %}
+              <span class="badge bg-success">Válido</span>
+            {% elif config.access_token %}
+              <span class="badge bg-warning text-dark">Expirado</span>
+            {% else %}
+              <span class="badge bg-secondary">Não obtido</span>
+            {% endif %}
+            {% if config.token_expires_at %}
+            <small class="text-muted d-block">Expira: {{ config.token_expires_at|date:"d/m/Y H:i" }}</small>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-5">Última sync</dt>
+          <dd class="col-sm-7">
+            {% if config.ultima_sincronizacao %}{{ config.ultima_sincronizacao|date:"d/m/Y H:i" }}
+            {% else %}<span class="text-muted">Nunca</span>{% endif %}
+          </dd>
+
+          <dt class="col-sm-5">Próxima sync</dt>
+          <dd class="col-sm-7">
+            <small class="text-muted">
+              {% if config.sync_horarios %}{{ config.sync_horarios }}h{% endif %}
+              {% if config.sync_dias_semana %} — {{ config.sync_dias_semana }}{% endif %}
+            </small>
+          </dd>
+        </dl>
+      </div>
+    </div>
+
+    {# Sync manual #}
+    <div class="card mb-3">
+      <div class="card-header"><strong>Sincronização de Preços</strong></div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Busca os preços no Bimer e atualiza todos os produtos ativos
+          (Perfis, Puxadores, Divisores e Vidros).
+        </p>
+        <button type="button"
+                class="btn btn-outline-primary"
+                hx-post="{% url 'bimer_sincronizar' %}"
+                hx-target="#resultado-sync"
+                hx-swap="innerHTML"
+                hx-indicator="#spinner-sync"
+                {% if not config.ativo %}disabled title="Ative a integração primeiro"{% endif %}>
+          Sincronizar agora
+          <span id="spinner-sync" class="htmx-indicator spinner-border spinner-border-sm ms-1"></span>
+        </button>
+        <div id="resultado-sync" class="mt-3"></div>
+      </div>
+    </div>
+
+    {# Log preços #}
+    {% if config.log_sync %}
+    <div class="card mb-3">
+      <div class="card-header"><strong>Log — Última sincronização de preços</strong></div>
+      <div class="card-body p-0">
+        <pre class="p-3 mb-0 small bg-light rounded-bottom" style="max-height:200px;overflow-y:auto;">{{ config.log_sync }}</pre>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Sync clientes #}
+    <div class="card mb-3">
+      <div class="card-header"><strong>Sincronização de Clientes</strong></div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Importa clientes do Bimer pela característica configurada.
+          Clientes já existentes (pelo ID do Bimer) são ignorados — apenas novos são cadastrados.
+        </p>
+        {% if config.ultima_sincronizacao_clientes %}
+        <p class="small text-muted mb-2">Última sync: {{ config.ultima_sincronizacao_clientes|date:"d/m/Y H:i" }}</p>
+        {% endif %}
+        <button type="button"
+                class="btn btn-outline-primary"
+                hx-post="{% url 'bimer_sincronizar_clientes' %}"
+                hx-target="#resultado-sync-clientes"
+                hx-swap="innerHTML"
+                hx-indicator="#spinner-sync-clientes"
+                {% if not config.ativo %}disabled title="Ative a integração primeiro"{% endif %}
+                {% if not config.identificador_caracteristica_clientes %}disabled title="Configure o identificador da característica de clientes"{% endif %}>
+          Importar clientes agora
+          <span id="spinner-sync-clientes" class="htmx-indicator spinner-border spinner-border-sm ms-1"></span>
+        </button>
+        <div id="resultado-sync-clientes" class="mt-3"></div>
+      </div>
+    </div>
+
+    {# Log clientes #}
+    {% if config.log_sync_clientes %}
+    <div class="card">
+      <div class="card-header"><strong>Log — Última sincronização de clientes</strong></div>
+      <div class="card-body p-0">
+        <pre class="p-3 mb-0 small bg-light rounded-bottom" style="max-height:200px;overflow-y:auto;">{{ config.log_sync_clientes }}</pre>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

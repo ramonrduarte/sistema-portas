@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login — {{ config_empresa.nome_empresa }}</title>
+
+  {# Aplica tema salvo antes do CSS para evitar flash #}
+  <script>(function(){try{document.documentElement.setAttribute('data-bs-theme',localStorage.getItem('theme')||'light');}catch(e){}})();</script>
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+    crossorigin="anonymous"
+  >
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 48px rgba(0,0,0,.18);
+    }
+
+    /* Cabeçalho sempre escuro — elemento de marca */
+    .login-header {
+      background: #1a1f2e;
+      padding: 2.2rem 2rem 2.8rem;
+      text-align: center;
+      position: relative;
+    }
+    /* Onda suave na base do header */
+    .login-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 28px;
+      background: var(--bs-body-bg);
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    }
+
+    .login-header img {
+      max-height: 72px;
+      max-width: 210px;
+      object-fit: contain;
+    }
+
+    .login-body {
+      padding: 1.6rem 2rem 2rem;
+    }
+
+    /* Botão de tema — posicionado no canto superior direito */
+    #theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 9;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Botão de alternância de tema -->
+  <button id="theme-toggle" class="btn btn-outline-secondary btn-sm" title="Alternar tema">
+    <i id="theme-icon" class="bi bi-moon-fill"></i>
+  </button>
+
+  <div class="login-card border">
+
+    <!-- Cabeçalho com logo -->
+    <div class="login-header">
+      {% if config_empresa.logo %}
+        <img src="{{ config_empresa.logo.url }}" alt="{{ config_empresa.nome_empresa }}">
+      {% else %}
+        <h3 class="text-white fw-bold mb-0">{{ config_empresa.nome_empresa }}</h3>
+      {% endif %}
+      <p class="text-white-50 small mt-2 mb-0" style="letter-spacing:.6px;">Sistema de Gestão</p>
+    </div>
+
+    <!-- Corpo do formulário -->
+    <div class="login-body">
+
+      {% if form.errors %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-3" role="alert">
+        <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+        <span>Usuário ou senha inválidos.</span>
+      </div>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="mb-3">
+          <label for="id_username" class="form-label fw-semibold small">Usuário</label>
+          <input
+            type="text"
+            name="username"
+            id="id_username"
+            class="form-control"
+            autofocus
+            autocomplete="username"
+            placeholder="Nome de usuário"
+          >
+        </div>
+
+        <div class="mb-4">
+          <label for="id_password" class="form-label fw-semibold small">Senha</label>
+          <input
+            type="password"
+            name="password"
+            id="id_password"
+            class="form-control"
+            autocomplete="current-password"
+            placeholder="••••••••"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 fw-semibold">
+          Entrar
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <p class="text-body-tertiary small mt-3">{{ config_empresa.nome_empresa }}</p>
+
+  <script>
+    (function () {
+      var html = document.documentElement;
+      var btn  = document.getElementById('theme-toggle');
+      var icon = document.getElementById('theme-icon');
+
+      function syncIcon() {
+        var dark = html.getAttribute('data-bs-theme') === 'dark';
+        icon.className = dark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+      }
+
+      syncIcon();
+
+      btn.addEventListener('click', function () {
+        var next = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-bs-theme', next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        syncIcon();
+      });
+    })();
+  </script>
+
+</body>
+</html>

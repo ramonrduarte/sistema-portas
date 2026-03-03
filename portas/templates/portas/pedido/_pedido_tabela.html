@@ -1,0 +1,99 @@
+<table class="table table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>Data</th>
+      <th>Número</th>
+      <th>Cliente</th>
+      <th>Usuário</th>
+      <th>Status</th>
+      <th style="width:180px;">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in pedidos %}
+      <tr>
+        <td>{{ p.data|date:"d/m/Y" }}</td>
+        <td>{{ p.numero }}</td>
+        <td>{{ p.cliente.codigo }} – {{ p.cliente.nome }}</td>
+        <td class="text-muted small">{% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}</td>
+        <td>
+          <span class="badge {% if p.status == 'aberto' %}bg-success{% elif p.status == 'producao' %}bg-warning text-dark{% elif p.status == 'concluido' %}bg-primary{% else %}bg-secondary{% endif %}">
+            {{ p.get_status_display }}
+          </span>
+        </td>
+        <td>
+          <div class="d-flex gap-1">
+            <a href="{% url 'pedido_detalhe' p.id %}"
+               class="btn btn-sm btn-outline-primary">Ver</a>
+
+            <a href="{% url 'pedido_imprimir' p.id %}"
+               target="_blank"
+               class="btn btn-sm btn-outline-secondary"
+               title="Visualizar impressão">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
+                <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+              </svg>
+            </a>
+
+            <a href="{% url 'pedido_imprimir' p.id %}?auto=1"
+               target="_blank"
+               class="btn btn-sm btn-outline-secondary"
+               title="Imprimir">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+              </svg>
+            </a>
+
+            {% if perms_usuario.producao.alterar_status and p.status != 'aberto' and p.status != 'cancelado' %}
+            <button class="btn btn-sm btn-outline-secondary"
+                    hx-get="{% url 'pedido_reabrir' p.id %}"
+                    hx-target="#modalConteudo"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro"
+                    title="Reabrir pedido">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            {% endif %}
+
+            {% if perms_usuario.pedidos.excluir %}
+              {% if p.status == 'aberto' %}
+              <button class="btn btn-sm btn-outline-danger"
+                      hx-get="{% url 'pedido_excluir' p.id %}"
+                      hx-target="#modalConteudo"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalCadastro"
+                      title="Excluir">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                  <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                </svg>
+              </button>
+              {% endif %}
+              {% if p.status != 'cancelado' %}
+              <button class="btn btn-sm btn-outline-warning"
+                      hx-get="{% url 'pedido_cancelar' p.id %}"
+                      hx-target="#modalConteudo"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalCadastro"
+                      title="Cancelar pedido">
+                <i class="bi bi-x-circle"></i>
+              </button>
+              {% endif %}
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="6" class="text-center text-muted py-4">
+          Nenhum pedido encontrado.
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

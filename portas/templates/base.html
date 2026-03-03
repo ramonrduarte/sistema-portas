@@ -3,65 +3,264 @@
 <html lang="pt-br">
 <head>
     <meta charset="utf-8">
-    <title>{% block title %}Sistema Portas{% endblock %}</title>
+    <title>{% block title %}{{ config_empresa.nome_empresa }}{% endblock %}</title>
 
-    <!-- Bootstrap CSS (CDN) -->
+    {# Aplica o tema salvo antes de qualquer CSS para evitar flash #}
+    <script>(function(){try{document.documentElement.setAttribute('data-bs-theme',localStorage.getItem('theme')||'light');}catch(e){}})();</script>
+
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     >
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
 
     <style>
-      /* Deixa as opções PF / PJ lado a lado no campo tipo_pessoa */
-      #div_id_tipo_pessoa .form-check {
-        display: inline-block;
-        margin-right: 1.5rem;
+      body {
+        padding-top: 56px; /* compensate fixed top navbar */
       }
-    
-      /* ===== ITENS INATIVOS (clientes, perfis, puxadores, etc) ===== */
+
+      /* ── Sidebar ───────────────────────────────────────────────── */
+      #sidebar {
+        width: 260px;
+      }
+      #sidebar .offcanvas-body {
+        padding: 0;
+      }
+      #sidebar .nav-link {
+        padding: .45rem 1.25rem;
+        border-radius: 0;
+        color: rgba(255,255,255,.8);
+        font-size: .9rem;
+      }
+      #sidebar .nav-link:hover,
+      #sidebar .nav-link.active {
+        background-color: rgba(255,255,255,.1);
+        color: #fff;
+      }
+      #sidebar .nav-section {
+        padding: .6rem 1.25rem .2rem;
+        font-size: .7rem;
+        font-weight: 600;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.4);
+      }
+      #sidebar hr {
+        border-color: rgba(255,255,255,.1);
+        margin: .4rem 0;
+      }
+
+      /* ── Content ───────────────────────────────────────────────── */
       .item-inativo td {
         opacity: 0.45;
         filter: grayscale(100%);
       }
-    
-      /* opcional: evita hover “forte” em item inativo */
       tr.item-inativo:hover td {
         background-color: inherit !important;
       }
+      #div_id_tipo_pessoa .form-check {
+        display: inline-block;
+        margin-right: 1.5rem;
+      }
     </style>
-    
 
     {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="#">Sistema Portas</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+<!-- ── Top Navbar ─────────────────────────────────────────────────────────── -->
+<nav class="navbar navbar-dark bg-dark fixed-top px-3">
+  <div class="d-flex align-items-center gap-2 flex-grow-1">
+    <!-- Hamburger -->
+    <button class="navbar-toggler border-0 p-1"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#sidebar"
+            aria-controls="sidebar">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="/clientes/">Clientes</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/perfis/">Perfis</a>
-        </li>
-        <!-- aqui você vai adicionando outros menus depois -->
-      </ul>
-    </div>
+
+    <!-- Logo + nome -->
+    <a class="navbar-brand mb-0 d-flex align-items-center gap-2" href="{% url 'pedidos_lista' %}">
+      {% if config_empresa.logo %}
+        <img src="{{ config_empresa.logo.url }}"
+             alt="{{ config_empresa.nome_empresa }}"
+             style="max-height:32px; max-width:120px; object-fit:contain;">
+      {% else %}
+        <span class="fw-semibold">{{ config_empresa.nome_empresa }}</span>
+      {% endif %}
+    </a>
+  </div>
+
+  <!-- Usuário + Tema + Logout -->
+  <div class="d-flex align-items-center gap-2">
+    <span class="text-white-50 small d-none d-sm-inline">
+      {{ request.user.username }}
+    </span>
+    <button id="theme-toggle" class="btn btn-outline-light btn-sm" title="Alternar tema claro/escuro">
+      <i id="theme-icon" class="bi bi-moon-fill"></i>
+    </button>
+    <form method="post" action="{% url 'logout' %}" class="d-inline m-0">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-light btn-sm">
+        <i class="bi bi-box-arrow-right"></i>
+        <span class="d-none d-sm-inline ms-1">Sair</span>
+      </button>
+    </form>
   </div>
 </nav>
 
-<main class="container mb-4">
+<!-- ── Sidebar (Offcanvas) ────────────────────────────────────────────────── -->
+<div class="offcanvas offcanvas-start text-bg-dark" id="sidebar" tabindex="-1">
+  <div class="offcanvas-header border-bottom border-secondary py-2">
+    <div class="d-flex align-items-center gap-2">
+      {% if config_empresa.logo %}
+        <img src="{{ config_empresa.logo.url }}"
+             alt="{{ config_empresa.nome_empresa }}"
+             style="max-height:40px; max-width:140px; object-fit:contain;">
+      {% else %}
+        <span class="fw-bold fs-6">{{ config_empresa.nome_empresa }}</span>
+      {% endif %}
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+  </div>
+
+  <div class="offcanvas-body d-flex flex-column">
+    <nav class="flex-grow-1">
+      <ul class="nav flex-column">
+
+        <!-- Pedidos -->
+        {% if perms_usuario.pedidos.ver %}
+        <li class="nav-item mt-1">
+          <a class="nav-link {% if request.resolver_match.url_name == 'pedidos_lista' %}active{% endif %}"
+             href="{% url 'pedidos_lista' %}">
+            <i class="bi bi-receipt me-2"></i>Pedidos
+          </a>
+        </li>
+        {% endif %}
+
+        <!-- Produção -->
+        {% if perms_usuario.producao.ver %}
+        <li><div class="nav-section mt-2">Produção</div></li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'pedido_controle' %}active{% endif %}"
+             href="{% url 'pedido_controle' %}">
+            <i class="bi bi-kanban me-2"></i>Controle
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'pedido_relatorio' %}active{% endif %}"
+             href="{% url 'pedido_relatorio' %}">
+            <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório
+          </a>
+        </li>
+        {% endif %}
+
+        <!-- Clientes -->
+        {% if perms_usuario.clientes.ver %}
+        <li><hr></li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'clientes_lista' %}active{% endif %}"
+             href="{% url 'clientes_lista' %}">
+            <i class="bi bi-people me-2"></i>Clientes
+          </a>
+        </li>
+        {% endif %}
+
+        <!-- Cadastros -->
+        {% if perms_usuario.cadastros.ver %}
+        <li><hr></li>
+        <li><div class="nav-section">Cadastros</div></li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_perfis' %}active{% endif %}"
+             href="{% url 'lista_perfis' %}">
+            <i class="bi bi-grid-3x3-gap me-2"></i>Perfis
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_perfis_puxador' %}active{% endif %}"
+             href="{% url 'lista_perfis_puxador' %}">
+            <i class="bi bi-layout-sidebar-inset me-2"></i>Perfis Puxadores
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_puxadores' %}active{% endif %}"
+             href="{% url 'lista_puxadores' %}">
+            <i class="bi bi-grip-vertical me-2"></i>Puxadores
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_divisores' %}active{% endif %}"
+             href="{% url 'lista_divisores' %}">
+            <i class="bi bi-bar-chart-steps me-2"></i>Divisores
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_vidros' %}active{% endif %}"
+             href="{% url 'lista_vidros' %}">
+            <i class="bi bi-square me-2"></i>Vidros
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_acabamentos' %}active{% endif %}"
+             href="{% url 'lista_acabamentos' %}">
+            <i class="bi bi-palette me-2"></i>Acabamentos
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_espessuras' %}active{% endif %}"
+             href="{% url 'lista_espessuras' %}">
+            <i class="bi bi-layers me-2"></i>Espessuras
+          </a>
+        </li>
+        {% endif %}
+
+        <!-- Administração (staff only) -->
+        {% if perms_usuario.admin %}
+        <li><hr></li>
+        <li><div class="nav-section">Administração</div></li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'usuarios_lista' %}active{% endif %}"
+             href="{% url 'usuarios_lista' %}">
+            <i class="bi bi-person-gear me-2"></i>Usuários
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'bimer_config' %}active{% endif %}"
+             href="{% url 'bimer_config' %}">
+            <i class="bi bi-plug me-2"></i>Integrações
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'configuracoes_empresa' %}active{% endif %}"
+             href="{% url 'configuracoes_empresa' %}">
+            <i class="bi bi-gear me-2"></i>Configurações
+          </a>
+        </li>
+        {% endif %}
+
+      </ul>
+    </nav>
+
+    <!-- Footer do sidebar -->
+    <div class="border-top border-secondary pt-2 pb-1 px-3">
+      <small class="text-white-50">
+        <i class="bi bi-person me-1"></i>{{ request.user.username }}
+      </small>
+    </div>
+  </div>
+</div>
+
+<!-- ── Conteúdo principal ──────────────────────────────────────────────────── -->
+<main class="container mb-4 mt-3">
     {% block content %}{% endblock %}
 </main>
 
-<!-- Bootstrap JS (CDN) -->
 <script
   src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
   integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
@@ -77,39 +276,156 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-        
+
+{# CSRF global para todas as requisições HTMX POST fora de <form> #}
+<script>
+  document.addEventListener('htmx:configRequest', function(evt) {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(evt.detail.verb.toUpperCase())) {
+      var token = document.querySelector('[name=csrfmiddlewaretoken]');
+      evt.detail.headers['X-CSRFToken'] = token ? token.value : '{{ csrf_token }}';
+    }
+  });
+</script>
 
 {% block extra_js %}{% endblock %}
 {% include "modais/modal_produto.html" %}
 {% include "modais/modal_aux.html" %}
 
 <script>
-  function abrirModalAux() {
-    const modalAuxEl = document.getElementById('modalAux');
-    const modalAux = bootstrap.Modal.getOrCreateInstance(modalAuxEl);
+  function $(id){ return document.getElementById(id); }
 
-    // NÃO fecha o modal principal
-    modalAux.show();
-  }
+  window.pedido_limpar_dependentes = function() {
+    const ids = [
+      "id_perfil_puxador", "id_qtd_perfil_puxador",
+      "id_puxador", "id_qtd_puxador", "id_puxador_tamanho_mm",
+      "id_divisor", "id_vidro"
+    ];
+    ids.forEach(i => {
+      const el = $(i);
+      if (!el) return;
+      el.value = "";
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  };
 
-  function fecharModalAux() {
-    const modalAuxEl = document.getElementById('modalAux');
-    const modalAux = bootstrap.Modal.getOrCreateInstance(modalAuxEl);
-    modalAux.hide();
+  window.pedido_regras_pp_pux = function() {
+    const pp = $("id_perfil_puxador");
+    const qtdpp = $("id_qtd_perfil_puxador");
+    const pux = $("id_puxador");
+    const qtdpux = $("id_qtd_puxador");
+    const tam = $("id_puxador_tamanho_mm");
 
-    // limpa conteúdo
-    const body = document.getElementById('modalAuxBody');
-    if (body) body.innerHTML = '';
-  }
-</script>
+    if (!pp || !pux) return;
 
-<script>
-  document.body.addEventListener("espessura-salva", function () {
-    fecharModalAux();
+    const temPP = !!pp.value;
+    const temPux = !!pux.value;
+
+    pux.disabled = temPP;
+    if (qtdpux) qtdpux.disabled = temPP;
+    if (tam) tam.disabled = temPP;
+    pp.disabled = temPux;
+    if (qtdpp) qtdpp.disabled = temPux;
+
+    if (temPP) {
+      pux.value = "";
+      if (qtdpux) qtdpux.value = "";
+      if (tam) tam.value = "";
+    }
+    if (temPux) {
+      pp.value = "";
+      if (qtdpp) qtdpp.value = "";
+    }
+  };
+
+  window.pedido_sync_dependencias = function() {
+    window.pedido_limpar_dependentes();
+    window.pedido_regras_pp_pux();
+  };
+
+  document.addEventListener("change", function(e) {
+    if (!e.target) return;
+    if (e.target.id === "id_perfil_puxador" || e.target.id === "id_puxador") {
+      window.pedido_regras_pp_pux();
+    }
+    if (e.target.id === "id_acabamento") {
+      const perfil = $("id_perfil");
+      if (perfil) perfil.value = "";
+      window.pedido_limpar_dependentes();
+    }
+    if (e.target.id === "id_perfil") {
+      window.pedido_limpar_dependentes();
+    }
+  });
+
+  document.body.addEventListener("htmx:afterSwap", function(evt) {
+    if (evt.target && (evt.target.id === "col-perfil" || evt.target.id === "col-opcoes")) {
+      window.pedido_regras_pp_pux();
+    }
   });
 </script>
 
+<script>
+  function disableIfEmpty(selectId) {
+    const el = document.getElementById(selectId);
+    if (!el) return;
+    el.disabled = !Array.from(el.options).some(o => o.value && o.value !== "");
+  }
 
+  function pedido_toggle_campos() {
+    disableIfEmpty("id_perfil");
+    disableIfEmpty("id_perfil_puxador");
+    disableIfEmpty("id_puxador");
+    disableIfEmpty("id_divisor");
+    disableIfEmpty("id_vidro");
+
+    const pp = document.getElementById("id_perfil_puxador");
+    const qtdpp = document.getElementById("id_qtd_perfil_puxador");
+    const pux = document.getElementById("id_puxador");
+    const qtdpux = document.getElementById("id_qtd_puxador");
+    const tam = document.getElementById("id_puxador_tamanho_mm");
+
+    if (qtdpp) qtdpp.disabled = !(pp && pp.value);
+    if (qtdpux) qtdpux.disabled = !(pux && pux.value);
+    if (tam) tam.disabled = !(pux && pux.value);
+  }
+
+  document.body.addEventListener("htmx:afterSwap", function(evt) {
+    if (evt.target && (evt.target.id === "col-perfil" || evt.target.id === "col-opcoes")) {
+      pedido_toggle_campos();
+    }
+  });
+
+  document.addEventListener("change", function(e) {
+    if (["id_perfil", "id_perfil_puxador", "id_puxador", "id_acabamento"].includes(e.target.id)) {
+      pedido_toggle_campos();
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", pedido_toggle_campos);
+</script>
+
+<script>
+  /* ── Alternância de tema claro / escuro ───────────────────────── */
+  (function () {
+    var html = document.documentElement;
+    var btn  = document.getElementById('theme-toggle');
+    var icon = document.getElementById('theme-icon');
+
+    function syncIcon() {
+      var dark = html.getAttribute('data-bs-theme') === 'dark';
+      icon.className = dark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+    }
+
+    syncIcon();
+
+    btn.addEventListener('click', function () {
+      var next = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-bs-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) {}
+      syncIcon();
+    });
+  })();
+</script>
 
 </body>
 </html>

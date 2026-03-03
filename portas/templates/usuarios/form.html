@@ -1,6 +1,215 @@
-{% load crispy_forms_tags %}
+<span id="modalTitulo" hx-swap-oob="true">
+  {% if object %}Editar Usuário{% else %}Novo Usuário{% endif %}
+</span>
 
-<form method="post" id="usuario-form" action="{{ request.path }}">
+<style>
+  .perm-module { border-radius: 8px; }
+  .perm-row { display: flex; justify-content: space-between; align-items: center; padding: .3rem 0; border-bottom: 1px solid var(--bs-border-color-translucent); }
+  .perm-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .perm-row label { font-size: .82rem; color: var(--bs-body-color); margin: 0; flex: 1; cursor: pointer; }
+  .perm-row .badge-desc { font-size: .7rem; color: var(--bs-secondary-color); }
+</style>
+
+<form
+  hx-post="{% if object %}{% url 'usuarios_editar' object.pk %}{% else %}{% url 'usuarios_novo' %}{% endif %}"
+  hx-target="#conteudoTabela"
+  hx-swap="innerHTML"
+>
   {% csrf_token %}
-  {% crispy form %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 mb-3">
+      {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- ── Identificação ──────────────────────────────────────────── -->
+  <div class="border rounded p-3 mb-3">
+    <p class="fw-semibold small text-uppercase text-secondary mb-2" style="letter-spacing:.05em;">Identificação</p>
+    <div class="row g-2">
+      <div class="col-3">
+        <label class="form-label small mb-1">{{ form.codigo.label }}</label>
+        {{ form.codigo }}
+        {% if form.codigo.errors %}<div class="text-danger small">{{ form.codigo.errors.0 }}</div>{% endif %}
+      </div>
+      <div class="col-5">
+        <label class="form-label small mb-1">{{ form.username.label }}</label>
+        {{ form.username }}
+        {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors.0 }}</div>{% endif %}
+      </div>
+      <div class="col-4 d-flex align-items-end pb-1">
+        <div class="form-check ms-1">
+          {{ form.ativo }}
+          <label class="form-check-label small" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <label class="form-label small mb-1">{{ form.nome.label }}</label>
+        {{ form.nome }}
+        {% if form.nome.errors %}<div class="text-danger small">{{ form.nome.errors.0 }}</div>{% endif %}
+      </div>
+      <div class="col-12">
+        <label class="form-label small mb-1">{{ form.tipo_usuario.label }}</label>
+        {{ form.tipo_usuario }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Senha ──────────────────────────────────────────────────── -->
+  <div class="border rounded p-3 mb-3">
+    <p class="fw-semibold small text-uppercase text-secondary mb-2" style="letter-spacing:.05em;">
+      {% if object %}Alterar senha <span class="fw-normal text-muted ms-1" style="text-transform:none;">(em branco = manter)</span>{% else %}Senha{% endif %}
+    </p>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label small mb-1">{{ form.password1.label }}</label>
+        {{ form.password1 }}
+        {% if form.password1.errors %}<div class="text-danger small">{{ form.password1.errors.0 }}</div>{% endif %}
+      </div>
+      <div class="col-6">
+        <label class="form-label small mb-1">{{ form.password2.label }}</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}<div class="text-danger small">{{ form.password2.errors.0 }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Permissões ─────────────────────────────────────────────── -->
+  <div class="border rounded p-3 mb-3" id="bloco-permissoes">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <p class="fw-semibold small text-uppercase text-secondary mb-0" style="letter-spacing:.05em;">Permissões de acesso</p>
+      <span class="badge bg-primary" id="perms-badge-admin" style="display:none;">
+        <i class="bi bi-shield-check me-1"></i>Acesso completo
+      </span>
+    </div>
+
+    <div class="row g-2" id="perms-grid">
+
+      <!-- Pedidos -->
+      <div class="col-12 col-md-6">
+        <div class="perm-module border rounded p-2 h-100">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-receipt text-primary"></i>
+            <span class="fw-semibold small">Pedidos</span>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_pedidos_ver.id_for_label }}">Ver lista e detalhes</label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_pedidos_ver }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_pedidos_criar.id_for_label }}">Criar novo pedido</label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_pedidos_criar }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_pedidos_editar.id_for_label }}">Editar itens do pedido</label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_pedidos_editar }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_pedidos_excluir.id_for_label }}">
+              Excluir pedido
+              <span class="badge bg-danger-subtle text-danger ms-1" style="font-size:.65rem;">restrito</span>
+            </label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_pedidos_excluir }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Produção -->
+      <div class="col-12 col-md-6">
+        <div class="perm-module border rounded p-2 h-100">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-kanban text-success"></i>
+            <span class="fw-semibold small">Produção</span>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_producao_ver.id_for_label }}">
+              Ver controle, insumos e plano de corte
+            </label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_producao_ver }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_producao_alterar_status.id_for_label }}">
+              Alterar status
+              <span class="badge bg-warning-subtle text-warning-emphasis ms-1" style="font-size:.65rem;">liberar / reabrir / concluir</span>
+            </label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_producao_alterar_status }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clientes -->
+      <div class="col-12 col-md-6">
+        <div class="perm-module border rounded p-2 h-100">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-people text-info"></i>
+            <span class="fw-semibold small">Clientes</span>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_clientes_ver.id_for_label }}">Ver lista de clientes</label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_clientes_ver }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_clientes_editar.id_for_label }}">Criar e editar clientes</label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_clientes_editar }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_clientes_excluir.id_for_label }}">
+              Excluir clientes
+              <span class="badge bg-danger-subtle text-danger ms-1" style="font-size:.65rem;">restrito</span>
+            </label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_clientes_excluir }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cadastros -->
+      <div class="col-12 col-md-6">
+        <div class="perm-module border rounded p-2 h-100">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-grid text-warning"></i>
+            <span class="fw-semibold small">Cadastros</span>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_cadastros_ver.id_for_label }}">Ver perfis, puxadores, vidros…</label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_cadastros_ver }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_cadastros_editar.id_for_label }}">Criar e editar cadastros</label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_cadastros_editar }}</div>
+          </div>
+          <div class="perm-row">
+            <label for="{{ form.perm_cadastros_excluir.id_for_label }}">
+              Excluir cadastros
+              <span class="badge bg-danger-subtle text-danger ms-1" style="font-size:.65rem;">restrito</span>
+            </label>
+            <div class="form-check form-switch mb-0 ms-2">{{ form.perm_cadastros_excluir }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /perms-grid -->
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mt-3">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+  </div>
 </form>
+
+<script>
+(function () {
+  var sel    = document.getElementById('id_tipo_usuario');
+  var checks = document.querySelectorAll('.perm-check');
+  var badge  = document.getElementById('perms-badge-admin');
+  var grid   = document.getElementById('perms-grid');
+
+  function atualizar() {
+    var isAdmin = sel && sel.value === 'ADMIN';
+    checks.forEach(function (cb) { cb.disabled = isAdmin; });
+    if (grid)  grid.style.opacity  = isAdmin ? '0.45' : '1';
+    if (badge) badge.style.display = isAdmin ? ''     : 'none';
+  }
+
+  if (sel) { sel.addEventListener('change', atualizar); atualizar(); }
+})();
+</script>

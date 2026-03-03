@@ -1,0 +1,198 @@
+<span id="modalTitulo" hx-swap-oob="true">
+  {% if item %}Editar item{% else %}Adicionar item{% endif %}
+</span>
+
+<div hx-swap-oob="true" id="modalDialogClass">
+  modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable
+</div>
+
+<form method="post"
+      hx-post="{% if pedido %}{% url 'pedido_item_novo' pedido.id %}{% else %}{% url 'pedido_item_temp_add' %}{% endif %}"
+      hx-target="{% if pedido %}#tabelaItens{% else %}#tabelaRascunho{% endif %}"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  {{ form.non_field_errors }}
+
+  <!-- ── Medidas ─────────────────────────────────────────────────── -->
+  <div class="row g-2 mb-3">
+    <div class="col-4">
+      <label class="form-label fw-semibold mb-1">
+        <span class="text-danger">*</span> Largura (mm)
+      </label>
+      {{ form.largura_mm }}
+      <div class="text-danger small">{{ form.largura_mm.errors }}</div>
+    </div>
+    <div class="col-4">
+      <label class="form-label fw-semibold mb-1">
+        <span class="text-danger">*</span> Altura (mm)
+      </label>
+      {{ form.altura_mm }}
+      <div class="text-danger small">{{ form.altura_mm.errors }}</div>
+    </div>
+    <div class="col-4">
+      <label class="form-label fw-semibold mb-1">
+        <span class="text-danger">*</span> Qtd
+      </label>
+      {{ form.quantidade }}
+      <div class="text-danger small">{{ form.quantidade.errors }}</div>
+    </div>
+  </div>
+
+  <!-- ── Acabamento + Perfil ───────────────────────────────────────── -->
+  <div class="row g-2 mb-3">
+    <div class="col-12 col-md-5">
+      <label class="form-label fw-semibold mb-1">
+        <span class="text-danger">*</span> Acabamento
+      </label>
+      {{ form.acabamento }}
+      <div class="text-danger small">{{ form.acabamento.errors }}</div>
+    </div>
+    <div class="col-12 col-md-7" id="col-perfil">
+      {% include "portas/pedido/_col_perfil.html" %}
+    </div>
+  </div>
+
+  <!-- ── Opções (HTMX) ────────────────────────────────────────────── -->
+  <div id="col-opcoes">
+    {% include "portas/pedido/_col_opcoes.html" %}
+  </div>
+
+  <!-- ── Adicionais ──────────────────────────────────────────────── -->
+  <div class="border rounded-3 p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <p class="fw-semibold text-secondary mb-0" style="font-size:.78rem;letter-spacing:.5px;text-transform:uppercase;">
+        Adicionais
+      </p>
+      <button type="button" id="btnAddAdicional" class="btn btn-outline-secondary btn-sm py-0">+ Adicionar</button>
+    </div>
+    <div id="adicionaisContainer">
+      {% for val_field, obs_field in adicional_pairs %}
+      <div class="row g-2 align-items-center adicional-row mb-2"
+           {% if not val_field.value %}style="display:none"{% endif %}>
+        <div class="col-12 col-md-3">
+          <label class="form-label mb-1">Valor (R$)</label>
+          {{ val_field }}
+        </div>
+        <div class="col-12 col-md-8">
+          <label class="form-label mb-1">Descrição</label>
+          {{ obs_field }}
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="button" class="btn btn-outline-danger btn-sm btn-remove-adicional mt-3" title="Remover">&times;</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <script>
+  (function () {
+    var container = document.getElementById('adicionaisContainer');
+    var btn       = document.getElementById('btnAddAdicional');
+    var rows      = container ? Array.from(container.querySelectorAll('.adicional-row')) : [];
+    var maxRows   = rows.length; // sempre 4
+
+    function visibleCount() {
+      return rows.filter(function(r){ return r.style.display !== 'none'; }).length;
+    }
+
+    function updateBtn() {
+      if (btn) btn.disabled = visibleCount() >= maxRows;
+    }
+
+    if (btn) btn.addEventListener('click', function () {
+      var hidden = rows.find(function(r){ return r.style.display === 'none'; });
+      if (hidden) {
+        hidden.style.display = '';
+        updateBtn();
+      }
+    });
+
+    container && container.addEventListener('click', function (e) {
+      if (!e.target.classList.contains('btn-remove-adicional')) return;
+      var row = e.target.closest('.adicional-row');
+      if (!row) return;
+      row.querySelectorAll('input').forEach(function(i){ i.value = ''; });
+      row.style.display = 'none';
+      updateBtn();
+    });
+
+    updateBtn();
+  })();
+  </script>
+
+  <hr class="my-3">
+
+  <!-- ── Preço em tempo real ──────────────────────────────────────── -->
+  <div class="card bg-body-secondary border-0 mb-3">
+    <div class="card-body py-2 px-3">
+      <div class="small text-muted fw-semibold mb-1" style="letter-spacing:.5px;text-transform:uppercase;font-size:.75rem;">
+        Valor calculado
+      </div>
+      <div id="resumoCalculo"
+           hx-get="{% url 'htmx_calcular_item' %}"
+           hx-trigger="load, change delay:400ms from:closest form"
+           hx-target="#resumoCalculo"
+           hx-swap="innerHTML"
+           hx-include="closest form">
+        {% include "portas/pedido/_resumo_calculo.html" %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Ações ────────────────────────────────────────────────────── -->
+  <div class="d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary px-4">Salvar item</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  function toggleBloqueios() {
+    var pp    = document.querySelector('[name="perfil_puxador"]');
+    var pux   = document.querySelector('[name="puxador"]');
+    var qtdPP = document.querySelector('[name="qtd_perfil_puxador"]');
+    var qtdPx = document.querySelector('[name="qtd_puxador"]');
+    var tamPx = document.querySelector('[name="puxador_tamanho_mm"]');
+
+    var hasPP  = pp  && pp.value;
+    var hasPux = pux && pux.value;
+
+    if (pux)   pux.disabled   = !!hasPP;
+    if (qtdPx) qtdPx.disabled = !!hasPP;
+    if (tamPx) tamPx.disabled = !!hasPP;
+    if (pp)    pp.disabled    = !!hasPux;
+    if (qtdPP) qtdPP.disabled = !!hasPux;
+  }
+
+  document.addEventListener('change', function (e) {
+    if (!e.target) return;
+    if (e.target.name === 'puxador' && !e.target.value) {
+      var qtdPx = document.querySelector('[name="qtd_puxador"]');
+      var tamPx = document.querySelector('[name="puxador_tamanho_mm"]');
+      if (qtdPx) qtdPx.value = '';
+      if (tamPx) tamPx.value = '';
+    }
+    if (e.target.name === 'perfil_puxador' && !e.target.value) {
+      var qtdPP2 = document.querySelector('[name="qtd_perfil_puxador"]');
+      if (qtdPP2) qtdPP2.value = '';
+    }
+    if (e.target.name === 'divisor' && !e.target.value) {
+      var qtdDv = document.querySelector('[name="qtd_divisor"]');
+      if (qtdDv) qtdDv.value = '';
+    }
+    if (e.target.name === 'perfil_puxador' || e.target.name === 'puxador') {
+      toggleBloqueios();
+    }
+  });
+
+  document.addEventListener('htmx:afterSwap', function (e) {
+    if (e.target && (e.target.id === 'col-opcoes' || e.target.id === 'col-perfil')) {
+      toggleBloqueios();
+    }
+  });
+
+  toggleBloqueios();
+})();
+</script>

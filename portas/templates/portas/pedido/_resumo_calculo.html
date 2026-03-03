@@ -1,0 +1,18 @@
+{% if erro %}
+  <div class="alert alert-warning mb-0">{{ erro }}</div>
+{% else %}
+  <div class="d-flex justify-content-between">
+    <span class="text-muted">Valor unitário</span>
+    <strong>R$ {{ valor_unitario|floatformat:2 }}</strong>
+  </div>
+  {% if adicional %}
+  <div class="d-flex justify-content-between">
+    <span class="text-muted">↳ inclui adicional</span>
+    <span class="text-muted">R$ {{ adicional|floatformat:2 }}</span>
+  </div>
+  {% endif %}
+  <div class="d-flex justify-content-between">
+    <span class="text-muted">Total (quantidade)</span>
+    <strong>R$ {{ valor_total|floatformat:2 }}</strong>
+  </div>
+{% endif %}

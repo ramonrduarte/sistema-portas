@@ -1,0 +1,44 @@
+<table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Código</th>
+        <th>Nome</th>
+        <th>CPF/CNPJ</th>
+        <th>Telefone</th>
+        <th>E-mail</th>
+        <th style="width:180px;">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in clientes %}
+        <tr class="{% if not c.ativo %}item-inativo{% endif %}">
+          <td>{{ c.codigo|default_if_none:"" }}</td>
+          <td>{{ c.nome|upper }}</td>
+          <td>{{ c.cpf_cnpj_formatado }}</td>
+          <td>{{ c.telefone }}</td>
+          <td>{{ c.email }}</td>
+  
+          <td class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary"
+                    hx-get="{% url 'clientes_editar' c.pk %}"
+                    hx-target="#modalConteudo"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro">
+              Editar
+            </button>
+  
+            <button class="btn btn-sm btn-outline-danger"
+                    hx-get="{% url 'clientes_excluir' c.pk %}"
+                    hx-target="#modalConteudo"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro">
+              Excluir
+            </button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  

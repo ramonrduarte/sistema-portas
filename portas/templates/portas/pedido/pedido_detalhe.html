@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+
+  <!-- ── Cabeçalho ────────────────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h4 class="mb-1">Pedido #{{ pedido.numero }}</h4>
+      <div class="text-muted small">
+        {{ pedido.data|date:"d/m/Y" }}
+        &bull; <strong>{{ pedido.cliente.codigo }}</strong> – {{ pedido.cliente.nome }}
+        &bull; {{ pedido.get_status_display }}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'pedidos_lista' %}" class="btn btn-outline-secondary btn-sm">← Voltar</a>
+      <a href="{% url 'pedido_imprimir' pedido.id %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+        Visualizar
+      </a>
+      <a href="{% url 'pedido_imprimir' pedido.id %}?auto=1" target="_blank" class="btn btn-outline-secondary btn-sm">
+        🖨 Imprimir
+      </a>
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'pedido_item_novo' pedido.id %}"
+              hx-target="#modalConteudo"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#modalCadastro">
+        + Adicionar item
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Conteúdo ─────────────────────────────────────────────────── -->
+  <div class="row g-4">
+
+    <!-- Tabela de itens -->
+    <div class="col-lg-9">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Itens do pedido</div>
+        <div class="card-body p-0">
+          <div id="tabelaItens">
+            {% include "portas/pedido/_itens_tabela.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumo lateral -->
+    <div class="col-lg-3">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Resumo</div>
+        <div class="card-body">
+          <div id="resumoPedido">
+            <div class="d-flex justify-content-between fw-semibold fs-5">
+              <span>Total</span>
+              <span>R$&nbsp;{{ total_pedido|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

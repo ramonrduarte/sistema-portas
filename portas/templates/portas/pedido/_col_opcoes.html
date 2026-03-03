@@ -1,0 +1,125 @@
+{% if form.perfil_puxador.field.queryset.exists or form.puxador.field.queryset.exists %}
+<!-- ── Seção Puxador ────────────────────────────────────────────── -->
+<div class="border rounded-3 p-3 mb-3 bg-body-secondary">
+  <p class="fw-semibold text-secondary mb-2" style="font-size:.78rem;letter-spacing:.5px;text-transform:uppercase;">
+    Puxador
+  </p>
+
+  {% if form.perfil_puxador.field.queryset.exists %}
+  <div class="row g-2 align-items-end mb-2">
+    <div class="col-8">
+      <label class="form-label mb-1">Perfil puxador</label>
+      {{ form.perfil_puxador }}
+    </div>
+    <div class="col-4">
+      <label class="form-label mb-1">Qtd</label>
+      {{ form.qtd_perfil_puxador }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if form.puxador.field.queryset.exists %}
+  <div class="row g-2 align-items-end">
+    <div class="col-5">
+      <label class="form-label mb-1">Puxador simples</label>
+      {{ form.puxador }}
+    </div>
+    <div class="col-3">
+      <label class="form-label mb-1">Qtd</label>
+      {{ form.qtd_puxador }}
+    </div>
+    <div class="col-4">
+      <label class="form-label mb-1">Tamanho (mm)</label>
+      {{ form.puxador_tamanho_mm }}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if form.divisor.field.queryset.exists or form.vidro.field.queryset.exists %}
+<!-- ── Divisor + Vidro ─────────────────────────────────────────── -->
+<div class="row g-2 align-items-end">
+  {% if form.divisor.field.queryset.exists %}
+  <div class="col-6">
+    <label class="form-label fw-semibold mb-1">Divisor</label>
+    {{ form.divisor }}
+  </div>
+  <div class="col-3">
+    <label class="form-label fw-semibold mb-1">Qtd</label>
+    {{ form.qtd_divisor }}
+  </div>
+  {% endif %}
+
+  {% if form.vidro.field.queryset.exists %}
+  <div class="col{% if not form.divisor.field.queryset.exists %}-12{% else %}-12 mt-2{% endif %}">
+    <label class="form-label fw-semibold mb-1">Vidro</label>
+    {{ form.vidro }}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+(function () {
+  var pp    = document.getElementById('id_perfil_puxador');
+  var qtdPp = document.getElementById('id_qtd_perfil_puxador');
+  var pux    = document.getElementById('id_puxador');
+  var qtdPux = document.getElementById('id_qtd_puxador');
+  var tamPux = document.getElementById('id_puxador_tamanho_mm');
+
+  function lock(fields) {
+    fields.forEach(function(el) {
+      if (!el) return;
+      el.disabled = true;
+      el.value = '';
+      var col = el.closest('.col-3, .col-4, .col-5, .col-8');
+      if (col) col.style.opacity = '0.4';
+    });
+  }
+
+  function unlock(fields) {
+    fields.forEach(function(el) {
+      if (!el) return;
+      el.disabled = false;
+      var col = el.closest('.col-3, .col-4, .col-5, .col-8');
+      if (col) col.style.opacity = '';
+    });
+  }
+
+  function update() {
+    var hasPp  = pp  && pp.value;
+    var hasPux = pux && pux.value;
+
+    if (hasPp) {
+      lock([pux, qtdPux, tamPux]);
+      unlock([pp, qtdPp]);
+    } else if (hasPux) {
+      lock([pp, qtdPp]);
+      unlock([pux, qtdPux, tamPux]);
+    } else {
+      unlock([pp, qtdPp, pux, qtdPux, tamPux]);
+    }
+  }
+
+  if (pp) pp.addEventListener('change', function () {
+    if (!pp.value && qtdPp) qtdPp.value = '';
+    update();
+  });
+  if (pux) pux.addEventListener('change', function () {
+    if (!pux.value) {
+      if (qtdPux) qtdPux.value = '';
+      if (tamPux) tamPux.value = '';
+    }
+    update();
+  });
+
+  var div    = document.getElementById('id_divisor');
+  var qtdDiv = document.getElementById('id_qtd_divisor');
+  if (div) div.addEventListener('change', function () {
+    if (!div.value && qtdDiv) qtdDiv.value = '';
+  });
+
+  update();
+})();
+</script>

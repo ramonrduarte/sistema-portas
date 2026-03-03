@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Pedido #{{ pedido.numero }} – Casa Adrofecha</title>
+  <style>
+    /* ── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      color: #111;
+    }
+
+    /* ── Tela: folhas A5 empilhadas sobre fundo cinza ───────── */
+    @media screen {
+      body {
+        background: #c8c8c8;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 0 48px;
+        gap: 18px;
+      }
+      .pagina {
+        background: #fff;
+        width: 148mm;
+        min-height: 210mm;
+        padding: 9mm 11mm;
+        box-shadow: 0 3px 14px rgba(0,0,0,.3);
+      }
+    }
+
+    /* ── Impressão: 1 página A5 por folha ──────────────────────
+       Impressora configurada para A4 retrato.
+       Carregue meia folha A4 (A5 = 148 × 210 mm) na impressora.
+       Cada página ocupa exatamente uma meia folha.            */
+    @page { size: A4 portrait; margin: 0; }
+    @media print {
+      body {
+        background: #fff;
+        margin: 0; padding: 0;
+        display: block;
+      }
+      .pagina {
+        width: 148mm;
+        height: 210mm;
+        padding: 9mm 11mm;
+        overflow: hidden;
+        page-break-after: always;
+        break-after: page;
+      }
+      .pagina:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      .btn-print { display: none !important; }
+      .aviso-imp { display: none !important; }
+    }
+
+    /* ── Aviso de configuração (só na tela) ─────────────────── */
+    .aviso-imp {
+      width: 148mm;
+      background: #fff8e1;
+      border: 1px solid #f0c040;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 8.5pt;
+      color: #555;
+      line-height: 1.6;
+    }
+    .aviso-imp strong { color: #333; }
+
+    /* ── Cabeçalho completo (1ª página) ─────────────────────── */
+    .cab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 2px solid #1a4a8a;
+      padding-bottom: 5px;
+      margin-bottom: 6px;
+    }
+    .cab img { height: 28px; width: auto; }
+    .cab-empresa h1 { font-size: 11pt; font-weight: bold; color: #1a4a8a; line-height: 1.2; }
+    .cab-empresa p  { font-size: 7.5pt; color: #666; }
+    .cab-pedido { margin-left: auto; text-align: right; }
+    .cab-pedido .lbl  { font-size: 7pt; color: #999; text-transform: uppercase; letter-spacing: .4px; }
+    .cab-pedido .num  { font-size: 13pt; font-weight: bold; color: #1a4a8a; line-height: 1.1; }
+    .cab-pedido .data { font-size: 7.5pt; color: #555; }
+
+    /* ── Cabeçalho de continuação (páginas seguintes) ───────── */
+    .cab-cont {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid #1a4a8a;
+      padding-bottom: 3px;
+      margin-bottom: 5px;
+      font-size: 8pt;
+      color: #555;
+    }
+    .cab-cont strong { color: #1a4a8a; }
+
+    /* ── Cliente ────────────────────────────────────────────── */
+    .cliente {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f0f4fb;
+      border-left: 3px solid #1a4a8a;
+      padding: 3px 7px;
+      margin-bottom: 7px;
+      border-radius: 0 3px 3px 0;
+    }
+    .cliente .cod  { font-size: 8pt; color: #666; white-space: nowrap; }
+    .cliente .nome { font-size: 10pt; font-weight: bold; }
+
+    /* ── Tabela de itens ────────────────────────────────────── */
+    .sec-titulo {
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: #999;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    table.itens {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 5px;
+    }
+    table.itens thead tr { background: #1a4a8a; color: #fff; }
+    table.itens thead th {
+      padding: 3px 4px;
+      font-size: 7.5pt;
+      font-weight: bold;
+      text-align: left;
+    }
+    table.itens thead th.r { text-align: right; }
+    table.itens tbody tr { border-bottom: 1px solid #e8e8e8; }
+    table.itens tbody tr:nth-child(even) { background: #f8f8f8; }
+    table.itens tbody td {
+      padding: 4px 4px;
+      font-size: 8pt;
+      vertical-align: middle;
+    }
+    table.itens tbody td.r { text-align: right; }
+
+    .item-nome { font-weight: bold; font-size: 8pt; }
+    .item-opc  { font-size: 7pt; color: #777; margin-top: 1px; }
+
+    /* ── Total ──────────────────────────────────────────────── */
+    .total-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+    .total-box {
+      background: #1a4a8a;
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 9.5pt;
+      font-weight: bold;
+      display: flex;
+      gap: 16px;
+    }
+
+    /* ── Rodapé (em todas as páginas) ───────────────────────── */
+    .rodape {
+      border-top: 1px solid #ddd;
+      padding-top: 4px;
+      margin-top: auto;
+      font-size: 7pt;
+      color: #aaa;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── Botão de impressão (só na tela) ────────────────────── */
+    .btn-print {
+      position: fixed;
+      top: 10px; right: 10px;
+      background: #1a4a8a; color: #fff;
+      border: none; padding: 7px 14px;
+      border-radius: 5px; cursor: pointer;
+      font-size: 10pt; z-index: 999;
+    }
+    .btn-print:hover { background: #143a70; }
+  </style>
+</head>
+<body>
+
+<button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
+
+{% if request.GET.auto %}
+<script>window.addEventListener('load', function(){ window.print(); });</script>
+{% endif %}
+
+<div class="aviso-imp">
+  <strong>Como imprimir:</strong> papel <strong>A4 Retrato</strong>,
+  escala <strong>100%</strong> (sem ajuste de margens).
+  Carregue <strong>meia folha A4</strong> (A5 = 148 × 210 mm) na impressora — cada página ocupa exatamente uma meia folha.
+</div>
+
+{% load static %}
+{% with total_pgs=paginas|length %}
+
+{% for pagina_itens in paginas %}
+<div class="pagina">
+
+  {% if forloop.first %}
+  <!-- ── Cabeçalho completo ───────────────────────────────── -->
+  <div class="cab">
+    <img src="{% static 'img/logo.jpg' %}" alt="Casa Adrofecha">
+    <div class="cab-empresa">
+      <h1>Casa Adrofecha</h1>
+      <p>Portas em alumínio e vidro</p>
+    </div>
+    <div class="cab-pedido">
+      <div class="lbl">Pedido</div>
+      <div class="num">#{{ pedido.numero }}</div>
+      <div class="data">{{ pedido.data|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+
+  <!-- ── Cliente ──────────────────────────────────────────── -->
+  <div class="cliente">
+    <span class="cod">{{ pedido.cliente.codigo }}</span>
+    <span style="color:#ccc;">|</span>
+    <span class="nome">{{ pedido.cliente.nome }}</span>
+  </div>
+
+  <div class="sec-titulo">Itens do pedido</div>
+
+  {% else %}
+  <!-- ── Cabeçalho de continuação ─────────────────────────── -->
+  <div class="cab-cont">
+    <strong>Casa Adrofecha</strong>
+    <span>Pedido #{{ pedido.numero }} — {{ pedido.cliente.nome }}</span>
+  </div>
+  {% endif %}
+
+  <!-- ── Tabela de itens desta página ─────────────────────── -->
+  <table class="itens">
+    <thead>
+      <tr>
+        <th>Descrição</th>
+        <th class="r" style="width:8mm;">Qtd</th>
+        <th class="r" style="width:19mm;">Unit.</th>
+        <th class="r" style="width:19mm;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in pagina_itens %}
+      <tr>
+        <td>
+          <div class="item-nome">{{ item.descricao }}</div>
+          {% for val, obs in item.adicionais_list %}
+          <div class="item-opc">+ R$&nbsp;{{ val|floatformat:2 }}{% if obs %} ({{ obs }}){% endif %}</div>
+          {% endfor %}
+        </td>
+        <td class="r">{{ item.quantidade }}</td>
+        <td class="r">R$&nbsp;{{ item.valor_unitario|floatformat:2 }}</td>
+        <td class="r">R$&nbsp;{{ item.valor_total|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" style="text-align:center;color:#aaa;padding:10px;">Nenhum item.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if forloop.last %}
+  <!-- ── Total (só na última página) ─────────────────────── -->
+  <div class="total-wrap">
+    <div class="total-box">
+      <span>Total do pedido</span>
+      <span>R$&nbsp;{{ total_pedido|floatformat:2 }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Rodapé (em todas as páginas) ─────────────────────── -->
+  <div class="rodape">
+    {% if forloop.last %}
+      <span>Casa Adrofecha – Portas em alumínio e vidro</span>
+      <span>Emitido em {{ pedido.data|date:"d/m/Y" }}</span>
+    {% else %}
+      <span>Continua na próxima página…</span>
+      <span>&nbsp;</span>
+    {% endif %}
+    <span>{{ forloop.counter }}/{{ total_pgs }}</span>
+  </div>
+
+</div>
+{% endfor %}
+
+{% endwith %}
+</body>
+</html>

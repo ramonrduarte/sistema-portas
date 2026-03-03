@@ -1,6 +1,45 @@
 # portas/views_base.py
+from django.http import HttpResponseForbidden
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView
+
+
+def _get_perms(user):
+    """Retorna o dict de permissões do usuário (mesmo formato do context processor)."""
+    if user.is_staff:
+        return {
+            "pedidos":  {"ver": True, "criar": True, "editar": True, "excluir": True},
+            "producao": {"ver": True, "alterar_status": True},
+            "clientes": {"ver": True, "editar": True, "excluir": True},
+            "cadastros":{"ver": True, "editar": True, "excluir": True},
+            "admin":    True,
+        }
+    try:
+        p = user.perfil
+        return {
+            "pedidos":  {"ver": p.perm_pedidos_ver, "criar": p.perm_pedidos_criar,
+                         "editar": p.perm_pedidos_editar, "excluir": p.perm_pedidos_excluir},
+            "producao": {"ver": p.perm_producao_ver, "alterar_status": p.perm_producao_alterar_status},
+            "clientes": {"ver": p.perm_clientes_ver, "editar": p.perm_clientes_editar,
+                         "excluir": p.perm_clientes_excluir},
+            "cadastros":{"ver": p.perm_cadastros_ver, "editar": p.perm_cadastros_editar,
+                         "excluir": p.perm_cadastros_excluir},
+            "admin":    False,
+        }
+    except Exception:
+        return {
+            "pedidos":  {"ver": True, "criar": True, "editar": True, "excluir": False},
+            "producao": {"ver": True, "alterar_status": False},
+            "clientes": {"ver": True, "editar": True, "excluir": False},
+            "cadastros":{"ver": False, "editar": False, "excluir": False},
+            "admin":    False,
+        }
+
+
+def _sem_permissao(msg="Você não tem permissão para realizar esta ação."):
+    return HttpResponseForbidden(
+        f'<div class="alert alert-danger m-3"><i class="bi bi-shield-exclamation me-2"></i>{msg}</div>'
+    )
 
 
 class AtivoQuerysetMixin:

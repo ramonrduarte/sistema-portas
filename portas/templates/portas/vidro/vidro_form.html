@@ -36,25 +36,22 @@
     </div>
 
     <div class="col-md-8">
-      <div class="d-flex justify-content-between align-items-center">
-        <label class="form-label mb-0">Espessura</label>
-
-        <button type="button"
-              class="btn btn-sm btn-outline-secondary"
-              hx-get="{% url 'cadastrar_espessura' %}?origem=vidro"
-              hx-target="#modalAuxBody"
-              onclick="abrirModalAux();">
-        + Nova espessura
-      </button>
-      </div>
-
-      <div id="wrapEspessuraSelect" class="mt-1">
-        {{ form.espessura }}
-      </div>
-
+      <label class="form-label">Espessura</label>
+      {{ form.espessura }}
       <div class="text-danger small">{{ form.espessura.errors }}</div>
     </div>
 
+    <div class="col-md-4">
+      <label class="form-label">Largura da chapa (mm)</label>
+      {{ form.chapa_largura_mm }}
+      <div class="text-danger small">{{ form.chapa_largura_mm.errors }}</div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Altura da chapa (mm)</label>
+      {{ form.chapa_altura_mm }}
+      <div class="text-danger small">{{ form.chapa_altura_mm.errors }}</div>
+    </div>
   </div>
 
   <div class="d-flex gap-2 mt-4">

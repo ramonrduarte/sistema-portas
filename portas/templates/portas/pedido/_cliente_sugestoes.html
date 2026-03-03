@@ -1,0 +1,30 @@
+{% if termo|length < min_len %}
+  <div class="text-muted small py-2">
+    Digite pelo menos {{ min_len }} caracteres.
+  </div>
+{% else %}
+
+<div class="cliente-resultados">
+  {% for c in clientes %}
+    <div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-1">
+      <div>
+        <strong>{{ c.codigo }}</strong> - {{ c.nome }}
+      </div>
+
+      <button type="button"
+              class="btn btn-sm btn-primary"
+              hx-get="{% url 'htmx_cliente_selecionar' c.pk %}"
+              hx-target="#clienteSugestoes"
+              hx-swap="innerHTML">
+        Selecionar
+      </button>
+    </div>
+  {% empty %}
+    <div class="text-muted small py-2">
+      Nenhum cliente encontrado.
+    </div>
+  {% endfor %}
+</div>
+
+{% endif %}
+

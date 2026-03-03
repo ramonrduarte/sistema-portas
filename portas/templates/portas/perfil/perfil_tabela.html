@@ -3,8 +3,8 @@
       <tr>
         <th style="width:120px;">Código</th>
         <th>Descrição</th>
+        <th>Acabamento</th>
         <th style="width:140px;">Preço</th>
-        <th>Compatibilidades</th>
         <th style="width:220px;">Ações</th>
       </tr>
     </thead>
@@ -14,33 +14,8 @@
         <tr>
           <td>{{ p.codigo }}</td>
           <td>{{ p.descricao }}</td>
-          <td>R$ {{ p.preco }}</td>
-          <td class="small">
-            <div><strong>Puxadores:</strong>
-              {% for x in p.puxadores_compativeis.all %}
-                {{ x.codigo }} - {{ x.descricao }}{% if x.acabamento %} ({{ x.acabamento.nome }}){% endif %}{% if not forloop.last %}, {% endif %}
-              {% empty %}-{% endfor %}
-            </div>
-  
-            <div><strong>Vidros:</strong>
-              {% for v in p.vidros_compativeis.all %}
-                {{ v.descricao }} - {{ v.espessura.valor_mm }} mm{% if not forloop.last %}, {% endif %}
-              {% empty %}-{% endfor %}
-            </div>
-  
-            <div><strong>Puxadores simples:</strong>
-              {% for s in p.puxadores_simples_compativeis.all %}
-                {{ s.codigo }} - {{ s.descricao }}{% if not forloop.last %}, {% endif %}
-              {% empty %}-{% endfor %}
-            </div>
-  
-            <div><strong>Divisores:</strong>
-              {% for d in p.divisores_compativeis.all %}
-                {{ d.codigo }} - {{ d.descricao }}{% if not forloop.last %}, {% endif %}
-              {% empty %}-{% endfor %}
-            </div>
-          </td>
-  
+          <td>{{ p.acabamento }}</td>
+          <td>R$ {{ p.preco|floatformat:2 }}</td>
           <td class="d-flex gap-2">
             <button class="btn btn-sm btn-outline-primary"
                     hx-get="{% url 'editar_perfil' p.pk %}"

@@ -1,0 +1,25 @@
+{% if resultado.status == "inativo" %}
+<div class="alert alert-warning py-2 mb-0">
+  Integração desativada. Ative-a nas configurações para sincronizar.
+</div>
+
+{% elif resultado.status == "erro_auth" %}
+<div class="alert alert-danger py-2 mb-0">
+  <strong>Erro de autenticação:</strong> {{ resultado.msg }}
+</div>
+
+{% else %}
+<div class="alert {% if resultado.erros %}alert-warning{% else %}alert-success{% endif %} py-2 mb-0">
+  <strong>{{ resultado.atualizados }}</strong> produto{{ resultado.atualizados|pluralize:"s" }} atualizado{{ resultado.atualizados|pluralize:"s" }}.
+  {% if resultado.erros %}
+  <br><small>{{ resultado.erros|length }} erro{{ resultado.erros|length|pluralize:"s" }} — veja o log abaixo.</small>
+  {% endif %}
+  {% if config.ultima_sincronizacao %}
+  <br><small class="text-muted">{{ config.ultima_sincronizacao|date:"d/m/Y H:i" }}</small>
+  {% endif %}
+</div>
+{% if resultado.erros %}
+<pre class="mt-2 p-2 small bg-light border rounded" style="max-height:150px;overflow-y:auto;">{% for e in resultado.erros %}{{ e }}
+{% endfor %}</pre>
+{% endif %}
+{% endif %}

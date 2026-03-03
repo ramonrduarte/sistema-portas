@@ -1,0 +1,26 @@
+<div id="clienteSelecionado" hx-swap-oob="outerHTML">
+  <div class="text-success small">
+    Selecionado: <strong>{{ cliente.codigo }}</strong> - {{ cliente.nome }}
+  </div>
+</div>
+
+<input type="hidden"
+       name="cliente"
+       id="id_cliente"
+       value="{{ cliente.id }}"
+       hx-swap-oob="outerHTML">
+
+<input type="text"
+       class="form-control"
+       id="clienteBusca"
+       name="cliente_busca"
+       value="{{ cliente.codigo }} - {{ cliente.nome }}"
+       placeholder="Digite o código ou parte do nome..."
+       autocomplete="off"
+       hx-get="{% url 'htmx_clientes_sugestoes' %}"
+       hx-trigger="keyup changed delay:300ms"
+       hx-target="#clienteSugestoes"
+       hx-swap="innerHTML"
+       hx-swap-oob="outerHTML">
+
+<div id="clienteSugestoes" hx-swap-oob="innerHTML"></div>

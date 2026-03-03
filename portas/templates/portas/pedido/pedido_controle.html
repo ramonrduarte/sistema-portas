@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Controle de Produção{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Controle de Produção</h4>
+  <a href="{% url 'pedidos_lista' %}" class="btn btn-sm btn-outline-secondary">← Pedidos</a>
+</div>
+
+{# Filtro por status #}
+<div class="btn-group mb-3" role="group">
+  {% for s_key, s_label in status_choices %}
+  <a href="?status={{ s_key }}"
+     class="btn btn-sm {% if status_filtro == s_key %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+    {{ s_label }}
+  </a>
+  {% endfor %}
+</div>
+
+<form method="post" id="formControle">
+  {% csrf_token %}
+
+  {% if pedidos %}
+  <div class="table-responsive mb-3">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width:2rem">
+            <input type="checkbox" id="selecionarTodos" class="form-check-input" title="Selecionar todos">
+          </th>
+          <th>#</th>
+          <th>Cliente</th>
+          <th>Data</th>
+          <th>Usuário</th>
+          <th>Status</th>
+          <th class="text-center">Itens</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pedidos %}
+        <tr>
+          <td>
+            <input type="checkbox" name="pedido_ids" value="{{ p.id }}" class="form-check-input chk-pedido">
+          </td>
+          <td class="fw-semibold">#{{ p.numero }}</td>
+          <td>{{ p.cliente.nome }}</td>
+          <td>{{ p.data|date:"d/m/Y" }}</td>
+          <td>
+            {% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="badge
+              {% if p.status == 'aberto' %}bg-secondary
+              {% elif p.status == 'producao' %}bg-primary
+              {% elif p.status == 'concluido' %}bg-success
+              {% else %}bg-danger{% endif %}">
+              {{ p.get_status_display }}
+            </span>
+          </td>
+          <td class="text-center">{{ p.nr_itens }}</td>
+          <td>
+            <a href="{% url 'pedido_detalhe' p.id %}" class="btn btn-sm btn-outline-secondary">Detalhes</a>
+            <a href="{% url 'pedido_imprimir' p.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">Imprimir</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Botões de ação em massa #}
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <span class="text-muted small me-1">Com selecionados:</span>
+    <button type="submit" name="action" value="producao" class="btn btn-primary btn-sm">
+      Enviar para produção
+    </button>
+    <button type="submit" name="action" value="concluido" class="btn btn-success btn-sm">
+      Marcar concluído
+    </button>
+    <button type="submit" name="action" value="aberto" class="btn btn-outline-secondary btn-sm">
+      Reabrir
+    </button>
+    <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
+      Cancelar
+    </button>
+    <span class="vr"></span>
+    <button type="submit" name="action" value="ver_insumos" class="btn btn-info btn-sm text-white">
+      Ver insumos
+    </button>
+  </div>
+
+  {% else %}
+  <p class="text-muted mt-3">Nenhum pedido com status <strong>{{ status_filtro }}</strong>.</p>
+  {% endif %}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const selecionarTodos = document.getElementById('selecionarTodos');
+  if (selecionarTodos) {
+    selecionarTodos.addEventListener('change', function () {
+      document.querySelectorAll('.chk-pedido').forEach(c => c.checked = this.checked);
+    });
+  }
+
+  // Confirma ação destrutiva
+  document.getElementById('formControle')?.addEventListener('submit', function (e) {
+    const action = e.submitter?.value;
+    const checked = document.querySelectorAll('.chk-pedido:checked').length;
+    if (checked === 0 && action !== 'ver_insumos') {
+      e.preventDefault();
+      alert('Selecione ao menos um pedido.');
+      return;
+    }
+    if (action === 'ver_insumos' && checked === 0) {
+      e.preventDefault();
+      alert('Selecione ao menos um pedido para ver os insumos.');
+      return;
+    }
+    if (action === 'cancelado') {
+      if (!confirm(`Cancelar ${checked} pedido(s) selecionado(s)? Esta ação pode ser revertida reabrindo o pedido.`)) {
+        e.preventDefault();
+      }
+    }
+  });
+</script>
+{% endblock %}
