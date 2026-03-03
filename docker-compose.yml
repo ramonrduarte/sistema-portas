@@ -10,8 +10,8 @@ services:
     environment:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-sistema.adrofecha.com.br,localhost}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://sistema.adrofecha.com.br}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-portas.adrofecha.com.br,192.168.0.110,localhost}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://portas.adrofecha.com.br, http://192.168.0.110:8000}
       DATABASE_ENGINE: django.db.backends.postgresql
       DATABASE_NAME: ${DATABASE_NAME:-portas_db}
       DATABASE_USER: ${DATABASE_USER:-postgres}
@@ -22,7 +22,7 @@ services:
       - media_data:/app/media
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.sistema-portas.rule=Host(`${DOMAIN:-sistema.adrofecha.com.br}`)"
+      - "traefik.http.routers.sistema-portas.rule=Host(`${DOMAIN:-portas.adrofecha.com.br}`)"
       - "traefik.http.routers.sistema-portas.entrypoints=websecure"
       - "traefik.http.routers.sistema-portas.tls.certresolver=letsencryptresolver"
       - "traefik.http.services.sistema-portas.loadbalancer.server.port=8000"
