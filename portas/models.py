@@ -40,7 +40,7 @@ class ProdutoBase(AtivoModel):
     descricao = models.CharField(max_length=255)
     preco = models.DecimalField(max_digits=10, decimal_places=2)
     acabamento = models.ForeignKey("Acabamento", on_delete=models.PROTECT)
-    abatimento_mm = models.IntegerField(default=0, help_text="Abate em mm na metragem do cálculo")
+    abatimento_mm = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Abate em mm na metragem do cálculo")
     modelo = models.CharField(max_length=50, blank=True, null=True)
     bimer_id = models.CharField(
         max_length=20, blank=True,

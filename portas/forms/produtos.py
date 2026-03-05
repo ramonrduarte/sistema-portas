@@ -1,6 +1,14 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import re
+
+
+class DecimalVirgula(forms.DecimalField):
+    """Campo decimal que aceita vírgula como separador (padrão pt-BR)."""
+    def to_python(self, value):
+        if isinstance(value, str):
+            value = value.replace(',', '.')
+        return super().to_python(value)
 from ..models import (
     Acabamento,
     PerfilPuxador,
@@ -33,6 +41,12 @@ class AcabamentoForm(forms.ModelForm):
 
 
 class PerfilPuxadorForm(forms.ModelForm):
+    abatimento_mm = DecimalVirgula(
+        max_digits=6, decimal_places=2, min_value=0, required=False,
+        initial=0, label="Abatimento (mm)",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1,5"}),
+    )
+
     class Meta:
         model = PerfilPuxador
         fields = ["ativo", "codigo", "descricao", "preco", "acabamento", "abatimento_mm", "modelo"]
@@ -42,7 +56,6 @@ class PerfilPuxadorForm(forms.ModelForm):
             "descricao": forms.TextInput(attrs={"class": "form-control"}),
             "preco": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
             "acabamento": forms.Select(attrs={"class": "form-select"}),
-            "abatimento_mm": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "modelo": forms.TextInput(attrs={"class": "form-control"}),
         }
 
@@ -68,6 +81,12 @@ class PerfilPuxadorForm(forms.ModelForm):
 
 
 class PuxadorForm(forms.ModelForm):
+    abatimento_mm = DecimalVirgula(
+        max_digits=6, decimal_places=2, min_value=0, required=False,
+        initial=0, label="Abatimento (mm)",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1,5"}),
+    )
+
     class Meta:
         model = Puxador
         fields = ["ativo", "codigo", "descricao", "preco", "acabamento", "abatimento_mm", "modelo"]
@@ -77,7 +96,6 @@ class PuxadorForm(forms.ModelForm):
             "descricao": forms.TextInput(attrs={"class": "form-control"}),
             "preco": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
             "acabamento": forms.Select(attrs={"class": "form-select"}),
-            "abatimento_mm": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "modelo": forms.TextInput(attrs={"class": "form-control"}),
         }
 
@@ -112,6 +130,11 @@ class DivisorForm(forms.ModelForm):
 
 
 class PerfilForm(forms.ModelForm):
+    abatimento_mm = DecimalVirgula(
+        max_digits=6, decimal_places=2, min_value=0, required=False,
+        initial=0, label="Abatimento (mm)",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1,5"}),
+    )
     puxadores_compativeis = forms.ModelMultipleChoiceField(
         label="Perfis Puxadores compatíveis (mesmo acabamento)",
         queryset=PerfilPuxador.objects.none(),
@@ -162,7 +185,6 @@ class PerfilForm(forms.ModelForm):
             "descricao": forms.TextInput(attrs={"class": "form-control"}),
             "preco": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
             "acabamento": forms.Select(attrs={"class": "form-select"}),
-            "abatimento_mm": forms.NumberInput(attrs={"class": "form-control"}),
             "modelo": forms.TextInput(attrs={"class": "form-control"}),
             "fixacao_vidro": forms.Select(attrs={"class": "form-select"}),
         }
