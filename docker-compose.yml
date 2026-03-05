@@ -22,7 +22,8 @@ services:
       - media_data:/app/media
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.sistema-portas.rule=Host(`${DOMAIN:-portas.adrofecha.com.br}`)"
+      - "traefik.docker.network=network_public"
+      - "traefik.http.routers.sistema-portas.rule=Host(`portas.adrofecha.com.br`)"
       - "traefik.http.routers.sistema-portas.entrypoints=websecure"
       - "traefik.http.routers.sistema-portas.tls.certresolver=letsencryptresolver"
       - "traefik.http.services.sistema-portas.loadbalancer.server.port=8000"
