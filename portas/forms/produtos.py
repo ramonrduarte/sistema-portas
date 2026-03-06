@@ -115,9 +115,15 @@ class PuxadorForm(forms.ModelForm):
 
 
 class DivisorForm(forms.ModelForm):
+    abatimento_mm = DecimalVirgula(
+        max_digits=6, decimal_places=2, min_value=0, required=False,
+        initial=0, label="Abatimento (mm)",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1,5"}),
+    )
+
     class Meta:
         model = Divisor
-        fields = ["ativo", "codigo", "modelo", "descricao", "preco", "acabamento", "encaixe"]
+        fields = ["ativo", "codigo", "modelo", "descricao", "preco", "acabamento", "abatimento_mm", "encaixe"]
         widgets = {
             "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "codigo": forms.TextInput(attrs={"class": "form-control"}),

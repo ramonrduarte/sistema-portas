@@ -46,7 +46,13 @@
         <div class="text-danger small">{{ form.encaixe.errors }}</div>
       </div>
 
-      <div class="col-md-8">
+      <div class="col-md-4">
+        <label class="form-label">Abatimento (mm)</label>
+        {{ form.abatimento_mm }}
+        <div class="text-danger small">{{ form.abatimento_mm.errors }}</div>
+      </div>
+
+      <div class="col-md-4">
         <label class="form-label">Modelo</label>
         {{ form.modelo }}
         <div class="text-danger small">{{ form.modelo.errors }}</div>
