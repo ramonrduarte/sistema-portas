@@ -33,6 +33,13 @@
       {{ form.puxador_tamanho_mm }}
     </div>
   </div>
+  <div class="mt-2 d-none" id="row-pux-sobreposto">
+    <div class="form-check">
+      <input type="checkbox" name="puxador_sobreposto" id="id_puxador_sobreposto"
+             class="form-check-input" checked>
+      <label class="form-check-label" for="id_puxador_sobreposto">Puxador sobreposto</label>
+    </div>
+  </div>
   {% endif %}
 </div>
 {% endif %}
@@ -116,13 +123,25 @@
     if (!pp.value && qtdPp) qtdPp.value = '';
     update();
   });
+  var rowSobreposto = document.getElementById('row-pux-sobreposto');
+  function updateSobreposto() {
+    if (!rowSobreposto) return;
+    if (pux && pux.value) {
+      rowSobreposto.classList.remove('d-none');
+    } else {
+      rowSobreposto.classList.add('d-none');
+    }
+  }
+
   if (pux) pux.addEventListener('change', function () {
     if (!pux.value) {
       if (qtdPux) qtdPux.value = '';
       if (tamPux) tamPux.value = '';
     }
     update();
+    updateSobreposto();
   });
+  updateSobreposto();
 
   var div    = document.getElementById('id_divisor');
   var qtdDiv = document.getElementById('id_qtd_divisor');

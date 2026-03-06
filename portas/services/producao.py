@@ -30,14 +30,15 @@ def _calcular_dimensoes_vidro(item) -> list:
     polimento = 2 if perfil.vidro_polido else 0
 
     # Largura do vidro (nao muda com divisores horizontais)
+    pux_sobreposto = getattr(item, 'puxador_sobreposto', True)
     if pp and qtd_pp == 1:
         glass_w = L - ab_perf - pp.abatimento_mm
     elif pp and qtd_pp == 2:
         glass_w = L - 2 * pp.abatimento_mm
     elif pux and qtd_pux == 1:
-        glass_w = L - 2 * ab_perf - pux.abatimento_mm
+        glass_w = L - 2 * ab_perf - (pux.abatimento_mm if pux_sobreposto else 0)
     elif pux and qtd_pux >= 2:
-        glass_w = L - 2 * ab_perf - 2 * pux.abatimento_mm
+        glass_w = L - 2 * ab_perf - (2 * pux.abatimento_mm if pux_sobreposto else 0)
     else:
         glass_w = L - 2 * ab_perf
     glass_w += polimento
@@ -291,12 +292,14 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
     # Peças por perfil (pk → lista de mm)
     pecas_perfil = defaultdict(list)
     pecas_pp = defaultdict(list)
+    pecas_puxador = defaultdict(list)
     pecas_divisor = defaultdict(list)
     # Peças de vidro agrupadas por tipo de vidro (vidro.pk → lista de (l, a))
     pecas_vidro = defaultdict(list)
 
     obj_perfis = {}
     obj_pps = {}
+    obj_puxadores_plano = {}
     obj_divisores_plano = {}
     obj_vidros_plano = {}
 
@@ -331,6 +334,12 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
             if peca_pp:
                 pecas_pp[item.perfil_puxador_id].extend(peca_pp)
                 obj_pps[item.perfil_puxador_id] = item.perfil_puxador
+
+        # Peças de puxador simples por porta (comprimento = tamanho do puxador)
+        if item.puxador_id and item.puxador_tamanho_mm and item.qtd_puxador:
+            peca_pux = [item.puxador_tamanho_mm] * (item.qtd_puxador * qtd)
+            pecas_puxador[item.puxador_id].extend(peca_pux)
+            obj_puxadores_plano[item.puxador_id] = item.puxador
 
         # Peças de divisor por porta (comprimento = largura da porta)
         if item.divisor_id and item.qtd_divisor:
@@ -379,6 +388,23 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
             "aproveitamento_pct": aprov.quantize(Decimal("0.1")),
         })
 
+    # Montar resultado para puxadores simples
+    resultado_puxadores = []
+    for pk, pecas in sorted(pecas_puxador.items()):
+        barras = _ffd_1d(pecas, _BARRA_MM)
+        total_usado = sum(sum(b) for b in barras)
+        total_disponivel = len(barras) * _BARRA_MM
+        sobra = total_disponivel - total_usado
+        aprov = Decimal(total_usado) / Decimal(total_disponivel) * 100 if total_disponivel else Decimal(0)
+        resultado_puxadores.append({
+            "puxador": obj_puxadores_plano[pk],
+            "barra_mm": _BARRA_MM,
+            "barras": barras,
+            "total_barras": len(barras),
+            "sobra_mm": sobra,
+            "aproveitamento_pct": aprov.quantize(Decimal("0.1")),
+        })
+
     # Montar resultado para divisores
     resultado_divisores = []
     for pk, pecas in sorted(pecas_divisor.items()):
@@ -418,6 +444,7 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
     return {
         "perfis": resultado_perfis,
         "pps": resultado_pps,
+        "puxadores": resultado_puxadores,
         "divisores": resultado_divisores,
         "vidros": resultado_vidros,
     }

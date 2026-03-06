@@ -212,6 +212,7 @@ def pedido_item_temp_add(request):
             qtd_pp = int(cd.get("qtd_perfil_puxador") or 0)
             qtd_pux = int(cd.get("qtd_puxador") or 0)
             pux_tam = cd.get("puxador_tamanho_mm") or 0
+            pux_sobreposto = cd.get("puxador_sobreposto", True)
             qtd_div = int(cd.get("qtd_divisor") or 0)
             div_alt_1 = cd.get("divisor_altura_1") or None
             div_alt_2 = cd.get("divisor_altura_2") or None
@@ -262,6 +263,7 @@ def pedido_item_temp_add(request):
                 "puxador_id": pux.pk if pux else None,
                 "qtd_puxador": qtd_pux or None,
                 "puxador_tamanho_mm": pux_tam or None,
+                "puxador_sobreposto": pux_sobreposto,
                 "divisor_id": divisor.pk if divisor else None,
                 "qtd_divisor": qtd_div or None,
                 "divisor_altura_1": div_alt_1,
@@ -459,6 +461,7 @@ def pedido_item_novo(request, pedido_pk):
             qtd_pp = int(cd.get("qtd_perfil_puxador") or 0)
             qtd_pux = int(cd.get("qtd_puxador") or 0)
             pux_tam = cd.get("puxador_tamanho_mm") or 0
+            pux_sobreposto = cd.get("puxador_sobreposto", True)
             qtd_div = int(cd.get("qtd_divisor") or 0)
             div_alt_1 = cd.get("divisor_altura_1") or None
             div_alt_2 = cd.get("divisor_altura_2") or None
@@ -496,6 +499,7 @@ def pedido_item_novo(request, pedido_pk):
                 puxador=pux,
                 qtd_puxador=(qtd_pux or None),
                 puxador_tamanho_mm=(pux_tam or None),
+                puxador_sobreposto=pux_sobreposto,
                 divisor=divisor,
                 qtd_divisor=(qtd_div or None),
                 divisor_altura_1=div_alt_1,

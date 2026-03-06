@@ -150,6 +150,8 @@ def cadastrar_perfil(request, pk=None):
             if request.headers.get("HX-Request") == "true":
                 resp = render(request, "portas/perfil/perfil_tabela.html", {"perfis": _perfil_qs()})
                 resp["HX-Trigger"] = "fecharModalCadastro"
+                resp["HX-Retarget"] = "#conteudoTabela"
+                resp["HX-Reswap"] = "innerHTML"
                 return resp
             return redirect("lista_perfis")
 

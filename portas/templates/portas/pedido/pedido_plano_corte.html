@@ -77,7 +77,7 @@
   {% endfor %}
 </div>
 
-{% if not plano.perfis and not plano.pps and not plano.divisores and not plano.vidros %}
+{% if not plano.perfis and not plano.pps and not plano.puxadores and not plano.divisores and not plano.vidros %}
 <div class="alert alert-warning">Nenhum item encontrado nos pedidos selecionados.</div>
 {% endif %}
 
@@ -144,6 +144,44 @@
         {% for peca in barra %}
         <div class="barra-peca"
              style="width: {% widthratio peca bloco.barra_mm 100 %}%; background: #6f42c1;"
+             title="{{ peca }} mm">
+          {{ peca }}
+        </div>
+        {% endfor %}
+        <div class="barra-sobra"></div>
+      </div>
+      <small class="text-muted">
+        Peças: {% for p in barra %}{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %} mm
+      </small>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{# ── Puxadores Simples ───────────────────────────────────────────────────── #}
+{% if plano.puxadores %}
+<h5 class="border-bottom pb-1 mt-3">Puxadores</h5>
+
+{% for bloco in plano.puxadores %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <strong>{{ bloco.puxador }}</strong>
+    <span class="text-muted small">
+      {{ bloco.total_barras }} barra{{ bloco.total_barras|pluralize:"s" }} de {{ bloco.barra_mm }} mm
+      &nbsp;|&nbsp; aproveitamento: {{ bloco.aproveitamento_pct }}%
+      &nbsp;|&nbsp; sobra: {{ bloco.sobra_mm }} mm
+    </span>
+  </div>
+  <div class="card-body py-2">
+    {% for barra in bloco.barras %}
+    <div class="mb-2">
+      <small class="text-muted">Barra {{ forloop.counter }}</small>
+      <div class="barra-visual">
+        {% for peca in barra %}
+        <div class="barra-peca"
+             style="width: {% widthratio peca bloco.barra_mm 100 %}%; background: #fd7e14;"
              title="{{ peca }} mm">
           {{ peca }}
         </div>

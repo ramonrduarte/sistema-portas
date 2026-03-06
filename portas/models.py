@@ -407,6 +407,10 @@ class PedidoItem(models.Model):
     )
     qtd_puxador = models.PositiveSmallIntegerField(null=True, blank=True)
     puxador_tamanho_mm = models.PositiveIntegerField(null=True, blank=True)
+    puxador_sobreposto = models.BooleanField(
+        default=True,
+        verbose_name="Puxador sobreposto",
+    )
 
     vidro = models.ForeignKey(
         "VidroBase",
