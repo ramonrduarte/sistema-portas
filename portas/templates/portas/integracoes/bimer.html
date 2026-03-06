@@ -207,6 +207,9 @@
           Busca os preços no Bimer e atualiza todos os produtos ativos
           (Perfis, Puxadores, Divisores e Vidros).
         </p>
+        {% if config.ultima_sincronizacao %}
+        <p class="small text-muted mb-2">Última sync: {{ config.ultima_sincronizacao|date:"d/m/Y H:i" }}</p>
+        {% endif %}
         <button type="button"
                 class="btn btn-outline-primary"
                 hx-post="{% url 'bimer_sincronizar' %}"
@@ -226,7 +229,7 @@
     <div class="card mb-3">
       <div class="card-header"><strong>Log — Última sincronização de preços</strong></div>
       <div class="card-body p-0">
-        <pre class="p-3 mb-0 small bg-light rounded-bottom" style="max-height:200px;overflow-y:auto;">{{ config.log_sync }}</pre>
+        <pre class="p-3 mb-0 small bg-body-secondary rounded-bottom" style="max-height:200px;overflow-y:auto;">{{ config.log_sync }}</pre>
       </div>
     </div>
     {% endif %}
@@ -262,7 +265,7 @@
     <div class="card">
       <div class="card-header"><strong>Log — Última sincronização de clientes</strong></div>
       <div class="card-body p-0">
-        <pre class="p-3 mb-0 small bg-light rounded-bottom" style="max-height:200px;overflow-y:auto;">{{ config.log_sync_clientes }}</pre>
+        <pre class="p-3 mb-0 small bg-body-secondary rounded-bottom" style="max-height:200px;overflow-y:auto;">{{ config.log_sync_clientes }}</pre>
       </div>
     </div>
     {% endif %}
