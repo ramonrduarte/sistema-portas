@@ -89,6 +89,11 @@ class Perfil(ProdutoBase):
         verbose_name="Fixação do vidro",
     )
 
+    vidro_polido = models.BooleanField(
+        default=False,
+        verbose_name="Vidro polido",
+        help_text="Se marcado, adiciona 2mm em cada dimensao do vidro",
+    )
     puxadores_compativeis = models.ManyToManyField(
         'PerfilPuxador', blank=True, related_name='perfis_estrutura_compativeis'
     )
@@ -417,6 +422,16 @@ class PedidoItem(models.Model):
         blank=True
     )
     qtd_divisor = models.PositiveSmallIntegerField(null=True, blank=True)
+    divisor_altura_1 = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Altura divisor 1 (mm)",
+        help_text="Posicao do 1o divisor a partir da base (mm)",
+    )
+    divisor_altura_2 = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Altura divisor 2 (mm)",
+        help_text="Posicao do 2o divisor a partir da base (mm)",
+    )
 
     # Adicionais livres (até 4 itens avulsos por item do pedido)
     adicional_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
@@ -585,6 +600,13 @@ class ConfiguracaoEmpresa(models.Model):
         blank=True,
         null=True,
         verbose_name="Logo",
+    )
+    custo_mao_obra = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Custo m�o de obra (por porta)",
+        help_text="Valor fixo adicionado em cada porta calculada",
     )
 
     class Meta:

@@ -11,14 +11,16 @@ class ConfiguracaoEmpresaForm(forms.ModelForm):
 
     class Meta:
         model = ConfiguracaoEmpresa
-        fields = ["nome_empresa", "logo"]
+        fields = ["nome_empresa", "logo", "custo_mao_obra"]
         widgets = {
             "nome_empresa": forms.TextInput(attrs={"class": "form-control"}),
             "logo": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "custo_mao_obra": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
         }
         labels = {
             "nome_empresa": "Nome da empresa",
             "logo": "Logo (PNG, JPG — recomendado: fundo transparente)",
+            "custo_mao_obra": "Custo mão de obra por porta (R$)",
         }
 
     def save(self, commit=True):

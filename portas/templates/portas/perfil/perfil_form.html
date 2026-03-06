@@ -62,6 +62,17 @@
       {{ form.abatimento_mm }}
       <div class="text-danger small">{{ form.abatimento_mm.errors }}</div>
     </div>
+
+    <div class="col-md-3">
+      <label class="form-label d-block">Vidro polido</label>
+      <div class="form-check form-switch mt-1">
+        {{ form.vidro_polido }}
+        <label class="form-check-label" for="{{ form.vidro_polido.id_for_label }}">
+          Adicionar 2mm (polimento)
+        </label>
+      </div>
+      <div class="text-danger small">{{ form.vidro_polido.errors }}</div>
+    </div>
   </div>
 
   <!-- LINHA 3: Acabamento + Espessuras do vidro -->

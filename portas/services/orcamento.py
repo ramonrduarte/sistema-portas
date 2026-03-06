@@ -100,6 +100,9 @@ def calc_total(
 
     # vidro (opcional)
     preco_vidro_m2: Decimal | None = None,
+
+    # mao de obra (fixo por porta)
+    custo_mao_obra: Decimal | None = None,
 ) -> Decimal:
     """
     PERFIL (obrigatório):
@@ -134,5 +137,8 @@ def calc_total(
 
     if preco_vidro_m2 is not None:
         total += calc_valor_vidro(preco_vidro_m2, largura_mm, altura_mm)
+
+    if custo_mao_obra:
+        total += custo_mao_obra
 
     return total

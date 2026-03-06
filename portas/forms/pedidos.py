@@ -22,7 +22,7 @@ class PedidoItemForm(forms.ModelForm):
             "acabamento", "perfil",
             "perfil_puxador", "qtd_perfil_puxador",
             "puxador", "qtd_puxador", "puxador_tamanho_mm",
-            "divisor", "qtd_divisor",
+            "divisor", "qtd_divisor", "divisor_altura_1", "divisor_altura_2",
             "vidro",
             "adicional_valor",  "adicional_obs",
             "adicional2_valor", "adicional2_obs",
@@ -56,6 +56,8 @@ class PedidoItemForm(forms.ModelForm):
             "puxador_tamanho_mm": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "divisor": forms.Select(attrs={"class": "form-select"}),
             "qtd_divisor": forms.Select(attrs={"class": "form-select"}),
+            "divisor_altura_1": forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "Alt. 1 (mm)"}),
+            "divisor_altura_2": forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "Alt. 2 (mm)"}),
             "vidro": forms.Select(attrs={"class": "form-select"}),
             "adicional_valor":  forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
             "adicional_obs":    forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
@@ -72,6 +74,8 @@ class PedidoItemForm(forms.ModelForm):
         self.fields["qtd_perfil_puxador"].required = False
         self.fields["qtd_puxador"].required = False
         self.fields["qtd_divisor"].required = False
+        self.fields["divisor_altura_1"].required = False
+        self.fields["divisor_altura_2"].required = False
         self.fields["qtd_perfil_puxador"].choices = _QTD_CHOICES
         self.fields["qtd_puxador"].choices = _QTD_CHOICES
         self.fields["qtd_divisor"].choices = _QTD_CHOICES

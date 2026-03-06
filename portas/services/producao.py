@@ -9,48 +9,70 @@ from ..models import PedidoItem
 
 # ── Dimensões reais do vidro ──────────────────────────────────────────────────
 
-def _calcular_dimensoes_vidro(item) -> tuple:
+def _calcular_dimensoes_vidro(item) -> list:
     """
-    Calcula largura e altura reais do vidro descontando abatimentos de perfil,
-    perfil puxador e/ou puxador simples.
+    Retorna lista de (largura_mm, altura_mm) de cada peca de vidro.
 
-    Regras:
-    - glass_h = A - 2 × perfil.ab  (sempre)
-    - glass_w depende dos opcionais:
-        sem PP/puxador  → L - 2 × perfil.ab
-        PP qtd=1        → L - perfil.ab - pp.ab      (PP substitui perfil em 1 lado)
-        PP qtd=2        → L - 2 × pp.ab              (PP substitui perfil em 2 lados)
-        puxador qtd=1   → L - 2 × perfil.ab - pux.ab     (sobreposto: perfil em tudo + puxador soma)
-        puxador qtd=2   → L - 2 × perfil.ab - 2 × pux.ab (sobreposto: perfil em tudo + puxador soma em 2)
-    - Se perfil.fixacao_vidro == "face": +2mm em cada dimensão (polimento)
+    - Sem divisor aparente: 1 peca, dimensoes normais com abatimentos.
+    - Com divisor aparente + alturas: N+1 pecas onde N = qtd_divisor.
+    - vidro_polido no perfil: +2mm em cada dimensao do vidro (por peca).
+    - Lado que encosta no divisor: +2mm na altura da peca.
+    - Abatimento do divisor: descontado em cada lado que encosta no divisor.
     """
     L, A = item.largura_mm, item.altura_mm
     perfil = item.perfil
     pp = item.perfil_puxador
     pux = item.puxador
+    divisor = item.divisor
     qtd_pp = item.qtd_perfil_puxador or 0
     qtd_pux = item.qtd_puxador or 0
+    ab_perf = perfil.abatimento_mm
+    polimento = 2 if perfil.vidro_polido else 0
 
+    # Largura do vidro (nao muda com divisores horizontais)
     if pp and qtd_pp == 1:
-        glass_w = L - perfil.abatimento_mm - pp.abatimento_mm
+        glass_w = L - ab_perf - pp.abatimento_mm
     elif pp and qtd_pp == 2:
         glass_w = L - 2 * pp.abatimento_mm
     elif pux and qtd_pux == 1:
-        # Puxador sobrepõe o perfil: desconto do perfil em todos os lados + puxador soma em 1
-        glass_w = L - 2 * perfil.abatimento_mm - pux.abatimento_mm
+        glass_w = L - 2 * ab_perf - pux.abatimento_mm
     elif pux and qtd_pux >= 2:
-        # Puxador sobrepõe o perfil: desconto do perfil em todos os lados + puxador soma em 2
-        glass_w = L - 2 * perfil.abatimento_mm - 2 * pux.abatimento_mm
+        glass_w = L - 2 * ab_perf - 2 * pux.abatimento_mm
     else:
-        glass_w = L - 2 * perfil.abatimento_mm
+        glass_w = L - 2 * ab_perf
+    glass_w += polimento
 
-    glass_h = A - 2 * perfil.abatimento_mm
+    # Divisor aparente com alturas -> multiplas pecas de vidro
+    h1 = getattr(item, 'divisor_altura_1', None)
+    h2 = getattr(item, 'divisor_altura_2', None)
+    qtd_div = item.qtd_divisor or 0
+    tem_divisor_aparente = (
+        divisor and
+        getattr(divisor, 'encaixe', None) == 'aparente' and
+        h1
+    )
 
-    if perfil.fixacao_vidro == "face":
-        glass_w += 2
-        glass_h += 2
+    if tem_divisor_aparente:
+        ab_div = divisor.abatimento_mm
+        # Cada peca: lado perfil = -ab_perf + polimento; lado divisor = -ab_div + 2
+        h_peca_perf_div = lambda span: int(span) - ab_perf + polimento - ab_div + 2
+        h_peca_div_div  = lambda span: int(span) - 2 * ab_div + 4
 
-    return glass_w, glass_h
+        if qtd_div == 2 and h2:
+            return [
+                (glass_w, h_peca_perf_div(h1)),
+                (glass_w, h_peca_div_div(int(h2) - int(h1))),
+                (glass_w, h_peca_perf_div(A - int(h2))),
+            ]
+        else:
+            return [
+                (glass_w, h_peca_perf_div(h1)),
+                (glass_w, h_peca_perf_div(A - int(h1))),
+            ]
+
+    # Peca unica
+    glass_h = A - 2 * ab_perf + polimento
+    return [(glass_w, glass_h)]
 
 
 # ── Cálculo de insumos ────────────────────────────────────────────────────────
@@ -139,9 +161,9 @@ def calcular_insumos(pedido_ids: list) -> dict:
 
         # Área de vidro em m² — usa dimensões reais após abatimentos
         if item.vidro_id:
-            gw, gh = _calcular_dimensoes_vidro(item)
-            area = Decimal(gw) * Decimal(gh) / Decimal(1_000_000) * qtd
-            vidros_area[item.vidro_id] += area
+            for gw, gh in _calcular_dimensoes_vidro(item):
+                area = Decimal(gw) * Decimal(gh) / Decimal(1_000_000) * qtd
+                vidros_area[item.vidro_id] += area
             obj_vidros[item.vidro_id] = item.vidro
 
     return {
@@ -315,9 +337,9 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
 
         # Peças de vidro por tipo de vidro — usa dimensões reais após abatimentos
         if item.vidro_id:
-            gw, gh = _calcular_dimensoes_vidro(item)
-            for _ in range(qtd):
-                pecas_vidro[item.vidro_id].append((gw, gh))
+            for gw, gh in _calcular_dimensoes_vidro(item):
+                for _ in range(qtd):
+                    pecas_vidro[item.vidro_id].append((gw, gh))
             obj_vidros_plano[item.vidro_id] = item.vidro
 
     # Montar resultado para perfis

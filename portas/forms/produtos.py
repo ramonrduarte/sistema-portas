@@ -177,7 +177,7 @@ class PerfilForm(forms.ModelForm):
         model = Perfil
         fields = [
             "codigo", "descricao", "preco", "acabamento", "abatimento_mm",
-            "modelo", "fixacao_vidro",
+            "modelo", "fixacao_vidro", "vidro_polido",
             "puxadores_compativeis", "puxadores_simples_compativeis", "divisores_compativeis",
         ]
         widgets = {
@@ -187,6 +187,7 @@ class PerfilForm(forms.ModelForm):
             "acabamento": forms.Select(attrs={"class": "form-select"}),
             "modelo": forms.TextInput(attrs={"class": "form-control"}),
             "fixacao_vidro": forms.Select(attrs={"class": "form-select"}),
+            "vidro_polido": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
     def __init__(self, *args, **kwargs):

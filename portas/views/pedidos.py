@@ -13,6 +13,7 @@ from django.utils.html import format_html
 from ..forms import PedidoForm, PedidoItemForm, PedidoNovoOrcamentoForm
 from ..models import (
     Cliente,
+    ConfiguracaoEmpresa,
     Divisor,
     Pedido,
     PedidoItem,
@@ -212,11 +213,14 @@ def pedido_item_temp_add(request):
             qtd_pux = int(cd.get("qtd_puxador") or 0)
             pux_tam = cd.get("puxador_tamanho_mm") or 0
             qtd_div = int(cd.get("qtd_divisor") or 0)
+            div_alt_1 = cd.get("divisor_altura_1") or None
+            div_alt_2 = cd.get("divisor_altura_2") or None
             qtd = cd["quantidade"]
             adicional = sum(
                 cd.get(k) or Decimal("0")
                 for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
             )
+            config = ConfiguracaoEmpresa.get()
 
             valor_unit = calc_total(
                 preco_perfil_m=perfil.preco,
@@ -230,6 +234,7 @@ def pedido_item_temp_add(request):
                 preco_divisor_m=(divisor.preco if divisor else None),
                 qtd_divisor=(qtd_div or None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
+                custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
             ) + adicional
 
             # Monta a descrição: Porta modelo1/modelo2 Acabamento LxA Vidro
@@ -259,6 +264,8 @@ def pedido_item_temp_add(request):
                 "puxador_tamanho_mm": pux_tam or None,
                 "divisor_id": divisor.pk if divisor else None,
                 "qtd_divisor": qtd_div or None,
+                "divisor_altura_1": div_alt_1,
+                "divisor_altura_2": div_alt_2,
                 "vidro_id": vidro.pk if vidro else None,
                 "adicional_valor":  f"{cd.get('adicional_valor') or 0:.2f}" if cd.get("adicional_valor") else None,
                 "adicional_obs":    cd.get("adicional_obs") or "",
@@ -453,11 +460,14 @@ def pedido_item_novo(request, pedido_pk):
             qtd_pux = int(cd.get("qtd_puxador") or 0)
             pux_tam = cd.get("puxador_tamanho_mm") or 0
             qtd_div = int(cd.get("qtd_divisor") or 0)
+            div_alt_1 = cd.get("divisor_altura_1") or None
+            div_alt_2 = cd.get("divisor_altura_2") or None
             qtd = cd["quantidade"]
             adicional = sum(
                 cd.get(k) or Decimal("0")
                 for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
             )
+            config = ConfiguracaoEmpresa.get()
 
             valor_unit = calc_total(
                 preco_perfil_m=perfil.preco,
@@ -471,6 +481,7 @@ def pedido_item_novo(request, pedido_pk):
                 preco_divisor_m=(divisor.preco if divisor else None),
                 qtd_divisor=(qtd_div or None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
+                custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
             ) + adicional
 
             PedidoItem.objects.create(
@@ -487,6 +498,8 @@ def pedido_item_novo(request, pedido_pk):
                 puxador_tamanho_mm=(pux_tam or None),
                 divisor=divisor,
                 qtd_divisor=(qtd_div or None),
+                divisor_altura_1=div_alt_1,
+                divisor_altura_2=div_alt_2,
                 vidro=vidro,
                 adicional_valor=(cd.get("adicional_valor") or None),
                 adicional_obs=cd.get("adicional_obs") or "",
@@ -549,6 +562,7 @@ def htmx_calcular_item(request):
             Decimal(request.GET.get(k) or 0)
             for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
         )
+        config = ConfiguracaoEmpresa.get()
 
         pp = PerfilPuxador.objects.filter(pk=pp_id).first() if pp_id else None
         pux = Puxador.objects.filter(pk=pux_id).first() if pux_id else None
@@ -567,6 +581,7 @@ def htmx_calcular_item(request):
             preco_divisor_m=(divisor.preco if divisor else None),
             qtd_divisor=(qtd_div or None),
             preco_vidro_m2=(vidro.preco if vidro else None),
+            custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
         ) + adicional
 
         return render(request, _tmpl, {
