@@ -54,8 +54,11 @@ def _calcular_dimensoes_vidro(item) -> list:
 
     if tem_divisor_aparente:
         ab_div = divisor.abatimento_mm
-        # Cada peca: lado perfil = -ab_perf + polimento; lado divisor = -ab_div + 2
-        h_peca_perf_div = lambda span: int(span) - ab_perf + polimento - ab_div + 1
+        # pol_lado: polimento por lado de perfil (1mm se vidro_polido, senao 0)
+        pol_lado = Decimal(1) if perfil.vidro_polido else Decimal(0)
+        # peca perf+div: 1 lado perfil + 1 lado divisor
+        h_peca_perf_div = lambda span: int(span) - ab_perf + pol_lado - ab_div + 1
+        # peca div+div: 2 lados divisor (so aparece com qtd_div=2)
         h_peca_div_div  = lambda span: int(span) - 2 * ab_div + 2
 
         if qtd_div == 2 and h2:
