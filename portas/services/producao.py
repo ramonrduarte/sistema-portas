@@ -13,8 +13,8 @@ def _calcular_dimensoes_vidro(item) -> list:
     """
     Retorna lista de (largura_mm, altura_mm) de cada peca de vidro.
 
-    - Sem divisor ou sem alturas definidas: 1 peca, dimensoes normais com abatimentos.
-    - Com divisor + alturas: N+1 pecas onde N = qtd_divisor (embutido ou aparente).
+    - Sem divisor aparente ou sem alturas: 1 peca, dimensoes normais com abatimentos.
+    - Divisor aparente + alturas: N+1 pecas onde N = qtd_divisor.
     - vidro_polido no perfil: +2mm em cada dimensao do vidro (por peca).
     - Lado que encosta no divisor: +1mm na altura da peca.
     - Abatimento do divisor: descontado em cada lado que encosta no divisor.
@@ -42,13 +42,17 @@ def _calcular_dimensoes_vidro(item) -> list:
         glass_w = L - 2 * ab_perf
     glass_w += polimento
 
-    # Divisor com alturas definidas -> multiplas pecas de vidro
+    # Divisor aparente com alturas -> multiplas pecas de vidro
     h1 = getattr(item, 'divisor_altura_1', None)
     h2 = getattr(item, 'divisor_altura_2', None)
     qtd_div = item.qtd_divisor or 0
-    tem_divisor_com_alturas = bool(divisor and h1)
+    tem_divisor_aparente = bool(
+        divisor and
+        getattr(divisor, 'encaixe', None) == 'aparente' and
+        h1
+    )
 
-    if tem_divisor_com_alturas:
+    if tem_divisor_aparente:
         ab_div = divisor.abatimento_mm
         # Cada peca: lado perfil = -ab_perf + polimento; lado divisor = -ab_div + 2
         h_peca_perf_div = lambda span: int(span) - ab_perf + polimento - ab_div + 1
