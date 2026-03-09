@@ -91,6 +91,7 @@ urlpatterns = [
     path("pedidos/<int:pk>/imprimir/", views.pedido_imprimir, name="pedido_imprimir"),
     path("pedidos/<int:pedido_pk>/itens/novo/", views.pedido_item_novo, name="pedido_item_novo"),
     path("pedidos/<int:pedido_pk>/itens/<int:item_pk>/remover/", views.htmx_remove_item, name="htmx_remove_item"),
+    path("pedidos/<int:pk>/observacoes/", views.htmx_pedido_observacoes, name="htmx_pedido_observacoes"),
 
     # Integrações
     path("integracoes/bimer/",                      views.bimer_config,                name="bimer_config"),

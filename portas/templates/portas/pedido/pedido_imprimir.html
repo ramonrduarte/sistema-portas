@@ -151,20 +151,29 @@
     /* ── Total ──────────────────────────────────────────────── */
     .total-wrap {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 10pt;
+      color: #1a4a8a;
+      border-top: 2px solid #1a4a8a;
+      padding-top: 5px;
       margin-top: 4px;
       margin-bottom: 6px;
     }
-    .total-box {
-      background: #1a4a8a;
-      color: #fff;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 9.5pt;
-      font-weight: bold;
-      display: flex;
-      gap: 16px;
+
+    /* ── Retângulo de anotação ───────────────────────────────── */
+    .anot { width: 14mm; min-height: 12mm; border: 1px solid #ccc; }
+
+    /* ── Observações ─────────────────────────────────────────── */
+    .obs-wrap {
+      border-top: 1px solid #e0e0e0;
+      margin-top: 5px;
+      padding-top: 4px;
+      font-size: 7.5pt;
     }
+    .obs-wrap .obs-lbl { font-weight: bold; color: #555; margin-bottom: 2px; }
+    .obs-wrap .obs-txt { color: #333; white-space: pre-wrap; }
 
     /* ── Rodapé (em todas as páginas) ───────────────────────── */
     .rodape {
@@ -254,6 +263,7 @@
         <th class="r" style="width:8mm;">Qtd</th>
         <th class="r" style="width:19mm;">Unit.</th>
         <th class="r" style="width:19mm;">Total</th>
+        <th style="width:16mm;"></th>
       </tr>
     </thead>
     <tbody>
@@ -268,10 +278,11 @@
         <td class="r">{{ item.quantidade }}</td>
         <td class="r">R$&nbsp;{{ item.valor_unitario|floatformat:2 }}</td>
         <td class="r">R$&nbsp;{{ item.valor_total|floatformat:2 }}</td>
+        <td><div class="anot"></div></td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="4" style="text-align:center;color:#aaa;padding:10px;">Nenhum item.</td>
+        <td colspan="5" style="text-align:center;color:#aaa;padding:10px;">Nenhum item.</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -280,11 +291,17 @@
   {% if forloop.last %}
   <!-- ── Total (só na última página) ─────────────────────── -->
   <div class="total-wrap">
-    <div class="total-box">
-      <span>Total do pedido</span>
-      <span>R$&nbsp;{{ total_pedido|floatformat:2 }}</span>
-    </div>
+    <span>Total do pedido</span>
+    <span>R$&nbsp;{{ total_pedido|floatformat:2 }}</span>
   </div>
+
+  <!-- ── Observações (só na última página, se houver) ──────── -->
+  {% if pedido.observacoes %}
+  <div class="obs-wrap">
+    <div class="obs-lbl">Observações:</div>
+    <div class="obs-txt">{{ pedido.observacoes }}</div>
+  </div>
+  {% endif %}
   {% endif %}
 
   <!-- ── Rodapé (em todas as páginas) ─────────────────────── -->

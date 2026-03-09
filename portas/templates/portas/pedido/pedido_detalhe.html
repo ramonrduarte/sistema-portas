@@ -48,7 +48,8 @@
 
     <!-- Resumo lateral -->
     <div class="col-lg-3">
-      <div class="card shadow-sm">
+
+      <div class="card shadow-sm mb-3">
         <div class="card-header fw-semibold">Resumo</div>
         <div class="card-body">
           <div id="resumoPedido">
@@ -59,6 +60,31 @@
           </div>
         </div>
       </div>
+
+      {% if perms_usuario.pedidos.editar %}
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Observações</div>
+        <div class="card-body">
+          <form hx-post="{% url 'htmx_pedido_observacoes' pedido.id %}"
+                hx-target="#obs-feedback"
+                hx-swap="outerHTML">
+            {% csrf_token %}
+            <textarea name="observacoes"
+                      class="form-control form-control-sm mb-2"
+                      rows="4"
+                      placeholder="Anotações sobre o pedido...">{{ pedido.observacoes|default:"" }}</textarea>
+            <button type="submit" class="btn btn-sm btn-secondary w-100">Salvar</button>
+          </form>
+          <div id="obs-feedback"></div>
+        </div>
+      </div>
+      {% elif pedido.observacoes %}
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Observações</div>
+        <div class="card-body small">{{ pedido.observacoes }}</div>
+      </div>
+      {% endif %}
+
     </div>
 
   </div>
