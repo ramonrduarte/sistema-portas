@@ -199,8 +199,9 @@ def pedido_novo(request):
                 "erro_itens": erro_itens,
             })
 
+        obs = request.POST.get("observacoes", "").strip() or None
         with transaction.atomic():
-            pedido = Pedido.objects.create(cliente=c, usuario=request.user)
+            pedido = Pedido.objects.create(cliente=c, usuario=request.user, observacoes=obs)
             for item_data in itens:
                 PedidoItem.objects.create(
                     pedido=pedido,
@@ -371,23 +372,21 @@ def pedido_detalhe(request, pk):
         "pedido": pedido,
         "itens": itens,
         "total_pedido": total,
+        "obs_salva": request.GET.get("obs_salva") == "1",
     })
 
 
 # ── Observações do pedido ────────────────────────────────────────────────────
 
 @login_required
-def htmx_pedido_observacoes(request, pk):
+def pedido_observacoes(request, pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
-        return HttpResponse("Sem permissão.", status=403)
+        return _sem_permissao()
     pedido = get_object_or_404(Pedido, pk=pk)
     if request.method == "POST":
         pedido.observacoes = request.POST.get("observacoes", "").strip() or None
         pedido.save(update_fields=["observacoes"])
-        if request.headers.get("HX-Request"):
-            return HttpResponse('<div id="obs-feedback" class="text-success small mt-1">Salvo.</div>')
-        return redirect("pedido_detalhe", pk=pk)
-    return redirect("pedido_detalhe", pk=pk)
+    return redirect(reverse("pedido_detalhe", args=[pk]) + "?obs_salva=1")
 
 
 # ── Reabrir pedido ───────────────────────────────────────────────────────────

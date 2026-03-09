@@ -65,21 +65,17 @@
       <div class="card shadow-sm">
         <div class="card-header fw-semibold">Observações</div>
         <div class="card-body">
-          <form method="post"
-                action="{% url 'htmx_pedido_observacoes' pedido.id %}"
-                hx-post="{% url 'htmx_pedido_observacoes' pedido.id %}"
-                hx-trigger="submit"
-                hx-target="#obs-feedback"
-                hx-swap="outerHTML">
+          <form method="post" action="{% url 'pedido_observacoes' pedido.id %}">
             {% csrf_token %}
             <textarea name="observacoes"
                       class="form-control form-control-sm mb-2"
                       rows="4"
                       placeholder="Anotações sobre o pedido...">{{ pedido.observacoes|default:"" }}</textarea>
-            <button type="submit"
-                    class="btn btn-sm btn-secondary w-100">Salvar</button>
+            <button type="submit" class="btn btn-sm btn-secondary w-100">Salvar</button>
           </form>
-          <div id="obs-feedback"></div>
+          {% if obs_salva %}
+          <div class="text-success small mt-1">Salvo.</div>
+          {% endif %}
         </div>
       </div>
       {% elif pedido.observacoes %}

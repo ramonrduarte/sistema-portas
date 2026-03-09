@@ -56,7 +56,7 @@ from .pedidos import (
     htmx_perfis_por_acabamento,
     htmx_opcoes_por_perfil,
     htmx_clientes_sugestoes,
-    htmx_pedido_observacoes,
+    pedido_observacoes,
 )
 
 __all__ = [
@@ -79,7 +79,7 @@ __all__ = [
     "pedido_controle", "pedido_insumos", "pedido_plano_corte", "pedido_relatorio",
     "htmx_remove_item", "htmx_calcular_item",
     "htmx_cliente_selecionar", "htmx_perfis_por_acabamento",
-    "htmx_opcoes_por_perfil", "htmx_clientes_sugestoes", "htmx_pedido_observacoes",
+    "htmx_opcoes_por_perfil", "htmx_clientes_sugestoes", "pedido_observacoes",
     # integrações
     "bimer_config", "bimer_testar_conexao", "bimer_sincronizar", "bimer_sincronizar_clientes",
     # configurações
