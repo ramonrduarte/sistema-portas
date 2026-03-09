@@ -32,11 +32,10 @@
       }
     }
 
-    /* ── Impressão: 1 página A5 por folha ──────────────────────
-       Impressora configurada para A4 retrato.
-       Carregue meia folha A4 (A5 = 148 × 210 mm) na impressora.
-       Cada página ocupa exatamente uma meia folha.            */
-    @page { size: A5 portrait; margin: 0; }
+    /* ── Impressão: meia folha A4 (148 × 210 mm) ───────────────
+       Configure a impressora para A4 retrato e carregue meia folha
+       A4 cortada. O conteúdo ocupa exatamente a metade superior.  */
+    @page { size: A4 portrait; margin: 0; }
     @media print {
       body {
         background: #fff;
@@ -45,10 +44,9 @@
       }
       .pagina {
         width: 148mm;
-        min-height: 210mm;
-        height: auto;
+        height: 210mm;
         padding: 9mm 11mm;
-        overflow: visible;
+        overflow: hidden;
         page-break-after: always;
         break-after: page;
       }
@@ -82,9 +80,8 @@
       padding-bottom: 5px;
       margin-bottom: 6px;
     }
-    .cab img { max-height: 38px; max-width: 100px; width: auto; object-fit: contain; }
+    .cab img { max-height: 42px; max-width: 130px; width: auto; object-fit: contain; }
     .cab-empresa h1 { font-size: 11pt; font-weight: bold; color: #1a4a8a; line-height: 1.2; }
-    .cab-empresa p  { font-size: 7.5pt; color: #666; }
     .cab-pedido { margin-left: auto; text-align: right; }
     .cab-pedido .lbl  { font-size: 7pt; color: #999; text-transform: uppercase; letter-spacing: .4px; }
     .cab-pedido .num  { font-size: 13pt; font-weight: bold; color: #1a4a8a; line-height: 1.1; }
@@ -202,9 +199,8 @@
 {% endif %}
 
 <div class="aviso-imp">
-  <strong>Como imprimir:</strong> papel <strong>A5</strong> (ou meia folha A4 cortada),
-  escala <strong>100%</strong> (sem ajuste de margens). Se sua impressora não suporta A5,
-  selecione A4 e marque <strong>"Ajustar à página"</strong> no diálogo de impressão.
+  <strong>Como imprimir:</strong> selecione <strong>A4 Retrato</strong>, escala <strong>100%</strong>
+  (sem ajuste de margens) e carregue <strong>meia folha A4</strong> (148 × 210 mm) na impressora.
 </div>
 
 {% with total_pgs=paginas|length %}
@@ -217,10 +213,11 @@
   <div class="cab">
     {% if config_empresa.logo %}
       <img src="{{ config_empresa.logo.url }}" alt="{{ config_empresa.nome_empresa }}">
+    {% else %}
+      <div class="cab-empresa">
+        <h1>{{ config_empresa.nome_empresa }}</h1>
+      </div>
     {% endif %}
-    <div class="cab-empresa">
-      <h1>{{ config_empresa.nome_empresa }}</h1>
-    </div>
     <div class="cab-pedido">
       <div class="lbl">Pedido</div>
       <div class="num">#{{ pedido.numero }}</div>
