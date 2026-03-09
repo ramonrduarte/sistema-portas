@@ -384,7 +384,10 @@ def htmx_pedido_observacoes(request, pk):
     if request.method == "POST":
         pedido.observacoes = request.POST.get("observacoes", "").strip() or None
         pedido.save(update_fields=["observacoes"])
-    return HttpResponse('<div id="obs-feedback" class="text-success small mt-1">Salvo.</div>')
+        if request.headers.get("HX-Request"):
+            return HttpResponse('<div id="obs-feedback" class="text-success small mt-1">Salvo.</div>')
+        return redirect("pedido_detalhe", pk=pk)
+    return redirect("pedido_detalhe", pk=pk)
 
 
 # ── Reabrir pedido ───────────────────────────────────────────────────────────
