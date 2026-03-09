@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Pedido #{{ pedido.numero }} – Casa Adrofecha</title>
+  <title>Pedido #{{ pedido.numero }} – {{ config_empresa.nome_empresa }}</title>
   <style>
     /* ── Reset ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -206,7 +206,6 @@
   Carregue <strong>meia folha A4</strong> (A5 = 148 × 210 mm) na impressora — cada página ocupa exatamente uma meia folha.
 </div>
 
-{% load static %}
 {% with total_pgs=paginas|length %}
 
 {% for pagina_itens in paginas %}
@@ -215,10 +214,11 @@
   {% if forloop.first %}
   <!-- ── Cabeçalho completo ───────────────────────────────── -->
   <div class="cab">
-    <img src="{% static 'img/logo.jpg' %}" alt="Casa Adrofecha">
+    {% if config_empresa.logo %}
+      <img src="{{ config_empresa.logo.url }}" alt="{{ config_empresa.nome_empresa }}" style="max-height:28px; max-width:80px; object-fit:contain;">
+    {% endif %}
     <div class="cab-empresa">
-      <h1>Casa Adrofecha</h1>
-      <p>Portas em alumínio e vidro</p>
+      <h1>{{ config_empresa.nome_empresa }}</h1>
     </div>
     <div class="cab-pedido">
       <div class="lbl">Pedido</div>
@@ -239,7 +239,7 @@
   {% else %}
   <!-- ── Cabeçalho de continuação ─────────────────────────── -->
   <div class="cab-cont">
-    <strong>Casa Adrofecha</strong>
+    <strong>{{ config_empresa.nome_empresa }}</strong>
     <span>Pedido #{{ pedido.numero }} — {{ pedido.cliente.nome }}</span>
   </div>
   {% endif %}
@@ -288,7 +288,7 @@
   <!-- ── Rodapé (em todas as páginas) ─────────────────────── -->
   <div class="rodape">
     {% if forloop.last %}
-      <span>Casa Adrofecha – Portas em alumínio e vidro</span>
+      <span>{{ config_empresa.nome_empresa }}</span>
       <span>Emitido em {{ pedido.data|date:"d/m/Y" }}</span>
     {% else %}
       <span>Continua na próxima página…</span>
