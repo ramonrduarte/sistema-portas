@@ -1,7 +1,8 @@
-from datetime import date as Date
+from datetime import date as Date, datetime
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
 from django.http import HttpResponse
@@ -75,12 +76,26 @@ def _resp_atualiza_tabela(request, pedido):
 
 # ── Lista ──────────────────────────────────────────────────────────────────────
 
+_PER_PAGE_OPCOES = [10, 20, 50, 100]
+
+
 @login_required
 def pedidos_lista(request):
     if not _get_perms(request.user)["pedidos"]["ver"]:
         return _sem_permissao("Você não tem permissão para visualizar pedidos.")
-    q = (request.GET.get("q") or "").strip()
+
+    q        = (request.GET.get("q") or "").strip()
+    data_de  = (request.GET.get("data_de") or "").strip()
+    data_ate = (request.GET.get("data_ate") or "").strip()
+    try:
+        per_page = int(request.GET.get("per_page", 20))
+        if per_page not in _PER_PAGE_OPCOES:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+
     qs = Pedido.objects.select_related("cliente", "usuario").order_by("-id")
+
     if q:
         if q.isdigit():
             qs = qs.filter(id=int(q))
@@ -88,9 +103,38 @@ def pedidos_lista(request):
             qs = (qs.filter(cliente__nome__icontains=q) |
                   qs.filter(cliente__codigo__icontains=q))
 
+    if data_de:
+        try:
+            qs = qs.filter(data__gte=datetime.strptime(data_de, "%Y-%m-%d").date())
+        except ValueError:
+            data_de = ""
+
+    if data_ate:
+        try:
+            qs = qs.filter(data__lte=datetime.strptime(data_ate, "%Y-%m-%d").date())
+        except ValueError:
+            data_ate = ""
+
+    paginator = Paginator(qs, per_page)
+    try:
+        page_num = int(request.GET.get("page", 1))
+    except (ValueError, TypeError):
+        page_num = 1
+    page_obj = paginator.get_page(page_num)
+
+    ctx = {
+        "pedidos": page_obj,
+        "page_obj": page_obj,
+        "q": q,
+        "data_de": data_de,
+        "data_ate": data_ate,
+        "per_page": per_page,
+        "per_page_opcoes": _PER_PAGE_OPCOES,
+    }
+
     if request.headers.get("HX-Request") == "true":
-        return render(request, "portas/pedido/_pedido_tabela.html", {"pedidos": qs})
-    return render(request, "portas/pedido/pedido_lista.html", {"pedidos": qs})
+        return render(request, "portas/pedido/_pedido_tabela.html", ctx)
+    return render(request, "portas/pedido/pedido_lista.html", ctx)
 
 
 # ── Rascunho de pedido (sessão) ────────────────────────────────────────────────

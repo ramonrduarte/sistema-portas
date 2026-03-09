@@ -3,6 +3,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{{ config_empresa.nome_empresa }}{% endblock %}</title>
 
     {# Aplica o tema salvo antes de qualquer CSS para evitar flash #}
@@ -257,7 +258,7 @@
 </div>
 
 <!-- ── Conteúdo principal ──────────────────────────────────────────────────── -->
-<main class="container mb-4 mt-3">
+<main class="container-fluid container-lg mb-4 mt-3">
     {% block content %}{% endblock %}
 </main>
 
