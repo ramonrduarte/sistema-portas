@@ -163,7 +163,7 @@
     }
 
     /* ── Retângulo de anotação ───────────────────────────────── */
-    .anot { width: 11mm; height: 26mm; border: 1px solid #aaa; }
+    .anot { width: 11mm; height: 15mm; border: 1px solid #aaa; }
 
     /* ── Observações ─────────────────────────────────────────── */
     .obs-wrap {
@@ -295,13 +295,15 @@
     <span>R$&nbsp;{{ total_pedido|floatformat:2 }}</span>
   </div>
 
-  <!-- ── Observações (só na última página, se houver) ──────── -->
-  {% if pedido.observacoes %}
+  <!-- ── Observações (última página) ──────────────────────── -->
   <div class="obs-wrap">
     <div class="obs-lbl">Observações:</div>
+    {% if pedido.observacoes %}
     <div class="obs-txt">{{ pedido.observacoes }}</div>
+    {% else %}
+    <div style="height:12mm; border-bottom: 1px solid #ddd; margin-top: 3px;"></div>
+    {% endif %}
   </div>
-  {% endif %}
   {% endif %}
 
   <!-- ── Rodapé (em todas as páginas) ─────────────────────── -->
