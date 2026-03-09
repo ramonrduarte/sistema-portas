@@ -265,6 +265,120 @@ def sincronizar_precos():
     return {"status": "ok", "atualizados": atualizados, "erros": erros}
 
 
+# ── Envio de pedido para o Bimer ─────────────────────────────────────────────
+
+def enviar_pedido_bimer(config, pedido):
+    """
+    Envia um Pedido para o Bimer ao mover para status 'wise'.
+
+    TODO: ajustar endpoint e estrutura do payload conforme documentação da API Bimer.
+
+    Retorna (True, msg) em caso de sucesso ou (False, msg) em caso de erro.
+    """
+    if not config.ativo:
+        return False, "Integração Bimer desativada."
+
+    if not config.identificador_empresa:
+        return False, "Configure o Identificador da empresa no Bimer."
+
+    if not pedido.cliente.bimer_id:
+        return False, f"Cliente '{pedido.cliente.nome}' não possui identificador Bimer. Sincronize os clientes primeiro."
+
+    try:
+        token = get_valid_token(config)
+    except Exception as e:
+        return False, f"Falha na autenticação Bimer: {e}"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    # ── Monta itens do pedido ────────────────────────────────────────────────
+    # Cada PedidoItem é uma porta composta de vários produtos.
+    # Enviamos cada produto como uma linha separada no Bimer.
+    itens_bimer = []
+    itens = pedido.itens.select_related(
+        "perfil", "perfil_puxador", "puxador", "divisor", "vidro"
+    ).all()
+
+    for item in itens:
+        qtd = item.quantidade
+
+        # Perfil (obrigatório)
+        itens_bimer.append({
+            # TODO: confirmar campos exatos exigidos pela API Bimer
+            "identificadorProduto": item.perfil.bimer_id or item.perfil.codigo,
+            "quantidade": qtd,
+            "valorUnitario": float(item.valor_unitario),
+            "descricao": item.descricao,
+        })
+
+        # Puxador (opcional)
+        if item.puxador_id and item.puxador.bimer_id:
+            itens_bimer.append({
+                "identificadorProduto": item.puxador.bimer_id or item.puxador.codigo,
+                "quantidade": qtd,
+                "valorUnitario": 0,
+                "descricao": f"Puxador {item.puxador.modelo}",
+            })
+
+        # Divisor (opcional)
+        if item.divisor_id and item.divisor.bimer_id:
+            itens_bimer.append({
+                "identificadorProduto": item.divisor.bimer_id or item.divisor.codigo,
+                "quantidade": qtd,
+                "valorUnitario": 0,
+                "descricao": f"Divisor {item.divisor.modelo}",
+            })
+
+        # Vidro (opcional)
+        if item.vidro_id and item.vidro.bimer_id:
+            itens_bimer.append({
+                "identificadorProduto": item.vidro.bimer_id or item.vidro.codigo,
+                "quantidade": qtd,
+                "valorUnitario": 0,
+                "descricao": f"Vidro {item.vidro.descricao}",
+            })
+
+    # ── Payload principal ────────────────────────────────────────────────────
+    # TODO: confirmar endpoint e campos exatos da API Bimer para criação de pedido
+    payload = {
+        "identificadorEmpresa": config.identificador_empresa,
+        "identificadorCliente": pedido.cliente.bimer_id,
+        "numeroPedido": pedido.numero,
+        "data": pedido.data.strftime("%Y-%m-%d"),
+        "observacoes": pedido.observacoes or "",
+        "itens": itens_bimer,
+    }
+
+    # TODO: confirmar endpoint correto (ex: /api/pedidos, /api/vendas, /api/empresas/{id}/pedidos)
+    url = f"{config.base_url.rstrip('/')}/api/pedidos"
+
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # TODO: confirmar campo do identificador retornado pelo Bimer
+        bimer_pedido_id = (
+            data.get("Identificador")
+            or data.get("identificador")
+            or data.get("id")
+            or ""
+        )
+        msg = f"Pedido enviado ao Bimer com sucesso. ID Bimer: {bimer_pedido_id}"
+        return True, msg
+
+    except requests.HTTPError as e:
+        corpo = e.response.text[:400] if e.response is not None else ""
+        return False, f"Erro HTTP {e.response.status_code}: {corpo}"
+    except requests.ConnectionError:
+        return False, "Não foi possível conectar ao Bimer. Verifique a URL base."
+    except Exception as e:
+        return False, str(e)
+
+
 # ── Sincronização de clientes ─────────────────────────────────────────────────
 
 def sincronizar_clientes():

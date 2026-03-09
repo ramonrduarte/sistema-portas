@@ -18,7 +18,7 @@
         <td>{{ p.cliente.codigo }} – {{ p.cliente.nome }}</td>
         <td class="text-muted small">{% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}</td>
         <td>
-          <span class="badge {% if p.status == 'aberto' %}bg-success{% elif p.status == 'producao' %}bg-warning text-dark{% elif p.status == 'concluido' %}bg-primary{% else %}bg-secondary{% endif %}">
+          <span class="badge {% if p.status == 'aberto' %}bg-success{% elif p.status == 'producao' %}bg-warning text-dark{% elif p.status == 'concluido' %}bg-primary{% elif p.status == 'wise' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
             {{ p.get_status_display }}
           </span>
         </td>
@@ -46,6 +46,18 @@
                 <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
               </svg>
             </a>
+
+            {% if perms_usuario.producao.alterar_status and p.status == 'concluido' %}
+            <button class="btn btn-sm btn-outline-info"
+                    hx-get="{% url 'pedido_enviar_wise' p.id %}"
+                    hx-target="#modalConteudo"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro"
+                    title="Enviar para Wise">
+              <i class="bi bi-cloud-upload"></i>
+            </button>
+            {% endif %}
 
             {% if perms_usuario.producao.alterar_status and p.status != 'aberto' and p.status != 'cancelado' %}
             <button class="btn btn-sm btn-outline-secondary"

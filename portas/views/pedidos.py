@@ -389,6 +389,46 @@ def pedido_observacoes(request, pk):
     return redirect(reverse("pedido_detalhe", args=[pk]) + "?obs_salva=1")
 
 
+# ── Enviar pedido para Wise (integração Bimer) ────────────────────────────────
+
+@login_required
+def pedido_enviar_wise(request, pk):
+    if not _get_perms(request.user)["producao"]["alterar_status"]:
+        return _sem_permissao("Você não tem permissão para alterar o status de pedidos.")
+    pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
+
+    if request.method == "POST":
+        if pedido.status == "wise":
+            return HttpResponse(
+                '<div class="alert alert-warning m-3">Pedido já está com status Wise.</div>',
+                status=400,
+            )
+
+        from ..models import BimerConfig
+        from ..services import bimer as svc_bimer
+
+        config = BimerConfig.get()
+        ok, msg = svc_bimer.enviar_pedido_bimer(config, pedido)
+
+        if not ok:
+            return render(request, "portas/pedido/_confirm_wise.html", {
+                "pedido": pedido,
+                "erro": msg,
+            })
+
+        pedido.status = "wise"
+        pedido.save(update_fields=["status"])
+
+        qs = Pedido.objects.select_related("cliente", "usuario").order_by("-id")
+        resp = HttpResponse(
+            render_to_string("portas/pedido/_pedido_tabela.html", {"pedidos": qs}, request=request)
+        )
+        resp["HX-Trigger"] = "fecharModalCadastro"
+        return resp
+
+    return render(request, "portas/pedido/_confirm_wise.html", {"pedido": pedido})
+
+
 # ── Reabrir pedido ───────────────────────────────────────────────────────────
 
 @login_required
