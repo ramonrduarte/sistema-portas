@@ -36,7 +36,7 @@
        Impressora configurada para A4 retrato.
        Carregue meia folha A4 (A5 = 148 × 210 mm) na impressora.
        Cada página ocupa exatamente uma meia folha.            */
-    @page { size: A4 portrait; margin: 0; }
+    @page { size: A5 portrait; margin: 0; }
     @media print {
       body {
         background: #fff;
@@ -45,9 +45,10 @@
       }
       .pagina {
         width: 148mm;
-        height: 210mm;
+        min-height: 210mm;
+        height: auto;
         padding: 9mm 11mm;
-        overflow: hidden;
+        overflow: visible;
         page-break-after: always;
         break-after: page;
       }
@@ -81,7 +82,7 @@
       padding-bottom: 5px;
       margin-bottom: 6px;
     }
-    .cab img { height: 28px; width: auto; }
+    .cab img { max-height: 38px; max-width: 100px; width: auto; object-fit: contain; }
     .cab-empresa h1 { font-size: 11pt; font-weight: bold; color: #1a4a8a; line-height: 1.2; }
     .cab-empresa p  { font-size: 7.5pt; color: #666; }
     .cab-pedido { margin-left: auto; text-align: right; }
@@ -201,9 +202,9 @@
 {% endif %}
 
 <div class="aviso-imp">
-  <strong>Como imprimir:</strong> papel <strong>A4 Retrato</strong>,
-  escala <strong>100%</strong> (sem ajuste de margens).
-  Carregue <strong>meia folha A4</strong> (A5 = 148 × 210 mm) na impressora — cada página ocupa exatamente uma meia folha.
+  <strong>Como imprimir:</strong> papel <strong>A5</strong> (ou meia folha A4 cortada),
+  escala <strong>100%</strong> (sem ajuste de margens). Se sua impressora não suporta A5,
+  selecione A4 e marque <strong>"Ajustar à página"</strong> no diálogo de impressão.
 </div>
 
 {% with total_pgs=paginas|length %}
@@ -215,7 +216,7 @@
   <!-- ── Cabeçalho completo ───────────────────────────────── -->
   <div class="cab">
     {% if config_empresa.logo %}
-      <img src="{{ config_empresa.logo.url }}" alt="{{ config_empresa.nome_empresa }}" style="max-height:28px; max-width:80px; object-fit:contain;">
+      <img src="{{ config_empresa.logo.url }}" alt="{{ config_empresa.nome_empresa }}">
     {% endif %}
     <div class="cab-empresa">
       <h1>{{ config_empresa.nome_empresa }}</h1>
