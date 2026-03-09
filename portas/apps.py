@@ -1,6 +1,10 @@
+import logging
 import os
+import sys
 
 from django.apps import AppConfig
+
+logger = logging.getLogger(__name__)
 
 
 class PortasConfig(AppConfig):
@@ -8,8 +12,10 @@ class PortasConfig(AppConfig):
     name = "portas"
 
     def ready(self):
-        # Evita dupla execução no runserver (reloader do Django cria 2 processos)
-        if os.environ.get("RUN_MAIN") != "true":
+        # Em desenvolvimento com runserver, o Django cria 2 processos (reloader + servidor).
+        # Só iniciamos o scheduler no processo filho (RUN_MAIN=true).
+        # Em produção (gunicorn, etc.) RUN_MAIN não é definido — sempre iniciamos.
+        if "runserver" in sys.argv and os.environ.get("RUN_MAIN") != "true":
             return
         self._iniciar_scheduler()
 
@@ -38,6 +44,6 @@ class PortasConfig(AppConfig):
 
             # Armazena referência global para reagendamento dinâmico
             sched_module.set(scheduler)
+            logger.info("APScheduler iniciado — sync Bimer às %s (dias: %s)", horarios, dias)
         except Exception:
-            # Não impede o servidor de subir se o APScheduler falhar
-            pass
+            logger.exception("Falha ao iniciar APScheduler")
