@@ -80,7 +80,8 @@
       padding-bottom: 5px;
       margin-bottom: 6px;
     }
-    .cab img { max-height: 42px; max-width: 130px; width: auto; object-fit: contain; }
+    .cab-logo { background: #1a1a2e; border-radius: 4px; padding: 3px 7px; display: flex; align-items: center; }
+    .cab img { max-height: 38px; max-width: 120px; width: auto; object-fit: contain; }
     .cab-empresa h1 { font-size: 11pt; font-weight: bold; color: #1a4a8a; line-height: 1.2; }
     .cab-pedido { margin-left: auto; text-align: right; }
     .cab-pedido .lbl  { font-size: 7pt; color: #999; text-transform: uppercase; letter-spacing: .4px; }
@@ -212,7 +213,9 @@
   <!-- ── Cabeçalho completo ───────────────────────────────── -->
   <div class="cab">
     {% if config_empresa.logo %}
-      <img src="{{ config_empresa.logo.url }}" alt="{{ config_empresa.nome_empresa }}">
+      <div class="cab-logo">
+        <img src="{{ config_empresa.logo.url }}" alt="{{ config_empresa.nome_empresa }}">
+      </div>
     {% else %}
       <div class="cab-empresa">
         <h1>{{ config_empresa.nome_empresa }}</h1>
