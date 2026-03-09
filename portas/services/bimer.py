@@ -272,12 +272,11 @@ _BIMER_ID_PORTA = "00A0000AU5"  # Identificador fixo do produto "Porta" no Bimer
 
 def enviar_pedido_bimer(config, pedido):
     """
-    Envia um Pedido para o Bimer ao mover para status 'wise'.
+    Envia um Pedido de Venda para o Bimer ao mover para status 'wise'.
 
-    Cada PedidoItem é enviado como uma linha com o produto fixo '00A0000AU5' (Porta),
-    usando a descrição gerada pelo sistema, quantidade e valor unitário.
-
-    TODO: confirmar endpoint e campos do payload com documentação Bimer.
+    Endpoint: POST /api/faturamento/pedidosvenda
+    Cada PedidoItem vira uma linha com produto fixo '00A0000AU5' (Porta),
+    descrição do sistema, quantidade e valor unitário.
 
     Retorna (True, msg) em caso de sucesso ou (False, msg) em caso de erro.
     """
@@ -303,45 +302,41 @@ def enviar_pedido_bimer(config, pedido):
         "Content-Type": "application/json",
     }
 
+    data_iso = pedido.data.strftime("%Y-%m-%dT00:00:00")
+
     # ── Monta itens: uma linha por porta ─────────────────────────────────────
     itens_bimer = []
     for item in pedido.itens.all():
         itens_bimer.append({
-            # TODO: confirmar campos exatos exigidos pela API Bimer
             "identificadorProduto": _BIMER_ID_PORTA,
             "quantidade": item.quantidade,
             "valorUnitario": float(item.valor_unitario),
-            "descricao": item.descricao,
-            "observacoes": pedido.observacoes or "",
+            # TODO: confirmar se a API aceita campo de complemento/descrição no item
+            # "complemento": item.descricao,
         })
 
-    # ── Payload principal ────────────────────────────────────────────────────
+    # ── Payload — campos confirmados pela doc Bimer ──────────────────────────
     payload = {
-        # TODO: confirmar campos exatos do payload com documentação Bimer
         "identificadorEmpresa": config.identificador_empresa,
-        "identificadorCliente": pedido.cliente.bimer_id,
-        "numeroPedido": pedido.numero,
-        "data": pedido.data.strftime("%Y-%m-%d"),
-        "observacoes": pedido.observacoes or "",
-        "itens": itens_bimer,
+        "identificadorPessoa":  pedido.cliente.bimer_id,   # campo correto: identificadorPessoa
+        "dataEmissao":          data_iso,
+        "dataPrevistaSaida":    data_iso,
+        "observacao":           pedido.observacoes or "",  # singular, sem 's'
+        "itens":                itens_bimer,
     }
 
-    # TODO: confirmar endpoint correto (ex: /api/pedidos, /api/vendas, /api/empresas/{id}/pedidos)
-    url = f"{config.base_url.rstrip('/')}/api/pedidos"
+    url = f"{config.base_url.rstrip('/')}/api/faturamento/pedidosvenda"
 
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
 
-        # TODO: confirmar campo do identificador retornado pelo Bimer
-        bimer_pedido_id = (
-            data.get("Identificador")
-            or data.get("identificador")
-            or data.get("id")
-            or ""
-        )
-        return True, f"Pedido enviado ao Bimer com sucesso. ID Bimer: {bimer_pedido_id}"
+        # Resposta: { "listaObjetos": [{ "codigo": "...", "identificador": "..." }] }
+        lista = data.get("listaObjetos") or data.get("ListaObjetos") or []
+        bimer_id = lista[0].get("identificador", "") if lista else ""
+        codigo   = lista[0].get("codigo", "") if lista else ""
+        return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}"
 
     except requests.HTTPError as e:
         corpo = e.response.text[:400] if e.response is not None else ""
