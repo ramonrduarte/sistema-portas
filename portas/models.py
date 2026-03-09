@@ -344,8 +344,8 @@ class Pedido(models.Model):
         ("aberto", "Aberto"),
         ("cancelado", "Cancelado"),
         ("producao", "Em produção"),
-        ("concluido", "Concluído"),
         ("wise", "Wise"),
+        ("concluido", "Concluído"),
     ]
 
     data = models.DateField(auto_now_add=True)

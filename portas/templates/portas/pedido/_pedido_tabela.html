@@ -47,7 +47,7 @@
               </svg>
             </a>
 
-            {% if perms_usuario.producao.alterar_status and p.status == 'concluido' %}
+            {% if perms_usuario.producao.alterar_status and p.status == 'producao' %}
             <button class="btn btn-sm btn-outline-info"
                     hx-get="{% url 'pedido_enviar_wise' p.id %}"
                     hx-target="#modalConteudo"
