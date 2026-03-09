@@ -13,7 +13,7 @@
       color: #111;
     }
 
-    /* ── Tela: folhas A5 empilhadas sobre fundo cinza ───────── */
+    /* ── Tela: folhas A4 empilhadas sobre fundo cinza ───────── */
     @media screen {
       body {
         background: #c8c8c8;
@@ -25,25 +25,24 @@
       }
       .pagina {
         background: #fff;
-        width: 148mm;
-        min-height: 210mm;
-        padding: 9mm 11mm;
+        width: 210mm;
+        min-height: 297mm;
+        padding: 12mm 15mm;
         box-shadow: 0 3px 14px rgba(0,0,0,.3);
       }
     }
 
-    /* ── Impressão: A5 (= meia folha A4 cortada, 148 × 210 mm) ─
-       Selecione tamanho A5 na impressora ou use A4 com escala 71%. */
-    @page { size: A5 portrait; margin: 0; }
+    /* ── Impressão: A4 retrato ───────────────────────────────── */
+    @page { size: A4 portrait; margin: 0; }
     @media print {
       body {
         background: #fff;
         margin: 0; padding: 0;
       }
       .pagina {
-        width: 148mm;
-        height: 210mm;
-        padding: 9mm 11mm;
+        width: 210mm;
+        height: 297mm;
+        padding: 12mm 15mm;
         overflow: hidden;
         page-break-after: always;
         break-after: page;
@@ -58,7 +57,7 @@
 
     /* ── Aviso de configuração (só na tela) ─────────────────── */
     .aviso-imp {
-      width: 148mm;
+      width: 210mm;
       background: #fff8e1;
       border: 1px solid #f0c040;
       border-radius: 5px;
@@ -199,9 +198,7 @@
 {% endif %}
 
 <div class="aviso-imp">
-  <strong>Como imprimir:</strong> selecione <strong>A5 Retrato</strong>, escala <strong>100%</strong>
-  (sem ajuste de margens) e carregue <strong>meia folha A4</strong> (148 × 210 mm) na impressora.
-  Se a impressora não tiver A5, use A4 com escala <strong>71%</strong>.
+  <strong>Como imprimir:</strong> selecione <strong>A4 Retrato</strong>, escala <strong>100%</strong>, sem ajuste de margens.
 </div>
 
 {% with total_pgs=paginas|length %}
