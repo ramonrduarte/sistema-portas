@@ -605,6 +605,13 @@ class ConfiguracaoEmpresa(models.Model):
         null=True,
         verbose_name="Logo",
     )
+    logo_claro = models.ImageField(
+        upload_to="empresa/",
+        blank=True,
+        null=True,
+        verbose_name="Logo (fundo claro/impressão)",
+        help_text="Versão do logo para uso em fundo branco (impressão). Opcional — se não preenchido, usa o logo principal com fundo escuro.",
+    )
     custo_mao_obra = models.DecimalField(
         max_digits=10,
         decimal_places=2,

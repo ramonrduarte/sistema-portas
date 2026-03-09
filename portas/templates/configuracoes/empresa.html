@@ -49,6 +49,28 @@
         </div>
 
         <div class="mb-3">
+          <label class="form-label fw-semibold">{{ form.logo_claro.label }}</label>
+
+          {% if config.logo_claro %}
+            <div class="mb-2 d-flex align-items-center gap-3">
+              <img src="{{ config.logo_claro.url }}" alt="Logo claro atual" style="max-height: 64px; max-width: 200px; object-fit: contain;" class="border rounded p-1">
+              <div class="form-check">
+                {{ form.limpar_logo_claro }}
+                <label class="form-check-label text-danger" for="{{ form.limpar_logo_claro.id_for_label }}">
+                  {{ form.limpar_logo_claro.label }}
+                </label>
+              </div>
+            </div>
+          {% endif %}
+
+          {{ form.logo_claro }}
+          <div class="form-text">Versão do logo para impressão (fundo branco). Se não preenchido, usa o logo principal com caixa escura.</div>
+          {% if form.logo_claro.errors %}
+            <div class="text-danger small mt-1">{{ form.logo_claro.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
           <label class="form-label fw-semibold">{{ form.custo_mao_obra.label }}</label>
           <div class="input-group">
             <span class="input-group-text">R$</span>
