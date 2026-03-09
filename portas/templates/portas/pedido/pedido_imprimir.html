@@ -32,17 +32,13 @@
       }
     }
 
-    /* ── Impressão: meia folha A4 (148 × 210 mm) ───────────────
-       Configure a impressora para A4 retrato e carregue meia folha
-       A4 cortada. O conteúdo ocupa exatamente a metade superior.  */
-    @page { size: A4 portrait; margin: 0; }
+    /* ── Impressão: A5 (= meia folha A4 cortada, 148 × 210 mm) ─
+       Selecione tamanho A5 na impressora ou use A4 com escala 71%. */
+    @page { size: A5 portrait; margin: 0; }
     @media print {
       body {
         background: #fff;
         margin: 0; padding: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
       }
       .pagina {
         width: 148mm;
@@ -203,8 +199,9 @@
 {% endif %}
 
 <div class="aviso-imp">
-  <strong>Como imprimir:</strong> selecione <strong>A4 Retrato</strong>, escala <strong>100%</strong>
+  <strong>Como imprimir:</strong> selecione <strong>A5 Retrato</strong>, escala <strong>100%</strong>
   (sem ajuste de margens) e carregue <strong>meia folha A4</strong> (148 × 210 mm) na impressora.
+  Se a impressora não tiver A5, use A4 com escala <strong>71%</strong>.
 </div>
 
 {% with total_pgs=paginas|length %}
