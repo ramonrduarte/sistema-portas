@@ -365,6 +365,7 @@ class Pedido(models.Model):
         choices=STATUS_CHOICES,
         default="aberto"
     )
+    observacoes = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"Pedido #{self.id}"
