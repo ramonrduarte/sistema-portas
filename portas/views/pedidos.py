@@ -1,11 +1,12 @@
 from datetime import date as Date, datetime
+from urllib.parse import urlencode
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -63,13 +64,14 @@ def _resp_atualiza_tabela(request, pedido):
         {"pedido": pedido, "itens": itens},
         request=request,
     )
-    oob = (
+    oob_tabela = f'<div hx-swap-oob="innerHTML:#tabelaItens">{tabela_html}</div>'
+    oob_resumo = (
         '<div hx-swap-oob="innerHTML:#resumoPedido">'
         '<div class="d-flex justify-content-between fw-semibold fs-5">'
         f'<span>Total</span><span>R$\xa0{total:,.2f}</span>'
         '</div></div>'
     )
-    resp = HttpResponse(tabela_html + oob)
+    resp = HttpResponse(oob_tabela + oob_resumo)
     resp["HX-Trigger"] = "fecharModalCadastro"
     return resp
 
@@ -154,13 +156,14 @@ def _resp_atualiza_rascunho(request, itens):
         {"itens": itens},
         request=request,
     )
-    oob = (
+    oob_tabela = f'<div hx-swap-oob="innerHTML:#tabelaRascunho">{tabela_html}</div>'
+    oob_resumo = (
         '<div hx-swap-oob="innerHTML:#resumoRascunho">'
         '<div class="d-flex justify-content-between fw-semibold fs-5">'
         f"<span>Total</span><span>R$\xa0{total:,.2f}</span>"
         "</div></div>"
     )
-    resp = HttpResponse(tabela_html + oob)
+    resp = HttpResponse(oob_tabela + oob_resumo)
     resp["HX-Trigger"] = "fecharModalCadastro"
     return resp
 
@@ -217,6 +220,9 @@ def pedido_novo(request):
                     puxador_tamanho_mm=item_data.get("puxador_tamanho_mm"),
                     divisor_id=item_data.get("divisor_id"),
                     qtd_divisor=item_data.get("qtd_divisor"),
+                    divisor_altura_1=item_data.get("divisor_altura_1"),
+                    divisor_altura_2=item_data.get("divisor_altura_2"),
+                    puxador_sobreposto=item_data.get("puxador_sobreposto", True),
                     vidro_id=item_data.get("vidro_id"),
                     adicional_valor=item_data.get("adicional_valor") or None,
                     adicional_obs=item_data.get("adicional_obs") or "",
@@ -376,6 +382,55 @@ def pedido_detalhe(request, pk):
     })
 
 
+# ── Duplicar pedido ──────────────────────────────────────────────────────────
+
+@login_required
+def pedido_duplicar(request, pk):
+    if not _get_perms(request.user)["pedidos"]["editar"]:
+        return _sem_permissao("Você não tem permissão para criar pedidos.")
+    original = get_object_or_404(
+        Pedido.objects.select_related("cliente").prefetch_related("itens"),
+        pk=pk,
+    )
+    novo = Pedido.objects.create(
+        cliente=original.cliente,
+        usuario=request.user,
+        observacoes=original.observacoes,
+        status="aberto",
+    )
+    for item in original.itens.all():
+        PedidoItem.objects.create(
+            pedido=novo,
+            largura_mm=item.largura_mm,
+            altura_mm=item.altura_mm,
+            quantidade=item.quantidade,
+            acabamento=item.acabamento,
+            perfil=item.perfil,
+            perfil_puxador=item.perfil_puxador,
+            qtd_perfil_puxador=item.qtd_perfil_puxador,
+            puxador=item.puxador,
+            qtd_puxador=item.qtd_puxador,
+            puxador_tamanho_mm=item.puxador_tamanho_mm,
+            puxador_sobreposto=item.puxador_sobreposto,
+            vidro=item.vidro,
+            divisor=item.divisor,
+            qtd_divisor=item.qtd_divisor,
+            divisor_altura_1=item.divisor_altura_1,
+            divisor_altura_2=item.divisor_altura_2,
+            adicional_valor=item.adicional_valor,
+            adicional_obs=item.adicional_obs,
+            adicional2_valor=item.adicional2_valor,
+            adicional2_obs=item.adicional2_obs,
+            adicional3_valor=item.adicional3_valor,
+            adicional3_obs=item.adicional3_obs,
+            adicional4_valor=item.adicional4_valor,
+            adicional4_obs=item.adicional4_obs,
+            valor_unitario=item.valor_unitario,
+            valor_total=item.valor_total,
+        )
+    return redirect("pedido_detalhe", pk=novo.pk)
+
+
 # ── Observações do pedido ────────────────────────────────────────────────────
 
 @login_required
@@ -438,6 +493,11 @@ def pedido_reabrir(request, pk):
     pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
 
     if request.method == "POST":
+        if pedido.status in ("wise", "concluido"):
+            return HttpResponse(
+                '<div class="alert alert-danger m-3">Pedidos Wise ou Concluídos não podem ser reabertos.</div>',
+                status=403,
+            )
         if pedido.status == "aberto":
             return HttpResponse(
                 '<div class="alert alert-warning m-3">Pedido já está aberto.</div>',
@@ -490,6 +550,11 @@ def pedido_cancelar(request, pk):
     pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
 
     if request.method == "POST":
+        if pedido.status in ("wise", "concluido"):
+            return HttpResponse(
+                '<div class="alert alert-danger m-3">Pedidos Wise ou Concluídos não podem ser cancelados.</div>',
+                status=403,
+            )
         if pedido.status == "cancelado":
             return HttpResponse(
                 '<div class="alert alert-warning m-3">Pedido já está cancelado.</div>',
@@ -547,6 +612,8 @@ def pedido_item_novo(request, pedido_pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
         return _sem_permissao("Você não tem permissão para editar pedidos.")
     pedido = get_object_or_404(Pedido, pk=pedido_pk)
+    if pedido.status != "aberto":
+        return HttpResponseForbidden("Itens só podem ser adicionados a pedidos em aberto.")
 
     if request.method == "POST":
         form = PedidoItemForm(request.POST)
@@ -631,6 +698,8 @@ def htmx_remove_item(request, pedido_pk, item_pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
         return _sem_permissao("Você não tem permissão para editar pedidos.")
     pedido = get_object_or_404(Pedido, pk=pedido_pk)
+    if pedido.status != "aberto":
+        return HttpResponseForbidden("Itens só podem ser removidos de pedidos em aberto.")
     PedidoItem.objects.filter(pk=item_pk, pedido=pedido).delete()
     return _resp_atualiza_tabela(request, pedido)
 
@@ -759,7 +828,34 @@ def pedido_controle(request):
         if ids and action in valid_statuses:
             if not _get_perms(request.user)["producao"]["alterar_status"]:
                 return _sem_permissao("Você não tem permissão para alterar o status de produção.")
-            Pedido.objects.filter(pk__in=ids).update(status=action)
+
+            if action == "wise":
+                from ..models import BimerConfig
+                from ..services import bimer as svc_bimer
+
+                config = BimerConfig.get()
+                erros_bimer = []
+                enviados = []
+                for pedido in Pedido.objects.filter(pk__in=ids).select_related("cliente"):
+                    ok, msg = svc_bimer.enviar_pedido_bimer(config, pedido)
+                    if ok:
+                        pedido.status = "wise"
+                        pedido.save(update_fields=["status"])
+                        enviados.append(pedido.numero)
+                    else:
+                        erros_bimer.append(f"#{pedido.numero}: {msg}")
+
+                if erros_bimer:
+                    msgs_erro = " | ".join(erros_bimer)
+                    qs = urlencode({"status": "producao", "bimer_erro": msgs_erro[:400]})
+                    return redirect(f"{reverse('pedido_controle')}?{qs}")
+                return redirect(f"{reverse('pedido_controle')}?status=wise")
+
+            qs_bulk = Pedido.objects.filter(pk__in=ids)
+            # Reabrir e cancelar não se aplicam a pedidos wise/concluido
+            if action in ("aberto", "cancelado"):
+                qs_bulk = qs_bulk.exclude(status__in=("wise", "concluido"))
+            qs_bulk.update(status=action)
             # Redireciona para a aba do status que foi aplicado
             return redirect(f"{reverse('pedido_controle')}?status={action}")
 
@@ -832,10 +928,19 @@ def pedido_relatorio(request):
     data_inicio_str = request.GET.get("data_inicio", "")
     data_fim_str    = request.GET.get("data_fim", "")
     cliente_id      = request.GET.get("cliente_id", "")
+    status_filtro   = request.GET.get("status", "concluido")
+
+    STATUS_CHOICES = [
+        ("aberto",    "Aberto"),
+        ("producao",  "Em produção"),
+        ("wise",      "Wise"),
+        ("concluido", "Concluído"),
+        ("cancelado", "Cancelado"),
+    ]
 
     qs = (
         Pedido.objects
-        .filter(status="concluido")
+        .filter(status=status_filtro)
         .select_related("cliente", "usuario")
         .annotate(nr_itens=Count("itens"))
     )
@@ -869,6 +974,8 @@ def pedido_relatorio(request):
         "data_inicio": data_inicio_str,
         "data_fim": data_fim_str,
         "cliente_id": cliente_id,
+        "status_filtro": status_filtro,
+        "status_choices": STATUS_CHOICES,
     })
 
 

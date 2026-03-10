@@ -20,11 +20,19 @@
 {# Filtros #}
 <form method="get" class="card card-body mb-4 d-print-none">
   <div class="row g-2 align-items-end">
-    <div class="col-md-3">
+    <div class="col-md-2">
+      <label class="form-label mb-1">Status</label>
+      <select name="status" class="form-select form-select-sm">
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filtro == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
       <label class="form-label mb-1">Data início</label>
       <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control form-control-sm">
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <label class="form-label mb-1">Data fim</label>
       <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control form-control-sm">
     </div>
@@ -46,7 +54,7 @@
 </form>
 
 {% if not pedidos %}
-<div class="alert alert-info">Nenhum pedido concluído encontrado com os filtros selecionados.</div>
+<div class="alert alert-info">Nenhum pedido encontrado com os filtros selecionados.</div>
 {% else %}
 
 {# Resumo geral #}
@@ -72,7 +80,9 @@
 </div>
 
 {# Lista de pedidos #}
-<h6 class="border-bottom pb-1 mt-2">Pedidos concluídos</h6>
+<h6 class="border-bottom pb-1 mt-2">Pedidos
+  {% for val, label in status_choices %}{% if status_filtro == val %}— {{ label }}{% endif %}{% endfor %}
+</h6>
 <table class="table table-sm table-bordered mb-4">
   <thead class="table-light">
     <tr>

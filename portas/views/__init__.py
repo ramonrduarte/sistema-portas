@@ -58,6 +58,7 @@ from .pedidos import (
     htmx_clientes_sugestoes,
     pedido_observacoes,
     pedido_enviar_wise,
+    pedido_duplicar,
 )
 
 __all__ = [

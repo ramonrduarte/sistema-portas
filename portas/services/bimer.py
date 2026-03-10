@@ -103,6 +103,39 @@ def get_valid_token(config):
     return obter_token(config)
 
 
+def _bimer_request(config, method, path, **kwargs):
+    """
+    Faz uma requisição autenticada à API Bimer com retry automático de token.
+
+    Fluxo:
+      1. Obtém token válido (renova/reautentica se necessário)
+      2. Faz a requisição com Authorization: Bearer
+      3. Se retornar 401 → força re-autenticação e tenta mais uma vez
+      4. Qualquer outro erro HTTP propaga normalmente
+
+    Uso:
+      resp = _bimer_request(config, "get", "/api/produtos", params={"codigo": "XYZ"})
+      resp = _bimer_request(config, "post", "/api/venda/pedidos", json=payload)
+    """
+    base = config.base_url.rstrip("/")
+    url  = f"{base}{path}"
+
+    token = get_valid_token(config)
+    headers = kwargs.pop("headers", {})
+    headers["Authorization"] = f"Bearer {token}"
+
+    resp = getattr(requests, method)(url, headers=headers, **kwargs)
+
+    if resp.status_code == 401:
+        # Token rejeitado pelo servidor — força nova autenticação e tenta uma vez mais
+        token = obter_token(config)
+        headers["Authorization"] = f"Bearer {token}"
+        resp = getattr(requests, method)(url, headers=headers, **kwargs)
+
+    resp.raise_for_status()
+    return resp
+
+
 def testar_conexao(config):
     """
     Testa as credenciais e a conectividade com a API.
@@ -131,7 +164,7 @@ def testar_conexao(config):
 
 # ── Sincronização de preços ───────────────────────────────────────────────────
 
-def _obter_bimer_id(config, obj, headers):
+def _obter_bimer_id(config, obj):
     """
     Etapa 1: busca o identificador interno do produto no Bimer pelo código local.
 
@@ -142,9 +175,8 @@ def _obter_bimer_id(config, obj, headers):
     Salva o identificador em obj.bimer_id para evitar buscas futuras.
     Retorna o identificador ou None se não encontrado.
     """
-    url  = f"{config.base_url.rstrip('/')}/api/produtos"
-    resp = requests.get(url, params={"codigo": obj.codigo}, headers=headers, timeout=_TIMEOUT_PRECO)
-    resp.raise_for_status()
+    resp = _bimer_request(config, "get", "/api/produtos",
+                          params={"codigo": obj.codigo}, timeout=_TIMEOUT_PRECO)
     data = resp.json()
 
     # Resposta no formato { "Erros": [...], "ListaObjetos": [...] }
@@ -162,7 +194,7 @@ def _obter_bimer_id(config, obj, headers):
     raise ValueError(f"Produto {obj.codigo} não encontrado no Bimer.")
 
 
-def _buscar_preco_bimer(config, obj, headers):
+def _buscar_preco_bimer(config, obj):
     """
     Fluxo de 2 etapas para obter o preço atualizado de um produto:
 
@@ -177,15 +209,13 @@ def _buscar_preco_bimer(config, obj, headers):
     Retorna o valor do preço (Decimal/float) ou None se não disponível.
     """
     # Etapa 1: garantir que temos o bimer_id
-    bimer_id = obj.bimer_id or _obter_bimer_id(config, obj, headers)
+    bimer_id = obj.bimer_id or _obter_bimer_id(config, obj)
     if not bimer_id:
         raise ValueError(f"Produto {obj.codigo} não encontrado no Bimer.")
 
     # Etapa 2: buscar preço
-    base = config.base_url.rstrip("/")
-    url  = f"{base}/api/empresas/{config.identificador_empresa}/produtos/{bimer_id}/precos/{config.identificador_tabela_precos}"
-    resp = requests.get(url, headers=headers, timeout=_TIMEOUT_PRECO)
-    resp.raise_for_status()
+    path = f"/api/empresas/{config.identificador_empresa}/produtos/{bimer_id}/precos/{config.identificador_tabela_precos}"
+    resp = _bimer_request(config, "get", path, timeout=_TIMEOUT_PRECO)
     data = resp.json()
 
     # Resposta no formato { "Erros": [...], "ListaObjetos": [...] }
@@ -200,7 +230,7 @@ def _buscar_preco_bimer(config, obj, headers):
         raise ValueError(
             f"ListaObjetos vazia ou sem campo 'Valor'. "
             f"Erros API: {erros}. "
-            f"URL: {url}"
+            f"Path: {path}"
         )
     return valor
 
@@ -230,22 +260,13 @@ def sincronizar_precos():
         config.save(update_fields=["log_sync", "ultima_sincronizacao"])
         return {"status": "erro_config", "msg": msg}
 
-    try:
-        token = get_valid_token(config)
-    except Exception as e:
-        config.log_sync = f"Falha na autenticação: {e}"
-        config.ultima_sincronizacao = timezone.now()
-        config.save(update_fields=["log_sync", "ultima_sincronizacao"])
-        return {"status": "erro_auth", "msg": str(e)}
-
-    headers     = {"Authorization": f"Bearer {token}"}
     erros       = []
     atualizados = 0
 
     for model_cls in [Perfil, PerfilPuxador, Puxador, Divisor, VidroBase]:
         for obj in model_cls.objects.filter(ativo=True):
             try:
-                novo_preco = _buscar_preco_bimer(config, obj, headers)
+                novo_preco = _buscar_preco_bimer(config, obj)
                 if novo_preco is not None:
                     obj.preco = novo_preco
                     obj.save(update_fields=["preco"])
@@ -274,7 +295,7 @@ def enviar_pedido_bimer(config, pedido):
     """
     Envia um Pedido de Venda para o Bimer ao mover para status 'wise'.
 
-    Endpoint: POST /api/faturamento/pedidosvenda
+    Endpoint: POST /api/venda/pedidos
     Cada PedidoItem vira uma linha com produto fixo '00A0000AU5' (Porta),
     descrição do sistema, quantidade e valor unitário.
 
@@ -292,55 +313,63 @@ def enviar_pedido_bimer(config, pedido):
             "Sincronize os clientes primeiro."
         )
 
-    try:
-        token = get_valid_token(config)
-    except Exception as e:
-        return False, f"Falha na autenticação Bimer: {e}"
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-
-    data_iso = pedido.data.strftime("%Y-%m-%dT00:00:00")
+    data_str = pedido.data.strftime("%Y-%m-%d")
 
     # ── Monta itens: uma linha por porta ─────────────────────────────────────
     itens_bimer = []
     for item in pedido.itens.all():
+        valor_total = float(item.valor_unitario) * item.quantidade
         itens_bimer.append({
-            "identificadorProduto": _BIMER_ID_PORTA,
-            "quantidade": item.quantidade,
-            "valorUnitario": float(item.valor_unitario),
-            # TODO: confirmar se a API aceita campo de complemento/descrição no item
-            # "complemento": item.descricao,
+            "IdentificadorProduto":   _BIMER_ID_PORTA,
+            "IdentificadorSetorSaida": "00A0000005",
+            "QuantidadePedida":       item.quantidade,
+            "Repasses": [{"IdentificadorPessoa": "00A00001RR"}],
+            "Valor":                  round(valor_total, 2),
+            "ValorUnitario":          float(item.valor_unitario),
+            "descricaoComplementar":  item.descricao,
+            "PIS":    {"CodigoSituacaoTributaria": "01"},
+            "COFINS": {"CodigoSituacaoTributaria": "01"},
         })
 
-    # ── Payload — campos confirmados pela doc Bimer ──────────────────────────
+    # ── Payload baseado no JSON de exemplo confirmado ─────────────────────────
     payload = {
-        "identificadorEmpresa": config.identificador_empresa,
-        "identificadorPessoa":  pedido.cliente.bimer_id,   # campo correto: identificadorPessoa
-        "dataEmissao":          data_iso,
-        "dataPrevistaSaida":    data_iso,
-        "observacao":           pedido.observacoes or "",  # singular, sem 's'
-        "itens":                itens_bimer,
+        "CodigoEmpresa":               1,
+        "CodigoPedidoDeCompraCliente": str(pedido.numero),
+        "DataEmissao":                 data_str,
+        "DataEntrega":                 data_str,
+        "IdentificadorCliente":        pedido.cliente.bimer_id,
+        "IdentificadorOperacao":       "00A0000047",
+        "IdentificadorSetor":          "00A0000005",
+        "Itens":                       itens_bimer,
+        "Prazo": {
+            "Identificador":                      "00A000001H",
+            "IdentificadorFormaPagamentoEntrada": "00A0000037",
+        },
+        "Status":                         "A",
+        "TipoFrete":                      "E",
+        "IndicadorAtendimentoPresencial": "2",
+        "Transportadora": {
+            "Quantidade": 1,
+            "Especie":    "Volume(s)",
+        },
+        "ObservacaoDocumento": pedido.observacoes or "",
     }
 
-    url = f"{config.base_url.rstrip('/')}/api/faturamento/pedidosvenda"
-
     try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT)
-        resp.raise_for_status()
+        resp = _bimer_request(config, "post", "/api/venda/pedidos",
+                              json=payload, timeout=_TIMEOUT)
         data = resp.json()
 
-        # Resposta: { "listaObjetos": [{ "codigo": "...", "identificador": "..." }] }
-        lista = data.get("listaObjetos") or data.get("ListaObjetos") or []
-        bimer_id = lista[0].get("identificador", "") if lista else ""
-        codigo   = lista[0].get("codigo", "") if lista else ""
+        # Resposta pode ser objeto único ou lista
+        obj = data[0] if isinstance(data, list) and data else (data if isinstance(data, dict) else {})
+        bimer_id = obj.get("Identificador") or obj.get("identificador", "")
+        codigo   = obj.get("Codigo") or obj.get("codigo", "")
         return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}"
 
     except requests.HTTPError as e:
+        url_usada = f"{config.base_url.rstrip('/')}/api/venda/pedidos"
         corpo = e.response.text[:400] if e.response is not None else ""
-        return False, f"Erro HTTP {e.response.status_code}: {corpo}"
+        return False, f"Erro HTTP {e.response.status_code} — URL: {url_usada} — {corpo}"
     except requests.ConnectionError:
         return False, "Não foi possível conectar ao Bimer. Verifique a URL base."
     except Exception as e:
@@ -375,34 +404,22 @@ def sincronizar_clientes():
         config.save(update_fields=["log_sync_clientes", "ultima_sincronizacao_clientes"])
         return {"status": "erro_config", "msg": msg}
 
-    try:
-        token = get_valid_token(config)
-    except Exception as e:
-        config.log_sync_clientes = f"Falha na autenticação: {e}"
-        config.ultima_sincronizacao_clientes = timezone.now()
-        config.save(update_fields=["log_sync_clientes", "ultima_sincronizacao_clientes"])
-        return {"status": "erro_auth", "msg": str(e)}
-
-    headers   = {"Authorization": f"Bearer {token}"}
     erros     = []
     importados = 0
     ignorados  = 0
-    url_base  = f"{config.base_url.rstrip('/')}/api/pessoas/porCaracteristica"
 
     pagina = 1
     while True:
         try:
-            resp = requests.get(
-                url_base,
+            resp = _bimer_request(
+                config, "get", "/api/pessoas/porCaracteristica",
                 params={
                     "identificadorCaracteristica": config.identificador_caracteristica_clientes,
                     "limite": 30,
                     "pagina": pagina,
                 },
-                headers=headers,
                 timeout=_TIMEOUT,
             )
-            resp.raise_for_status()
         except requests.HTTPError as e:
             corpo = e.response.text[:300] if e.response is not None else ""
             msg = f"Erro HTTP {e.response.status_code} ao buscar página {pagina}: {corpo}"

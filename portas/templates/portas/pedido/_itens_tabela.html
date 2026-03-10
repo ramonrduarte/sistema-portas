@@ -24,6 +24,7 @@
       <td class="text-end">R$&nbsp;{{ item.valor_unitario|floatformat:2 }}</td>
       <td class="text-end fw-semibold">R$&nbsp;{{ item.valor_total|floatformat:2 }}</td>
       <td class="text-end pe-3">
+        {% if pedido.status == 'aberto' %}
         <button class="btn btn-sm btn-outline-danger"
                 hx-post="{% url 'htmx_remove_item' pedido.id item.id %}"
                 hx-target="#tabelaItens"
@@ -32,6 +33,7 @@
                 hx-confirm="Remover este item?">
           &times;
         </button>
+        {% endif %}
       </td>
     </tr>
     {% empty %}

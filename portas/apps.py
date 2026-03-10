@@ -45,5 +45,28 @@ class PortasConfig(AppConfig):
             # Armazena referência global para reagendamento dinâmico
             sched_module.set(scheduler)
             logger.info("APScheduler iniciado — sync Bimer às %s (dias: %s)", horarios, dias)
+
+            # Se a integração está ativa e a última sync foi há mais de 6 horas,
+            # roda imediatamente para não depender do horário exato de inicialização
+            self._sync_se_defasado(config, scheduler, sincronizar_precos)
         except Exception:
             logger.exception("Falha ao iniciar APScheduler")
+
+    def _sync_se_defasado(self, config, scheduler, sincronizar_precos):
+        try:
+            if not config.ativo:
+                return
+            from django.utils import timezone
+            from datetime import timedelta
+
+            limite = timezone.now() - timedelta(hours=6)
+            if config.ultima_sincronizacao is None or config.ultima_sincronizacao < limite:
+                logger.info("Sync Bimer defasada — executando imediatamente na inicialização.")
+                scheduler.add_job(
+                    sincronizar_precos,
+                    "date",  # executa uma vez agora
+                    id="bimer_sync_startup",
+                    replace_existing=True,
+                )
+        except Exception:
+            logger.exception("Falha ao verificar sync defasada na inicialização")

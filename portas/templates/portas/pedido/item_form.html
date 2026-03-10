@@ -8,7 +8,7 @@
 
 <form method="post"
       hx-post="{% if pedido %}{% url 'pedido_item_novo' pedido.id %}{% else %}{% url 'pedido_item_temp_add' %}{% endif %}"
-      hx-target="{% if pedido %}#tabelaItens{% else %}#tabelaRascunho{% endif %}"
+      hx-target="#modalConteudo"
       hx-swap="innerHTML">
   {% csrf_token %}
 

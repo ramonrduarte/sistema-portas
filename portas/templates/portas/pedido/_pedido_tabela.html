@@ -25,11 +25,11 @@
         <td>
           <div class="d-flex gap-1">
             <a href="{% url 'pedido_detalhe' p.id %}"
-               class="btn btn-sm btn-outline-primary">Ver</a>
+               class="btn btn-sm btn-primary">Ver</a>
 
             <a href="{% url 'pedido_imprimir' p.id %}"
                target="_blank"
-               class="btn btn-sm btn-outline-secondary"
+               class="btn btn-sm btn-outline-success"
                title="Visualizar impressão">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
@@ -59,7 +59,13 @@
             </button>
             {% endif %}
 
-            {% if perms_usuario.producao.alterar_status and p.status != 'aberto' and p.status != 'cancelado' %}
+            <a href="{% url 'pedido_duplicar' p.id %}"
+               class="btn btn-sm btn-outline-primary"
+               title="Duplicar pedido">
+              <i class="bi bi-copy"></i>
+            </a>
+
+            {% if perms_usuario.producao.alterar_status and p.status == 'producao' %}
             <button class="btn btn-sm btn-outline-secondary"
                     hx-get="{% url 'pedido_reabrir' p.id %}"
                     hx-target="#modalConteudo"
@@ -86,7 +92,7 @@
                 </svg>
               </button>
               {% endif %}
-              {% if p.status != 'cancelado' %}
+              {% if p.status != 'cancelado' and p.status != 'wise' and p.status != 'concluido' %}
               <button class="btn btn-sm btn-outline-warning"
                       hx-get="{% url 'pedido_cancelar' p.id %}"
                       hx-target="#modalConteudo"

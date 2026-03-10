@@ -58,13 +58,13 @@
   </div>
   <div class="col-3 d-none" id="col-div-alt-1">
     <label class="form-label fw-semibold mb-1">Altura 1 (mm)</label>
-    <input type="number" name="divisor_altura_1" id="id_divisor_altura_1"
-           class="form-control" min="1" placeholder="mm">
+    {{ form.divisor_altura_1 }}
+    {% if form.divisor_altura_1.errors %}<div class="text-danger small mt-1">{{ form.divisor_altura_1.errors }}</div>{% endif %}
   </div>
   <div class="col-3 d-none" id="col-div-alt-2">
     <label class="form-label fw-semibold mb-1">Altura 2 (mm)</label>
-    <input type="number" name="divisor_altura_2" id="id_divisor_altura_2"
-           class="form-control" min="1" placeholder="mm">
+    {{ form.divisor_altura_2 }}
+    {% if form.divisor_altura_2.errors %}<div class="text-danger small mt-1">{{ form.divisor_altura_2.errors }}</div>{% endif %}
   </div>
   {% endif %}
 

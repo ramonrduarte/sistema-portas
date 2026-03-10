@@ -118,8 +118,14 @@ class PedidoItemForm(forms.ModelForm):
             if not data.get("puxador_tamanho_mm"):
                 self.add_error("puxador_tamanho_mm", "Informe o tamanho do puxador.")
         if div:
-            if str(data.get("qtd_divisor") or "") not in ("1", "2"):
+            qtd_div_str = str(data.get("qtd_divisor") or "")
+            if qtd_div_str not in ("1", "2"):
                 self.add_error("qtd_divisor", "Informe 1 ou 2.")
+            elif div.encaixe == "aparente":
+                if not data.get("divisor_altura_1"):
+                    self.add_error("divisor_altura_1", "Para divisor aparente, informe a Altura 1.")
+                if qtd_div_str == "2" and not data.get("divisor_altura_2"):
+                    self.add_error("divisor_altura_2", "Para 2 divisores aparentes, informe a Altura 2.")
 
         return data
 
@@ -175,6 +181,10 @@ class PedidoNovoOrcamentoForm(forms.Form):
     puxador_tamanho_mm = forms.IntegerField(min_value=1, required=False)
     divisor = forms.ModelChoiceField(queryset=Divisor.objects.none(), required=False)
     qtd_divisor = forms.ChoiceField(choices=_QTD_CHOICES, required=False)
+    divisor_altura_1 = forms.IntegerField(min_value=1, required=False,
+                                          widget=forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "mm"}))
+    divisor_altura_2 = forms.IntegerField(min_value=1, required=False,
+                                          widget=forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "mm"}))
     vidro = forms.ModelChoiceField(queryset=VidroBase.objects.none(), required=False)
 
     def __init__(self, *args, **kwargs):

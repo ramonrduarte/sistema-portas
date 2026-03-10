@@ -8,6 +8,12 @@
   <a href="{% url 'pedidos_lista' %}" class="btn btn-sm btn-outline-secondary">← Pedidos</a>
 </div>
 
+{% if request.GET.bimer_erro %}
+<div class="alert alert-danger py-2 small mb-3">
+  <strong>Erro ao enviar para o Bimer:</strong> {{ request.GET.bimer_erro }}
+</div>
+{% endif %}
+
 {# Filtro por status #}
 <div class="btn-group mb-3" role="group">
   {% for s_key, s_label in status_choices %}
@@ -54,6 +60,7 @@
             <span class="badge
               {% if p.status == 'aberto' %}bg-secondary
               {% elif p.status == 'producao' %}bg-primary
+              {% elif p.status == 'wise' %}bg-info text-dark
               {% elif p.status == 'concluido' %}bg-success
               {% else %}bg-danger{% endif %}">
               {{ p.get_status_display }}
@@ -70,11 +77,22 @@
     </table>
   </div>
 
-  {# Botões de ação em massa #}
+  {# Botões de ação em massa — exibidos conforme o status atual #}
   <div class="d-flex gap-2 flex-wrap align-items-center">
     <span class="text-muted small me-1">Com selecionados:</span>
+
+    {% if status_filtro == 'aberto' %}
     <button type="submit" name="action" value="producao" class="btn btn-primary btn-sm">
       Enviar para produção
+    </button>
+    <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
+      Cancelar
+    </button>
+    {% endif %}
+
+    {% if status_filtro == 'producao' %}
+    <button type="submit" name="action" value="wise" class="btn btn-info btn-sm text-dark">
+      Marcar Wise
     </button>
     <button type="submit" name="action" value="concluido" class="btn btn-success btn-sm">
       Marcar concluído
@@ -85,6 +103,20 @@
     <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
       Cancelar
     </button>
+    {% endif %}
+
+    {% if status_filtro == 'wise' %}
+    <button type="submit" name="action" value="concluido" class="btn btn-success btn-sm">
+      Marcar concluído
+    </button>
+    {% endif %}
+
+    {% if status_filtro == 'cancelado' %}
+    <button type="submit" name="action" value="aberto" class="btn btn-outline-secondary btn-sm">
+      Reabrir
+    </button>
+    {% endif %}
+
     <span class="vr"></span>
     <button type="submit" name="action" value="ver_insumos" class="btn btn-info btn-sm text-white">
       Ver insumos
