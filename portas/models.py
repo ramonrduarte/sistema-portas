@@ -159,10 +159,6 @@ class VidroBase(models.Model):
         return f"{self.codigo} - {self.descricao} ({self.espessura})"
 
 
-class ExtraServico(ProdutoBase):
-    pass
-
-
 class PessoaBase(AtivoModel):
     """Base para cadastros de pessoas/entidades simples."""
     nome = models.CharField(max_length=255)
@@ -202,6 +198,7 @@ class Cliente(PessoaBase):
         null=True,
         verbose_name="CPF/CNPJ",
     )
+    cidade = models.CharField(max_length=100, blank=True, verbose_name="Cidade")
     bimer_id = models.CharField(
         max_length=20, blank=True,
         verbose_name="ID interno Bimer",
@@ -247,50 +244,6 @@ class Cliente(PessoaBase):
         else:
             # Se estiver estranho, devolve como está
             return self.cpf_cnpj
-
-
-class Orcamento(models.Model):
-    TIPO_PORTA_CHOICES = (
-        ('AVULSO', 'Avulso'),
-        ('1P_PUXADOR', '1x Perfil Puxador'),
-        ('2P_PUXADOR', '2x Perfil Puxador'),
-        ('LINHA_1000', 'Linha 1000'),
-        ('VIDRO', 'Vidros'),
-    )
-
-    cliente = models.ForeignKey(
-        Cliente,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="orcamentos",
-    )
-
-    cliente_nome = models.CharField(max_length=255, blank=True, null=True)
-    tipo_porta = models.CharField(max_length=20, choices=TIPO_PORTA_CHOICES)
-    data_criacao = models.DateTimeField(auto_now_add=True)
-    observacoes = models.TextField(blank=True, null=True)
-
-    def total(self):
-        return sum(item.total for item in self.itens.all())
-
-
-class ItemOrcamento(models.Model):
-    orcamento = models.ForeignKey(Orcamento, related_name='itens', on_delete=models.CASCADE)
-    descricao = models.CharField(max_length=255)
-
-    quantidade = models.DecimalField(max_digits=10, decimal_places=3, default=1)
-    largura_m = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True)
-    altura_m = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True)
-
-    perfil = models.ForeignKey(Perfil, blank=True, null=True, on_delete=models.SET_NULL)
-    perfil_puxador = models.ForeignKey(PerfilPuxador, blank=True, null=True, on_delete=models.SET_NULL)
-    divisor = models.ForeignKey(Divisor, blank=True, null=True, on_delete=models.SET_NULL)
-    vidro = models.ForeignKey(VidroBase, blank=True, null=True, on_delete=models.SET_NULL)
-    extra = models.ForeignKey(ExtraServico, blank=True, null=True, on_delete=models.SET_NULL)
-
-    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    total = models.DecimalField(max_digits=12, decimal_places=2)
 
 
 class UsuarioPerfil(AtivoModel):
@@ -343,7 +296,8 @@ class Pedido(models.Model):
     STATUS_CHOICES = [
         ("aberto", "Aberto"),
         ("cancelado", "Cancelado"),
-        ("producao", "Em produção"),
+        ("corte", "Aguardando Corte"),
+        ("montagem", "Aguardando Montagem"),
         ("wise", "Wise"),
         ("concluido", "Concluído"),
     ]
@@ -367,6 +321,7 @@ class Pedido(models.Model):
         default="aberto"
     )
     observacoes = models.TextField(blank=True, null=True)
+    data_previsao = models.DateField(null=True, blank=True, verbose_name="Previsão de entrega")
 
     def __str__(self):
         return f"Pedido #{self.id}"
@@ -495,6 +450,31 @@ class PedidoItem(models.Model):
         return f"Item {self.id} do Pedido {self.pedido.id}"
 
 
+# ── Histórico de status do pedido ─────────────────────────────────────────────
+
+class PedidoStatusLog(models.Model):
+    """Registra cada mudança de status de um pedido."""
+    pedido = models.ForeignKey(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name="status_logs",
+    )
+    status = models.CharField(max_length=20, choices=Pedido.STATUS_CHOICES)
+    alterado_em = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["alterado_em"]
+
+    def __str__(self):
+        return f"Pedido #{self.pedido_id} → {self.status} em {self.alterado_em:%d/%m/%Y %H:%M}"
+
+
 # ── Integração Bimer ──────────────────────────────────────────────────────────
 
 class BimerConfig(models.Model):
@@ -568,11 +548,13 @@ class BimerConfig(models.Model):
 
     @property
     def password(self):
-        return self._password
+        from .crypto import decrypt
+        return decrypt(self._password)
 
     @password.setter
     def password(self, value):
-        self._password = value
+        from .crypto import encrypt
+        self._password = encrypt(value) if value else value
 
     def senha_configurada(self):
         return bool(self._password)

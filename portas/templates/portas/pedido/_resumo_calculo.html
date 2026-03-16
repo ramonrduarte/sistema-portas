@@ -3,13 +3,14 @@
 {% else %}
   <div class="d-flex justify-content-between">
     <span class="text-muted">Valor unitário</span>
-    <strong>R$ {{ valor_unitario|floatformat:2 }}</strong>
+    <strong>R$ {{ valor_base|floatformat:2 }}</strong>
   </div>
   {% if adicional %}
   <div class="d-flex justify-content-between">
-    <span class="text-muted">↳ inclui adicional</span>
-    <span class="text-muted">R$ {{ adicional|floatformat:2 }}</span>
+    <span class="text-muted">+ Adicional</span>
+    <span class="text-secondary">R$ {{ adicional|floatformat:2 }}</span>
   </div>
+  <hr class="my-1">
   {% endif %}
   <div class="d-flex justify-content-between">
     <span class="text-muted">Total (quantidade)</span>

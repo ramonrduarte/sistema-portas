@@ -111,7 +111,6 @@ class PerfilPuxadorSerializer(serializers.ModelSerializer):
             "acabamento_nome",
             "abatimento_mm",
             "modelo",
-            "fixacao_vidro",
         ]
 
 

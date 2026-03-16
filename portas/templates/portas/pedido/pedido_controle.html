@@ -15,7 +15,7 @@
 {% endif %}
 
 {# Filtro por status #}
-<div class="btn-group mb-3" role="group">
+<div class="btn-group mb-3 flex-wrap" role="group">
   {% for s_key, s_label in status_choices %}
   <a href="?status={{ s_key }}"
      class="btn btn-sm {% if status_filtro == s_key %}btn-dark{% else %}btn-outline-secondary{% endif %}">
@@ -57,19 +57,22 @@
             {% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}
           </td>
           <td>
-            <span class="badge
-              {% if p.status == 'aberto' %}bg-secondary
-              {% elif p.status == 'producao' %}bg-primary
-              {% elif p.status == 'wise' %}bg-info text-dark
-              {% elif p.status == 'concluido' %}bg-success
-              {% else %}bg-danger{% endif %}">
-              {{ p.get_status_display }}
-            </span>
+            {% if p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
+            {% elif p.status == 'corte' %}<span class="badge bg-warning text-dark">Ag. Corte</span>
+            {% elif p.status == 'montagem' %}<span class="badge bg-primary">Ag. Montagem</span>
+            {% elif p.status == 'wise' %}<span class="badge bg-info text-dark">Wise</span>
+            {% elif p.status == 'concluido' %}<span class="badge bg-dark">Concluído</span>
+            {% else %}<span class="badge bg-secondary">{{ p.get_status_display }}</span>
+            {% endif %}
           </td>
           <td class="text-center">{{ p.nr_itens }}</td>
           <td>
-            <a href="{% url 'pedido_detalhe' p.id %}" class="btn btn-sm btn-outline-secondary">Detalhes</a>
-            <a href="{% url 'pedido_imprimir' p.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">Imprimir</a>
+            <a href="{% url 'pedido_detalhe' p.id %}" class="btn btn-sm btn-outline-secondary" title="Detalhes">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="{% url 'pedido_imprimir' p.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Imprimir">
+              <i class="bi bi-printer"></i>
+            </a>
           </td>
         </tr>
         {% endfor %}
@@ -82,26 +85,29 @@
     <span class="text-muted small me-1">Com selecionados:</span>
 
     {% if status_filtro == 'aberto' %}
-    <button type="submit" name="action" value="producao" class="btn btn-primary btn-sm">
-      Enviar para produção
+    <button type="submit" name="action" value="corte" class="btn btn-warning btn-sm text-dark">
+      <i class="bi bi-scissors me-1"></i>Enviar para Corte
     </button>
     <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
       Cancelar
     </button>
     {% endif %}
 
-    {% if status_filtro == 'producao' %}
-    <button type="submit" name="action" value="wise" class="btn btn-info btn-sm text-dark">
-      Marcar Wise
-    </button>
-    <button type="submit" name="action" value="concluido" class="btn btn-success btn-sm">
-      Marcar concluído
+    {% if status_filtro == 'corte' %}
+    <button type="submit" name="action" value="montagem" class="btn btn-primary btn-sm">
+      <i class="bi bi-tools me-1"></i>Enviar para Montagem
     </button>
     <button type="submit" name="action" value="aberto" class="btn btn-outline-secondary btn-sm">
-      Reabrir
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir
     </button>
-    <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
-      Cancelar
+    {% endif %}
+
+    {% if status_filtro == 'montagem' %}
+    <button type="submit" name="action" value="wise" class="btn btn-info btn-sm text-dark">
+      <i class="bi bi-cloud-upload me-1"></i>Marcar Wise
+    </button>
+    <button type="submit" name="action" value="aberto" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir
     </button>
     {% endif %}
 
@@ -113,14 +119,21 @@
 
     {% if status_filtro == 'cancelado' %}
     <button type="submit" name="action" value="aberto" class="btn btn-outline-secondary btn-sm">
-      Reabrir
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir
     </button>
     {% endif %}
 
     <span class="vr"></span>
+
     <button type="submit" name="action" value="ver_insumos" class="btn btn-info btn-sm text-white">
-      Ver insumos
+      <i class="bi bi-list-ul me-1"></i>Ver insumos
     </button>
+
+    {% if status_filtro == 'corte' or status_filtro == 'montagem' %}
+    <button type="submit" name="action" value="ver_plano_corte" class="btn btn-outline-info btn-sm">
+      <i class="bi bi-grid-3x3-gap me-1"></i>Ver plano de corte
+    </button>
+    {% endif %}
   </div>
 
   {% else %}
@@ -138,18 +151,18 @@
     });
   }
 
-  // Confirma ação destrutiva
   document.getElementById('formControle')?.addEventListener('submit', function (e) {
     const action = e.submitter?.value;
     const checked = document.querySelectorAll('.chk-pedido:checked').length;
-    if (checked === 0 && action !== 'ver_insumos') {
+
+    if (checked === 0 && action !== 'ver_insumos' && action !== 'ver_plano_corte') {
       e.preventDefault();
       alert('Selecione ao menos um pedido.');
       return;
     }
-    if (action === 'ver_insumos' && checked === 0) {
+    if ((action === 'ver_insumos' || action === 'ver_plano_corte') && checked === 0) {
       e.preventDefault();
-      alert('Selecione ao menos um pedido para ver os insumos.');
+      alert('Selecione ao menos um pedido.');
       return;
     }
     if (action === 'cancelado') {

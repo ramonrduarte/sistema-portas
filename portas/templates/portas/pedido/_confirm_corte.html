@@ -1,37 +1,27 @@
-<span id="modalTitulo" hx-swap-oob="true">Enviar para Wise</span>
+<span id="modalTitulo" hx-swap-oob="true">Enviar para Corte</span>
 
 <div hx-swap-oob="true" id="modalDialogClass">
   modal-dialog modal-dialog-centered
 </div>
 
 <div class="mb-4">
-  <p class="mb-1">Enviar pedido <strong>#{{ pedido.numero }}</strong> para status <strong>Wise</strong>?</p>
+  <p class="mb-1">Enviar pedido <strong>#{{ pedido.numero }}</strong> para <strong>Aguardando Corte</strong>?</p>
   <p class="text-muted small mb-0">
     {{ pedido.data|date:"d/m/Y" }} &bull; {{ pedido.cliente.codigo }} – {{ pedido.cliente.nome }}
   </p>
-
-  {% if erro %}
-  <div class="alert alert-danger mt-3 mb-0 small py-2">
-    <strong>Erro ao enviar para o Bimer:</strong><br>{{ erro }}
-  </div>
-  {% else %}
   <div class="alert alert-warning mt-3 mb-0 small py-2">
-    O pedido será enviado ao <strong>Bimer</strong> e o status mudará para <strong>Wise</strong>.<br>
-    Isso indica que o pedido está pronto e aguardando baixa de materiais.
+    O pedido sairá de <strong>Aberto</strong> e ficará aguardando o corte das peças.
   </div>
-  {% endif %}
 </div>
 
 <div class="d-flex justify-content-end gap-2">
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
-  {% if not erro %}
   <button class="btn btn-warning"
-          hx-post="{% url 'pedido_enviar_wise' pedido.id %}"
+          hx-post="{% url 'pedido_enviar_corte' pedido.id %}"
           hx-target="#modalConteudo"
           hx-swap="innerHTML"
           hx-include="[name=csrfmiddlewaretoken]">
     Confirmar
   </button>
-  {% endif %}
 </div>
 {% csrf_token %}

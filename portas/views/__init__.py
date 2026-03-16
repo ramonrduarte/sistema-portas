@@ -28,6 +28,7 @@ from .clientes import (
     ClienteCreateView,
     ClienteUpdateView,
     ClienteDeleteView,
+    cliente_detalhe,
 )
 from .usuarios import (
     UsuarioListView,
@@ -57,6 +58,9 @@ from .pedidos import (
     htmx_opcoes_por_perfil,
     htmx_clientes_sugestoes,
     pedido_observacoes,
+    pedido_previsao,
+    pedido_enviar_corte,
+    pedido_enviar_montagem,
     pedido_enviar_wise,
     pedido_duplicar,
 )
@@ -72,7 +76,7 @@ __all__ = [
     "lista_divisores", "cadastrar_divisor", "excluir_divisor",
     "perfil_vidros_por_espessuras", "perfil_compativeis_por_acabamento",
     # clientes
-    "ClienteListView", "ClienteCreateView", "ClienteUpdateView", "ClienteDeleteView",
+    "ClienteListView", "ClienteCreateView", "ClienteUpdateView", "ClienteDeleteView", "cliente_detalhe",
     # usuários
     "UsuarioListView", "UsuarioCreateView", "UsuarioUpdateView", "UsuarioDeleteView",
     # pedidos
@@ -81,7 +85,8 @@ __all__ = [
     "pedido_controle", "pedido_insumos", "pedido_plano_corte", "pedido_relatorio",
     "htmx_remove_item", "htmx_calcular_item",
     "htmx_cliente_selecionar", "htmx_perfis_por_acabamento",
-    "htmx_opcoes_por_perfil", "htmx_clientes_sugestoes", "pedido_observacoes", "pedido_enviar_wise",
+    "htmx_opcoes_por_perfil", "htmx_clientes_sugestoes", "pedido_observacoes", "pedido_previsao",
+    "pedido_enviar_corte", "pedido_enviar_montagem", "pedido_enviar_wise",
     # integrações
     "bimer_config", "bimer_testar_conexao", "bimer_sincronizar", "bimer_sincronizar_clientes",
     # configurações

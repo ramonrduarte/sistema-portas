@@ -18,7 +18,7 @@
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
   <button class="btn btn-danger"
           hx-post="{% url 'pedido_excluir' pedido.id %}"
-          hx-target="#conteudoTabela"
+          hx-target="#modalConteudo"
           hx-swap="innerHTML"
           hx-include="[name=csrfmiddlewaretoken]">
     Excluir pedido

@@ -7,7 +7,7 @@
       <th>Cliente</th>
       <th>Usuário</th>
       <th>Status</th>
-      <th style="width:180px;">Ações</th>
+      <th style="width:220px;">Ações</th>
     </tr>
   </thead>
   <tbody>
@@ -18,14 +18,22 @@
         <td>{{ p.cliente.codigo }} – {{ p.cliente.nome }}</td>
         <td class="text-muted small">{% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}</td>
         <td>
-          <span class="badge {% if p.status == 'aberto' %}bg-success{% elif p.status == 'producao' %}bg-warning text-dark{% elif p.status == 'concluido' %}bg-primary{% elif p.status == 'wise' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
-            {{ p.get_status_display }}
-          </span>
+          {% if p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
+          {% elif p.status == 'corte' %}<span class="badge bg-warning text-dark">Ag. Corte</span>
+          {% elif p.status == 'montagem' %}<span class="badge bg-primary">Ag. Montagem</span>
+          {% elif p.status == 'wise' %}<span class="badge bg-info text-dark">Wise</span>
+          {% elif p.status == 'concluido' %}<span class="badge bg-dark">Concluído</span>
+          {% elif p.status == 'cancelado' %}<span class="badge bg-secondary">Cancelado</span>
+          {% else %}<span class="badge bg-secondary">{{ p.get_status_display }}</span>
+          {% endif %}
         </td>
         <td>
-          <div class="d-flex gap-1">
+          <div class="d-flex gap-1 flex-nowrap">
             <a href="{% url 'pedido_detalhe' p.id %}"
-               class="btn btn-sm btn-primary">Ver</a>
+               class="btn btn-sm btn-primary"
+               title="Ver pedido">
+              <i class="bi bi-eye"></i>
+            </a>
 
             <a href="{% url 'pedido_imprimir' p.id %}"
                target="_blank"
@@ -47,36 +55,13 @@
               </svg>
             </a>
 
-            {% if perms_usuario.producao.alterar_status and p.status == 'producao' %}
-            <button class="btn btn-sm btn-outline-info"
-                    hx-get="{% url 'pedido_enviar_wise' p.id %}"
-                    hx-target="#modalConteudo"
-                    hx-swap="innerHTML"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro"
-                    title="Enviar para Wise">
-              <i class="bi bi-cloud-upload"></i>
-            </button>
-            {% endif %}
-
             <a href="{% url 'pedido_duplicar' p.id %}"
                class="btn btn-sm btn-outline-primary"
                title="Duplicar pedido">
               <i class="bi bi-copy"></i>
             </a>
 
-            {% if perms_usuario.producao.alterar_status and p.status == 'producao' %}
-            <button class="btn btn-sm btn-outline-secondary"
-                    hx-get="{% url 'pedido_reabrir' p.id %}"
-                    hx-target="#modalConteudo"
-                    hx-swap="innerHTML"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro"
-                    title="Reabrir pedido">
-              <i class="bi bi-arrow-counterclockwise"></i>
-            </button>
-            {% endif %}
-
+            {# ── Excluir / Cancelar ── #}
             {% if perms_usuario.pedidos.excluir %}
               {% if p.status == 'aberto' %}
               <button class="btn btn-sm btn-outline-danger"
@@ -92,7 +77,7 @@
                 </svg>
               </button>
               {% endif %}
-              {% if p.status != 'cancelado' and p.status != 'wise' and p.status != 'concluido' %}
+              {% if p.status == 'aberto' %}
               <button class="btn btn-sm btn-outline-warning"
                       hx-get="{% url 'pedido_cancelar' p.id %}"
                       hx-target="#modalConteudo"

@@ -1,4 +1,6 @@
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+
 from portas.models import Acabamento, EspessuraVidro, VidroBase, Puxador, Divisor, Perfil, PerfilPuxador, Cliente
 from .serializers import (
     AcabamentoSerializer,
@@ -8,60 +10,58 @@ from .serializers import (
     DivisorSerializer,
     PerfilSerializer,
     PerfilPuxadorSerializer,
-    ClienteSerializer
+    ClienteSerializer,
 )
 
-class AcabamentoViewSet(ModelViewSet):
+
+class ReadOrAdminMixin:
+    """Leitura: qualquer usuário autenticado. Escrita (POST/PUT/PATCH/DELETE): apenas staff."""
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated()]
+        return [IsAdminUser()]
+
+
+class AcabamentoViewSet(ReadOrAdminMixin, ModelViewSet):
     queryset = Acabamento.objects.all().order_by("nome")
     serializer_class = AcabamentoSerializer
 
-class EspessuraVidroViewSet(ModelViewSet):
+
+class EspessuraVidroViewSet(ReadOrAdminMixin, ModelViewSet):
     queryset = EspessuraVidro.objects.all().order_by("valor_mm")
     serializer_class = EspessuraVidroSerializer
 
-class VidroBaseViewSet(ModelViewSet):
+
+class VidroBaseViewSet(ReadOrAdminMixin, ModelViewSet):
     queryset = VidroBase.objects.select_related("espessura").all()
     serializer_class = VidroBaseSerializer
     lookup_field = "codigo"
 
-class PuxadorViewSet(ModelViewSet):
+
+class PuxadorViewSet(ReadOrAdminMixin, ModelViewSet):
     queryset = Puxador.objects.all().order_by("descricao")
     serializer_class = PuxadorSerializer
     lookup_field = "codigo"
 
-class DivisorViewSet(ModelViewSet):
+
+class DivisorViewSet(ReadOrAdminMixin, ModelViewSet):
     queryset = Divisor.objects.all().order_by("descricao")
     serializer_class = DivisorSerializer
     lookup_field = "codigo"
 
-class PerfilViewSet(ModelViewSet):
-    queryset = (
-        Perfil.objects
-        .select_related("acabamento")
-        .prefetch_related(
-            "puxadores_compativeis",
-            "puxadores_simples_compativeis",
-            "divisores_compativeis",
-            "vidros_compativeis",
-            "espessuras_vidro_compativeis",
-        )
-        .all()
-        .order_by("descricao")
-    )
+
+class PerfilViewSet(ReadOrAdminMixin, ModelViewSet):
+    queryset = Perfil.objects.select_related("acabamento").all()
     serializer_class = PerfilSerializer
     lookup_field = "codigo"
 
-class PerfilPuxadorViewSet(ModelViewSet):
-    queryset = (
-        PerfilPuxador.objects
-        .select_related("acabamento")
-        .all()
-        .order_by("descricao")
-    )
+
+class PerfilPuxadorViewSet(ReadOrAdminMixin, ModelViewSet):
+    queryset = PerfilPuxador.objects.select_related("acabamento").all()
     serializer_class = PerfilPuxadorSerializer
     lookup_field = "codigo"
 
-class ClienteViewSet(ModelViewSet):
+
+class ClienteViewSet(ReadOrAdminMixin, ModelViewSet):
     queryset = Cliente.objects.all().order_by("nome")
     serializer_class = ClienteSerializer
-    lookup_field = "codigo"   

@@ -28,7 +28,7 @@
                  hx-trigger="keyup changed delay:400ms"
                  hx-target="#conteudoTabela"
                  hx-swap="innerHTML"
-                 hx-include="[name='data_de'],[name='data_ate'],[name='per_page']"
+                 hx-include="[name='data_de'],[name='data_ate'],[name='status'],[name='per_page']"
                  autocomplete="off">
         </div>
       </div>
@@ -49,6 +49,16 @@
         </div>
       </div>
 
+      <!-- Status -->
+      <div class="col-12 col-sm-auto">
+        <select name="status" class="form-select" style="min-width:140px;">
+          <option value="">Todos os status</option>
+          {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if val == status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
       <!-- Por página -->
       <div class="col-12 col-sm-auto">
         <select name="per_page" class="form-select" style="min-width:90px;">
@@ -61,16 +71,18 @@
       <!-- Botão filtrar -->
       <div class="col-12 col-sm-auto d-flex gap-2">
         <button type="submit" class="btn btn-secondary">Filtrar</button>
-        {% if q or data_de or data_ate %}
-          <a href="{% url 'pedidos_lista' %}" class="btn btn-outline-secondary">Limpar</a>
-        {% endif %}
+        <a href="{% url 'pedidos_lista' %}?limpar=1" class="btn btn-outline-secondary">Limpar</a>
       </div>
 
     </div>
   </form>
 
   <!-- ── Tabela ─────────────────────────────────────────────────── -->
-  <div id="conteudoTabela">
+  <div id="conteudoTabela"
+       hx-trigger="atualizarTabela from:body"
+       hx-get="{% url 'pedidos_lista' %}"
+       hx-swap="innerHTML"
+       hx-include="#buscaPedidos,[name='data_de'],[name='data_ate'],[name='status'],[name='per_page']">
     {% include "portas/pedido/_pedido_tabela.html" %}
   </div>
 

@@ -1,27 +1,27 @@
-<span id="modalTitulo" hx-swap-oob="true">Reabrir pedido</span>
+<span id="modalTitulo" hx-swap-oob="true">Enviar para Montagem</span>
 
 <div hx-swap-oob="true" id="modalDialogClass">
   modal-dialog modal-dialog-centered
 </div>
 
 <div class="mb-4">
-  <p class="mb-1">Deseja reabrir o pedido <strong>#{{ pedido.numero }}</strong>?</p>
+  <p class="mb-1">Enviar pedido <strong>#{{ pedido.numero }}</strong> para <strong>Aguardando Montagem</strong>?</p>
   <p class="text-muted small mb-0">
     {{ pedido.data|date:"d/m/Y" }} &bull; {{ pedido.cliente.codigo }} – {{ pedido.cliente.nome }}
   </p>
-  <div class="alert alert-info mt-3 mb-0 small py-2">
-    O pedido voltará ao status <strong>Aberto</strong> e poderá ser editado normalmente.
+  <div class="alert alert-primary mt-3 mb-0 small py-2">
+    O corte das peças foi concluído. O pedido aguardará a montagem final.
   </div>
 </div>
 
 <div class="d-flex justify-content-end gap-2">
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
   <button class="btn btn-primary"
-          hx-post="{% url 'pedido_reabrir' pedido.id %}"
+          hx-post="{% url 'pedido_enviar_montagem' pedido.id %}"
           hx-target="#modalConteudo"
           hx-swap="innerHTML"
           hx-include="[name=csrfmiddlewaretoken]">
-    Reabrir pedido
+    Confirmar
   </button>
 </div>
 {% csrf_token %}

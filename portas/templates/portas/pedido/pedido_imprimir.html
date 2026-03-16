@@ -33,17 +33,15 @@
     }
 
     /* ── Impressão: A4 retrato ───────────────────────────────── */
-    @page { size: A4 portrait; margin: 0; }
+    @page { size: A4 portrait; margin: 6mm 15mm 12mm; }
     @media print {
       body {
         background: #fff;
         margin: 0; padding: 0;
       }
       .pagina {
-        width: 210mm;
-        height: 297mm;
-        padding: 12mm 15mm;
-        overflow: hidden;
+        width: 100%;
+        padding: 0;
         page-break-after: always;
         break-after: page;
       }
@@ -128,7 +126,10 @@
       border-collapse: collapse;
       margin-bottom: 5px;
     }
-    table.itens thead tr { background: #1a4a8a; color: #fff; }
+    table.itens thead tr {
+      background: #1a4a8a; color: #fff;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
     table.itens thead th {
       padding: 3px 4px;
       font-size: 7.5pt;
@@ -136,6 +137,11 @@
       text-align: left;
     }
     table.itens thead th.r { text-align: right; }
+    @media print {
+      table.itens thead tr { background: #d8d8d8 !important; color: #000 !important; }
+      table.itens thead th { border-bottom: 2px solid #444; }
+      table.itens tbody tr { page-break-inside: avoid; break-inside: avoid; }
+    }
     table.itens tbody tr { border-bottom: 1px solid #e8e8e8; }
     table.itens tbody tr:nth-child(even) { background: #f8f8f8; }
     table.itens tbody td {
@@ -163,7 +169,7 @@
     }
 
     /* ── Retângulo de anotação ───────────────────────────────── */
-    .anot { width: 11mm; height: 15mm; border: 1px solid #aaa; }
+    .anot { width: 32mm; height: 44mm; border: 1px solid #aaa; }
 
     /* ── Observações ─────────────────────────────────────────── */
     .obs-wrap {
@@ -179,7 +185,7 @@
     .rodape {
       border-top: 1px solid #ddd;
       padding-top: 4px;
-      margin-top: auto;
+      margin-top: 8mm;
       font-size: 7pt;
       color: #aaa;
       display: flex;
@@ -235,6 +241,9 @@
       <div class="lbl">Pedido</div>
       <div class="num">#{{ pedido.numero }}</div>
       <div class="data">{{ pedido.data|date:"d/m/Y" }}</div>
+      {% if pedido.data_previsao %}
+      <div class="data" style="margin-top:3px;">Previsão: {{ pedido.data_previsao|date:"d/m/Y" }}</div>
+      {% endif %}
     </div>
   </div>
 
@@ -243,6 +252,10 @@
     <span class="cod">{{ pedido.cliente.codigo }}</span>
     <span style="color:#ccc;">|</span>
     <span class="nome">{{ pedido.cliente.nome }}</span>
+    {% if pedido.cliente.cidade %}
+    <span style="color:#ccc;">|</span>
+    <span style="font-size:8.5pt;color:#555;">{{ pedido.cliente.cidade }}</span>
+    {% endif %}
   </div>
 
   <div class="sec-titulo">Itens do pedido</div>
@@ -263,7 +276,7 @@
         <th class="r" style="width:8mm;">Qtd</th>
         <th class="r" style="width:19mm;">Unit.</th>
         <th class="r" style="width:19mm;">Total</th>
-        <th style="width:14mm;"></th>
+        <th style="width:19mm;"></th>
       </tr>
     </thead>
     <tbody>
@@ -278,7 +291,7 @@
         <td class="r">{{ item.quantidade }}</td>
         <td class="r">R$&nbsp;{{ item.valor_unitario|floatformat:2 }}</td>
         <td class="r">R$&nbsp;{{ item.valor_total|floatformat:2 }}</td>
-        <td><div class="anot"></div></td>
+        <td style="padding-left:5mm;"><div class="anot"></div></td>
       </tr>
       {% empty %}
       <tr>
@@ -300,8 +313,6 @@
     <div class="obs-lbl">Observações:</div>
     {% if pedido.observacoes %}
     <div class="obs-txt">{{ pedido.observacoes }}</div>
-    {% else %}
-    <div style="height:12mm; border-bottom: 1px solid #ddd; margin-top: 3px;"></div>
     {% endif %}
   </div>
   {% endif %}

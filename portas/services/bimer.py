@@ -13,10 +13,13 @@ Endpoints confirmados:
   GET  /api/empresas/{id_empresa}/produtos/{bimer_id}/precos/{id_tabela}
        — retorna preço do produto para a empresa e tabela especificadas
 """
+import logging
 import requests
 from datetime import datetime, timedelta, timezone as dt_tz
 
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_expires(expires_raw):
@@ -99,7 +102,7 @@ def get_valid_token(config):
         try:
             return renovar_token(config)
         except Exception:
-            pass
+            logger.warning("Falha ao renovar token Bimer; re-autenticando.", exc_info=True)
     return obter_token(config)
 
 
@@ -445,11 +448,6 @@ def sincronizar_clientes():
                 if not bimer_id:
                     continue
 
-                # Já existe → pula
-                if Cliente.objects.filter(bimer_id=bimer_id).exists():
-                    ignorados += 1
-                    continue
-
                 nome   = (pessoa.get("Nome") or "").strip().upper()
                 codigo = (str(pessoa.get("Codigo") or ""))[:6]
 
@@ -458,11 +456,29 @@ def sincronizar_clientes():
                 digitos = "".join(c for c in cpf_cnpj_raw if c.isdigit())
                 tipo_pessoa = "PF" if len(digitos) <= 11 else "PJ"
 
-                # Contato principal do endereço principal
-                end     = pessoa.get("EnderecoPrincipal") or {}
+                # Endereço principal → cidade + contato
+                end    = pessoa.get("EnderecoPrincipal") or {}
+                cidade = str((end.get("Cidade") or {}).get("Nome") or "")[:100]
                 contato = end.get("ContatoPrincipal") or {}
                 telefone = str(contato.get("TelefoneCelular") or contato.get("TelefoneFixo") or "")[:20]
                 email    = str(contato.get("Email") or "")[:254]
+
+                # Já existe → atualiza dados (cidade sempre sincronizada; telefone/email só se vazios)
+                existente = Cliente.objects.filter(bimer_id=bimer_id).first()
+                if existente:
+                    campos = {}
+                    if cidade and existente.cidade != cidade:
+                        campos["cidade"] = cidade
+                    if telefone and not existente.telefone:
+                        campos["telefone"] = telefone or None
+                    if email and not existente.email:
+                        campos["email"] = email or None
+                    if campos:
+                        for k, v in campos.items():
+                            setattr(existente, k, v)
+                        existente.save(update_fields=list(campos.keys()))
+                    ignorados += 1
+                    continue
 
                 Cliente.objects.create(
                     bimer_id   = bimer_id,
@@ -472,6 +488,7 @@ def sincronizar_clientes():
                     tipo_pessoa= tipo_pessoa,
                     telefone   = telefone or None,
                     email      = email or None,
+                    cidade     = cidade,
                 )
                 importados += 1
 

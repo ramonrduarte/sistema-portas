@@ -66,6 +66,24 @@
         </div>
       </div>
 
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Previsão de entrega</div>
+        <div class="card-body">
+          {% if perms_usuario.pedidos.editar and pedido.status == 'aberto' %}
+          <form method="post" action="{% url 'pedido_previsao' pedido.id %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <input type="date" name="data_previsao" class="form-control form-control-sm"
+                   value="{{ pedido.data_previsao|date:'Y-m-d'|default:'' }}">
+            <button type="submit" class="btn btn-sm btn-secondary">Salvar</button>
+          </form>
+          {% elif pedido.data_previsao %}
+          <span class="fw-semibold">{{ pedido.data_previsao|date:"d/m/Y" }}</span>
+          {% else %}
+          <span class="text-muted small">Não definida</span>
+          {% endif %}
+        </div>
+      </div>
+
       {% if perms_usuario.pedidos.editar %}
       <div class="card shadow-sm">
         <div class="card-header fw-semibold">Observações</div>

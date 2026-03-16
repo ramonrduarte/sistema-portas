@@ -15,7 +15,7 @@ class ClienteForm(forms.ModelForm):
 
     class Meta:
         model = Cliente
-        fields = ["codigo", "tipo_pessoa", "ativo", "cpf_cnpj", "nome", "telefone", "email"]
+        fields = ["codigo", "tipo_pessoa", "ativo", "cpf_cnpj", "nome", "cidade", "telefone", "email"]
         widgets = {
             "codigo": forms.TextInput(attrs={
                 "class": "form-control",
@@ -28,6 +28,7 @@ class ClienteForm(forms.ModelForm):
                 "class": "form-control",
                 "style": "text-transform: uppercase;",
             }),
+            "cidade": forms.TextInput(attrs={"class": "form-control"}),
             "telefone": forms.TextInput(attrs={"class": "form-control"}),
             "email": forms.EmailInput(attrs={"class": "form-control"}),
             "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -58,6 +59,7 @@ class ClienteForm(forms.ModelForm):
                 Column("cpf_cnpj", css_class="col-md-6"),
             ),
             Row(Column("nome", css_class="col-md-12")),
+            Row(Column("cidade", css_class="col-md-12")),
             Row(
                 Column("telefone", css_class="col-md-4"),
                 Column("email", css_class="col-md-8"),

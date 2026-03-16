@@ -55,6 +55,7 @@ urlpatterns = [
     # Clientes
     path("clientes/", ClienteListView.as_view(), name="clientes_lista"),
     path("clientes/novo/", ClienteCreateView.as_view(), name="clientes_novo"),
+    path("clientes/<int:pk>/", views.cliente_detalhe, name="cliente_detalhe"),
     path("clientes/<int:pk>/editar/", ClienteUpdateView.as_view(), name="clientes_editar"),
     path("clientes/<int:pk>/excluir/", ClienteDeleteView.as_view(), name="clientes_excluir"),
 
@@ -92,6 +93,9 @@ urlpatterns = [
     path("pedidos/<int:pedido_pk>/itens/novo/", views.pedido_item_novo, name="pedido_item_novo"),
     path("pedidos/<int:pedido_pk>/itens/<int:item_pk>/remover/", views.htmx_remove_item, name="htmx_remove_item"),
     path("pedidos/<int:pk>/observacoes/", views.pedido_observacoes, name="pedido_observacoes"),
+    path("pedidos/<int:pk>/previsao/", views.pedido_previsao, name="pedido_previsao"),
+    path("pedidos/<int:pk>/corte/", views.pedido_enviar_corte, name="pedido_enviar_corte"),
+    path("pedidos/<int:pk>/montagem/", views.pedido_enviar_montagem, name="pedido_enviar_montagem"),
     path("pedidos/<int:pk>/wise/", views.pedido_enviar_wise, name="pedido_enviar_wise"),
     path("pedidos/<int:pk>/duplicar/", views.pedido_duplicar, name="pedido_duplicar"),
 

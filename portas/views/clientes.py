@@ -1,11 +1,17 @@
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
+from django.http import HttpResponse
+from django.urls import reverse
 from django.views.generic import ListView, CreateView, UpdateView
 from django.views import View
 from django.shortcuts import render, get_object_or_404, redirect
 
 from ..views_base import AtivoQuerysetMixin, BaseCRUDMixin, _get_perms, _sem_permissao
-from ..models import Cliente
+from ..models import Cliente, Pedido, PedidoStatusLog
 from ..forms import ClienteForm
+
+_PER_PAGE_OPCOES = [10, 20, 50]
 
 
 class ClienteListView(LoginRequiredMixin, AtivoQuerysetMixin, ListView):
@@ -13,14 +19,40 @@ class ClienteListView(LoginRequiredMixin, AtivoQuerysetMixin, ListView):
     template_name = "clientes/lista.html"
     context_object_name = "clientes"
     only_active = False
+    paginate_by = 20
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and not _get_perms(request.user)["clientes"]["ver"]:
             return _sem_permissao("Você não tem permissão para visualizar clientes.")
         return super().dispatch(request, *args, **kwargs)
 
+    def get_paginate_by(self, _queryset):
+        try:
+            per_page = int(self.request.GET.get("per_page", 20))
+            return per_page if per_page in _PER_PAGE_OPCOES else 20
+        except (ValueError, TypeError):
+            return 20
+
     def get_queryset(self):
-        return super().get_queryset().order_by("nome")
+        qs = super().get_queryset().order_by("nome")
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(
+                Q(nome__icontains=q) | Q(codigo__icontains=q) | Q(cpf_cnpj__icontains=q)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["q"] = self.request.GET.get("q", "")
+        ctx["per_page"] = self.get_paginate_by(self.get_queryset())
+        ctx["per_page_opcoes"] = _PER_PAGE_OPCOES
+        return ctx
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get("HX-Request") == "true":
+            return render(self.request, "clientes/_tabela.html", context)
+        return super().render_to_response(context, **response_kwargs)
 
 
 class ClienteCreateView(LoginRequiredMixin, BaseCRUDMixin, CreateView):
@@ -66,6 +98,13 @@ class ClienteUpdateView(LoginRequiredMixin, BaseCRUDMixin, UpdateView):
     def form_valid(self, form):
         self.object = form.save()
         if self.request.headers.get("HX-Request") == "true":
+            # Se veio da página de detalhe do cliente, redireciona de volta para ela
+            current_url = self.request.headers.get("HX-Current-URL", "")
+            detalhe_path = reverse("cliente_detalhe", args=[self.object.pk])
+            if detalhe_path in current_url:
+                resp = HttpResponse("")
+                resp["HX-Redirect"] = detalhe_path
+                return resp
             clientes = Cliente.objects.all().order_by("nome")
             resp = render(self.request, "clientes/_tabela.html", {"clientes": clientes})
             resp["HX-Trigger"] = "fecharModalCadastro"
@@ -99,3 +138,42 @@ class ClienteDeleteView(LoginRequiredMixin, View):
             clientes = Cliente.objects.all().order_by("nome")
             return render(request, "clientes/_tabela.html", {"clientes": clientes})
         return redirect("clientes_lista")
+
+
+@login_required
+def cliente_detalhe(request, pk):
+    from django.db.models import Sum, Prefetch
+
+    if not _get_perms(request.user)["clientes"]["ver"]:
+        return _sem_permissao("Você não tem permissão para visualizar clientes.")
+
+    cliente = get_object_or_404(Cliente, pk=pk)
+
+    pedidos = (
+        Pedido.objects
+        .filter(cliente=cliente)
+        .prefetch_related(
+            Prefetch(
+                "status_logs",
+                queryset=PedidoStatusLog.objects.order_by("alterado_em"),
+            ),
+            "itens",
+        )
+        .annotate(total=Sum("itens__valor_total"))
+        .order_by("-id")
+    )
+
+    # Resumo por status e valor total geral
+    resumo = {}
+    total_valor = 0
+    for p in pedidos:
+        resumo[p.status] = resumo.get(p.status, 0) + 1
+        total_valor += p.total or 0
+
+    return render(request, "clientes/detalhe.html", {
+        "cliente": cliente,
+        "pedidos": pedidos,
+        "resumo": resumo,
+        "total_valor": total_valor,
+        "status_labels": dict(Pedido.STATUS_CHOICES),
+    })

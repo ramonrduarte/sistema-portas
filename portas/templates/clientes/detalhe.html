@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+
+  <!-- ── Cabeçalho ──────────────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h3 class="mb-1">{{ cliente.nome|upper }}</h3>
+      <div class="text-muted small">
+        {% if cliente.cidade %}{{ cliente.cidade }}{% if cliente.cpf_cnpj or cliente.telefone or cliente.email %} &bull; {% endif %}{% endif %}
+        {% if cliente.cpf_cnpj %}{{ cliente.cpf_cnpj_formatado }} &bull; {% endif %}
+        {% if cliente.telefone %}{{ cliente.telefone }} &bull; {% endif %}
+        {% if cliente.email %}{{ cliente.email }}{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-primary btn-sm"
+              hx-get="{% url 'clientes_editar' cliente.pk %}"
+              hx-target="#modalConteudo"
+              data-bs-toggle="modal"
+              data-bs-target="#modalCadastro">
+        <i class="bi bi-pencil"></i> Editar
+      </button>
+      <a href="{% url 'clientes_lista' %}" class="btn btn-outline-secondary btn-sm">Voltar</a>
+    </div>
+  </div>
+
+  <!-- ── Cards de resumo ────────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold">{{ pedidos|length }}</div>
+          <div class="text-muted small">Total de pedidos</div>
+        </div>
+      </div>
+    </div>
+
+    {% if resumo.aberto %}
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100 border-success">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-success">{{ resumo.aberto }}</div>
+          <div class="text-muted small">Aberto{{ resumo.aberto|pluralize }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resumo.corte %}
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100 border-warning">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-warning">{{ resumo.corte }}</div>
+          <div class="text-muted small">Ag. Corte</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resumo.montagem %}
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100 border-primary">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-primary">{{ resumo.montagem }}</div>
+          <div class="text-muted small">Ag. Montagem</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resumo.wise %}
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100 border-info">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-info">{{ resumo.wise }}</div>
+          <div class="text-muted small">Wise</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resumo.concluido %}
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold">{{ resumo.concluido }}</div>
+          <div class="text-muted small">Concluído{{ resumo.concluido|pluralize }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resumo.cancelado %}
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100 border-secondary">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-secondary">{{ resumo.cancelado }}</div>
+          <div class="text-muted small">Cancelado{{ resumo.cancelado|pluralize }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="col-6 col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-5 fw-bold">R$ {{ total_valor|floatformat:2 }}</div>
+          <div class="text-muted small">Valor total</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Histórico de pedidos ───────────────────────────────────── -->
+  <h5 class="mb-3">Histórico de pedidos</h5>
+
+  {% if pedidos %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Data</th>
+          <th>Status</th>
+          <th>Última alteração</th>
+          <th>Histórico de status</th>
+          <th class="text-end">Valor</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pedido in pedidos %}
+        {% with logs=pedido.status_logs.all %}
+        <tr>
+          <td><strong>{{ pedido.id }}</strong></td>
+          <td>{{ pedido.data|date:"d/m/Y" }}</td>
+          <td>
+            {% if pedido.status == "aberto" %}
+              <span class="badge bg-success">Aberto</span>
+            {% elif pedido.status == "corte" %}
+              <span class="badge bg-warning text-dark">Ag. Corte</span>
+            {% elif pedido.status == "montagem" %}
+              <span class="badge bg-primary">Ag. Montagem</span>
+            {% elif pedido.status == "wise" %}
+              <span class="badge bg-info text-dark">Wise</span>
+            {% elif pedido.status == "concluido" %}
+              <span class="badge bg-dark">Concluído</span>
+            {% elif pedido.status == "cancelado" %}
+              <span class="badge bg-secondary">Cancelado</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ pedido.status }}</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">
+            {% if logs %}
+              {{ logs.last.alterado_em|date:"d/m/Y H:i" }}
+              {% if logs.last.usuario %}
+                <br>por {{ logs.last.usuario.get_full_name|default:logs.last.usuario.username }}
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>
+            {% if logs %}
+            <div class="d-flex flex-wrap gap-1">
+              {% for log in logs %}
+                <span class="badge
+                  {% if log.status == 'aberto' %}bg-success
+                  {% elif log.status == 'corte' %}bg-warning text-dark
+                  {% elif log.status == 'montagem' %}bg-primary
+                  {% elif log.status == 'wise' %}bg-info text-dark
+                  {% elif log.status == 'concluido' %}bg-dark
+                  {% elif log.status == 'cancelado' %}bg-secondary
+                  {% else %}bg-secondary
+                  {% endif %}"
+                  title="{{ log.alterado_em|date:'d/m/Y H:i' }}{% if log.usuario %} — {{ log.usuario.get_full_name|default:log.usuario.username }}{% endif %}">
+                  {{ log.get_status_display }}
+                  {{ log.alterado_em|date:"d/m" }}
+                </span>
+              {% endfor %}
+            </div>
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            R$ {{ pedido.total|default:0|floatformat:2 }}
+          </td>
+          <td>
+            <a href="{% url 'pedido_detalhe' pedido.pk %}" class="btn btn-sm btn-outline-secondary">
+              Ver pedido
+            </a>
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="text-muted">Nenhum pedido encontrado para este cliente.</p>
+  {% endif %}
+
+</div>
+
+<div id="conteudoTabela" class="d-none"></div>
+<script>
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.target && e.target.id === "conteudoTabela") {
+      window.location.reload();
+    }
+  });
+</script>
+{% endblock %}

@@ -1,4 +1,5 @@
-from datetime import date as Date, datetime
+import json
+from datetime import date as Date, datetime, timedelta
 from urllib.parse import urlencode
 from decimal import Decimal
 
@@ -19,6 +20,7 @@ from ..models import (
     Divisor,
     Pedido,
     PedidoItem,
+    PedidoStatusLog,
     Perfil,
     PerfilPuxador,
     Puxador,
@@ -81,20 +83,50 @@ def _resp_atualiza_tabela(request, pedido):
 _PER_PAGE_OPCOES = [10, 20, 50, 100]
 
 
+_FILTROS_SESSION_KEY = "pedidos_filtros"
+
+
 @login_required
 def pedidos_lista(request):
     if not _get_perms(request.user)["pedidos"]["ver"]:
         return _sem_permissao("Você não tem permissão para visualizar pedidos.")
 
-    q        = (request.GET.get("q") or "").strip()
-    data_de  = (request.GET.get("data_de") or "").strip()
-    data_ate = (request.GET.get("data_ate") or "").strip()
-    try:
-        per_page = int(request.GET.get("per_page", 20))
-        if per_page not in _PER_PAGE_OPCOES:
-            per_page = 20
-    except (ValueError, TypeError):
-        per_page = 20
+    # Limpar filtros salvos e voltar ao padrão
+    if "limpar" in request.GET:
+        request.session.pop(_FILTROS_SESSION_KEY, None)
+        return redirect(request.path)
+
+    params = request.GET
+
+    valid_statuses = [v for v, _ in Pedido.STATUS_CHOICES]
+
+    if params:
+        # Usuário enviou filtros → lê da requisição e salva na sessão
+        data_de  = params.get("data_de", "").strip()
+        data_ate = params.get("data_ate", "").strip()
+        status   = params.get("status", "").strip()
+        if status not in valid_statuses:
+            status = ""
+        try:
+            per_page = int(params["per_page"]) if "per_page" in params else 10
+            if per_page not in _PER_PAGE_OPCOES:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
+        if not request.headers.get("HX-Request"):
+            request.session[_FILTROS_SESSION_KEY] = {
+                "data_de": data_de, "data_ate": data_ate,
+                "status": status, "per_page": per_page,
+            }
+    else:
+        # Sem parâmetros → carrega da sessão ou usa padrões (hoje / 10)
+        saved    = request.session.get(_FILTROS_SESSION_KEY, {})
+        data_de  = saved.get("data_de") or Date.today().strftime("%Y-%m-%d")
+        data_ate = saved.get("data_ate", "")
+        status   = saved.get("status", "")
+        per_page = saved.get("per_page", 10)
+
+    q = params.get("q", "").strip()
 
     qs = Pedido.objects.select_related("cliente", "usuario").order_by("-id")
 
@@ -117,6 +149,9 @@ def pedidos_lista(request):
         except ValueError:
             data_ate = ""
 
+    if status:
+        qs = qs.filter(status=status)
+
     paginator = Paginator(qs, per_page)
     try:
         page_num = int(request.GET.get("page", 1))
@@ -130,6 +165,8 @@ def pedidos_lista(request):
         "q": q,
         "data_de": data_de,
         "data_ate": data_ate,
+        "status": status,
+        "status_choices": Pedido.STATUS_CHOICES,
         "per_page": per_page,
         "per_page_opcoes": _PER_PAGE_OPCOES,
     }
@@ -165,6 +202,22 @@ def _resp_atualiza_rascunho(request, itens):
     )
     resp = HttpResponse(oob_tabela + oob_resumo)
     resp["HX-Trigger"] = "fecharModalCadastro"
+    return resp
+
+
+def _log_status(pedido, request):
+    """Registra mudança de status no histórico do pedido."""
+    PedidoStatusLog.objects.create(
+        pedido=pedido,
+        status=pedido.status,
+        usuario=request.user if request.user.is_authenticated else None,
+    )
+
+
+def _resp_atualizar_lista():
+    """Resposta HTMX para ações de modal na lista: fecha modal + dispara re-fetch da tabela."""
+    resp = HttpResponse("")
+    resp["HX-Trigger"] = json.dumps({"fecharModalCadastro": True, "atualizarTabela": True})
     return resp
 
 
@@ -204,7 +257,10 @@ def pedido_novo(request):
 
         obs = request.POST.get("observacoes", "").strip() or None
         with transaction.atomic():
-            pedido = Pedido.objects.create(cliente=c, usuario=request.user, observacoes=obs)
+            pedido = Pedido.objects.create(
+                cliente=c, usuario=request.user, observacoes=obs,
+                data_previsao=Date.today() + timedelta(days=7),
+            )
             for item_data in itens:
                 PedidoItem.objects.create(
                     pedido=pedido,
@@ -237,6 +293,7 @@ def pedido_novo(request):
                 )
 
         request.session.pop(_SESSION_KEY, None)
+        PedidoStatusLog.objects.create(pedido=pedido, status="aberto", usuario=request.user)
         return redirect("pedido_detalhe", pk=pedido.pk)
 
     # GET: limpa rascunho e exibe a página de novo pedido
@@ -397,6 +454,7 @@ def pedido_duplicar(request, pk):
         usuario=request.user,
         observacoes=original.observacoes,
         status="aberto",
+        data_previsao=Date.today() + timedelta(days=7),
     )
     for item in original.itens.all():
         PedidoItem.objects.create(
@@ -444,6 +502,66 @@ def pedido_observacoes(request, pk):
     return redirect(reverse("pedido_detalhe", args=[pk]) + "?obs_salva=1")
 
 
+@login_required
+def pedido_previsao(request, pk):
+    if not _get_perms(request.user)["pedidos"]["editar"]:
+        return _sem_permissao()
+    pedido = get_object_or_404(Pedido, pk=pk)
+    if request.method == "POST" and pedido.status == "aberto":
+        raw = request.POST.get("data_previsao", "").strip()
+        try:
+            pedido.data_previsao = datetime.strptime(raw, "%Y-%m-%d").date() if raw else None
+        except ValueError:
+            pass
+        else:
+            pedido.save(update_fields=["data_previsao"])
+    return redirect(reverse("pedido_detalhe", args=[pk]))
+
+
+# ── Enviar pedido para Aguardando Corte ───────────────────────────────────────
+
+@login_required
+def pedido_enviar_corte(request, pk):
+    if not _get_perms(request.user)["producao"]["alterar_status"]:
+        return _sem_permissao("Você não tem permissão para alterar o status de pedidos.")
+    pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
+
+    if request.method == "POST":
+        if pedido.status != "aberto":
+            return HttpResponse(
+                '<div class="alert alert-warning m-3">Só pedidos <strong>Abertos</strong> podem ser enviados para Corte.</div>',
+                status=400,
+            )
+        pedido.status = "corte"
+        pedido.save(update_fields=["status"])
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
+
+    return render(request, "portas/pedido/_confirm_corte.html", {"pedido": pedido})
+
+
+# ── Enviar pedido para Aguardando Montagem ─────────────────────────────────────
+
+@login_required
+def pedido_enviar_montagem(request, pk):
+    if not _get_perms(request.user)["producao"]["alterar_status"]:
+        return _sem_permissao("Você não tem permissão para alterar o status de pedidos.")
+    pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
+
+    if request.method == "POST":
+        if pedido.status != "corte":
+            return HttpResponse(
+                '<div class="alert alert-warning m-3">Só pedidos em <strong>Aguardando Corte</strong> podem ser enviados para Montagem.</div>',
+                status=400,
+            )
+        pedido.status = "montagem"
+        pedido.save(update_fields=["status"])
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
+
+    return render(request, "portas/pedido/_confirm_montagem.html", {"pedido": pedido})
+
+
 # ── Enviar pedido para Wise (integração Bimer) ────────────────────────────────
 
 @login_required
@@ -453,9 +571,9 @@ def pedido_enviar_wise(request, pk):
     pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
 
     if request.method == "POST":
-        if pedido.status == "wise":
+        if pedido.status != "montagem":
             return HttpResponse(
-                '<div class="alert alert-warning m-3">Pedido já está com status Wise.</div>',
+                '<div class="alert alert-warning m-3">Só pedidos em <strong>Aguardando Montagem</strong> podem ser enviados para Wise.</div>',
                 status=400,
             )
 
@@ -473,13 +591,8 @@ def pedido_enviar_wise(request, pk):
 
         pedido.status = "wise"
         pedido.save(update_fields=["status"])
-
-        qs = Pedido.objects.select_related("cliente", "usuario").order_by("-id")
-        resp = HttpResponse(
-            render_to_string("portas/pedido/_pedido_tabela.html", {"pedidos": qs}, request=request)
-        )
-        resp["HX-Trigger"] = "fecharModalCadastro"
-        return resp
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
 
     return render(request, "portas/pedido/_confirm_wise.html", {"pedido": pedido})
 
@@ -505,12 +618,8 @@ def pedido_reabrir(request, pk):
             )
         pedido.status = "aberto"
         pedido.save(update_fields=["status"])
-        qs = Pedido.objects.select_related("cliente", "usuario").order_by("-id")
-        resp = HttpResponse(
-            render_to_string("portas/pedido/_pedido_tabela.html", {"pedidos": qs}, request=request)
-        )
-        resp["HX-Trigger"] = "fecharModalCadastro"
-        return resp
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
 
     return render(request, "portas/pedido/_confirm_reabrir.html", {"pedido": pedido})
 
@@ -530,12 +639,7 @@ def pedido_excluir(request, pk):
                 status=400,
             )
         pedido.delete()
-        qs = Pedido.objects.select_related("cliente", "usuario").order_by("-id")
-        resp = HttpResponse(
-            render_to_string("portas/pedido/_pedido_tabela.html", {"pedidos": qs}, request=request)
-        )
-        resp["HX-Trigger"] = "fecharModalCadastro"
-        return resp
+        return _resp_atualizar_lista()
 
     # GET → carrega modal de confirmação
     return render(request, "portas/pedido/_confirm_excluir.html", {"pedido": pedido})
@@ -555,6 +659,11 @@ def pedido_cancelar(request, pk):
                 '<div class="alert alert-danger m-3">Pedidos Wise ou Concluídos não podem ser cancelados.</div>',
                 status=403,
             )
+        if pedido.status in ("corte", "montagem"):
+            return HttpResponse(
+                '<div class="alert alert-danger m-3">Pedidos em <strong>Aguardando Corte</strong> ou <strong>Aguardando Montagem</strong> precisam ser reabertos antes de cancelar.</div>',
+                status=403,
+            )
         if pedido.status == "cancelado":
             return HttpResponse(
                 '<div class="alert alert-warning m-3">Pedido já está cancelado.</div>',
@@ -562,12 +671,8 @@ def pedido_cancelar(request, pk):
             )
         pedido.status = "cancelado"
         pedido.save(update_fields=["status"])
-        qs = Pedido.objects.select_related("cliente", "usuario").order_by("-id")
-        resp = HttpResponse(
-            render_to_string("portas/pedido/_pedido_tabela.html", {"pedidos": qs}, request=request)
-        )
-        resp["HX-Trigger"] = "fecharModalCadastro"
-        return resp
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
 
     # GET → carrega modal de confirmação
     return render(request, "portas/pedido/_confirm_cancelar.html", {"pedido": pedido})
@@ -575,8 +680,8 @@ def pedido_cancelar(request, pk):
 
 # ── Imprimir pedido ───────────────────────────────────────────────────────────
 
-_ITENS_PG1 = 6   # itens na 1ª página (tem cabeçalho + cliente + rodapé)
-_ITENS_PGN = 9   # itens nas páginas seguintes
+_ITENS_PG1 = 4   # itens na 1ª página (tem cabeçalho + cliente + rodapé)
+_ITENS_PGN = 5   # itens nas páginas seguintes
 
 
 def _paginar(itens):
@@ -741,7 +846,7 @@ def htmx_calcular_item(request):
         divisor = Divisor.objects.filter(pk=div_id).first() if div_id else None
         vidro = VidroBase.objects.filter(pk=vidro_id).first() if vidro_id else None
 
-        valor_unit = calc_total(
+        valor_base = calc_total(
             preco_perfil_m=perfil.preco,
             largura_mm=largura,
             altura_mm=altura,
@@ -754,12 +859,12 @@ def htmx_calcular_item(request):
             qtd_divisor=(qtd_div or None),
             preco_vidro_m2=(vidro.preco if vidro else None),
             custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
-        ) + adicional
+        )
 
         return render(request, _tmpl, {
-            "valor_unitario": valor_unit,
-            "valor_total": valor_unit * Decimal(qtd),
+            "valor_base": valor_base,
             "adicional": adicional if adicional else None,
+            "valor_total": (valor_base + adicional) * Decimal(qtd),
         })
 
     except (ValueError, TypeError):
@@ -825,6 +930,10 @@ def pedido_controle(request):
             ids_str = ",".join(ids)
             return redirect(f"{reverse('pedido_insumos')}?ids={ids_str}")
 
+        if ids and action == "ver_plano_corte":
+            ids_str = ",".join(ids)
+            return redirect(f"{reverse('pedido_plano_corte')}?ids={ids_str}")
+
         if ids and action in valid_statuses:
             if not _get_perms(request.user)["producao"]["alterar_status"]:
                 return _sem_permissao("Você não tem permissão para alterar o status de produção.")
@@ -835,19 +944,18 @@ def pedido_controle(request):
 
                 config = BimerConfig.get()
                 erros_bimer = []
-                enviados = []
-                for pedido in Pedido.objects.filter(pk__in=ids).select_related("cliente"):
+                for pedido in Pedido.objects.filter(pk__in=ids, status="montagem").select_related("cliente"):
                     ok, msg = svc_bimer.enviar_pedido_bimer(config, pedido)
                     if ok:
                         pedido.status = "wise"
                         pedido.save(update_fields=["status"])
-                        enviados.append(pedido.numero)
+                        _log_status(pedido, request)
                     else:
                         erros_bimer.append(f"#{pedido.numero}: {msg}")
 
                 if erros_bimer:
                     msgs_erro = " | ".join(erros_bimer)
-                    qs = urlencode({"status": "producao", "bimer_erro": msgs_erro[:400]})
+                    qs = urlencode({"status": "montagem", "bimer_erro": msgs_erro[:400]})
                     return redirect(f"{reverse('pedido_controle')}?{qs}")
                 return redirect(f"{reverse('pedido_controle')}?status=wise")
 
@@ -855,7 +963,19 @@ def pedido_controle(request):
             # Reabrir e cancelar não se aplicam a pedidos wise/concluido
             if action in ("aberto", "cancelado"):
                 qs_bulk = qs_bulk.exclude(status__in=("wise", "concluido"))
+            # corte só se aplica a pedidos abertos
+            if action == "corte":
+                qs_bulk = qs_bulk.filter(status="aberto")
+            # montagem só se aplica a pedidos em corte
+            if action == "montagem":
+                qs_bulk = qs_bulk.filter(status="corte")
             qs_bulk.update(status=action)
+            # Registra log para cada pedido alterado em bulk
+            for pedido in qs_bulk.only("id", "status"):
+                PedidoStatusLog.objects.create(
+                    pedido=pedido, status=action,
+                    usuario=request.user if request.user.is_authenticated else None,
+                )
             # Redireciona para a aba do status que foi aplicado
             return redirect(f"{reverse('pedido_controle')}?status={action}")
 

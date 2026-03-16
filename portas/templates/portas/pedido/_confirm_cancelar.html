@@ -18,7 +18,7 @@
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
   <button class="btn btn-warning"
           hx-post="{% url 'pedido_cancelar' pedido.id %}"
-          hx-target="#conteudoTabela"
+          hx-target="#modalConteudo"
           hx-swap="innerHTML"
           hx-include="[name=csrfmiddlewaretoken]">
     Cancelar pedido
