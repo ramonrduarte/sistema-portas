@@ -680,8 +680,8 @@ def pedido_cancelar(request, pk):
 
 # ── Imprimir pedido ───────────────────────────────────────────────────────────
 
-_ITENS_PG1 = 4   # itens na 1ª página (tem cabeçalho + cliente + rodapé)
-_ITENS_PGN = 5   # itens nas páginas seguintes
+_ITENS_PG1 = 2   # itens na 1ª página A5 (cabeçalho + cliente + rodapé)
+_ITENS_PGN = 2   # itens nas páginas A5 seguintes
 
 
 def _paginar(itens):

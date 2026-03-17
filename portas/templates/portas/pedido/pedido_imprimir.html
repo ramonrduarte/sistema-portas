@@ -13,7 +13,7 @@
       color: #111;
     }
 
-    /* ── Tela: folhas A4 empilhadas sobre fundo cinza ───────── */
+    /* ── Tela: folhas A5 empilhadas sobre fundo cinza ───────── */
     @media screen {
       body {
         background: #c8c8c8;
@@ -25,15 +25,15 @@
       }
       .pagina {
         background: #fff;
-        width: 210mm;
-        min-height: 297mm;
-        padding: 12mm 15mm;
+        width: 148mm;
+        min-height: 210mm;
+        padding: 8mm 12mm;
         box-shadow: 0 3px 14px rgba(0,0,0,.3);
       }
     }
 
-    /* ── Impressão: A4 retrato ───────────────────────────────── */
-    @page { size: A4 portrait; margin: 5mm 15mm 12mm; }
+    /* ── Impressão: A5 retrato (meia folha A4) ───────────────── */
+    @page { size: A5 portrait; margin: 5mm 12mm 10mm; }
     @media print {
       body {
         background: #fff;
@@ -55,7 +55,7 @@
 
     /* ── Aviso de configuração (só na tela) ─────────────────── */
     .aviso-imp {
-      width: 210mm;
+      width: 148mm;
       background: #fff8e1;
       border: 1px solid #f0c040;
       border-radius: 5px;
@@ -213,7 +213,7 @@
 {% endif %}
 
 <div class="aviso-imp">
-  <strong>Como imprimir:</strong> selecione <strong>A4 Retrato</strong>, escala <strong>100%</strong>, sem ajuste de margens.
+  <strong>Como imprimir:</strong> selecione <strong>A5 Retrato</strong> (ou "2 páginas por folha" no A4), escala <strong>100%</strong>, sem ajuste de margens.
 </div>
 
 {% with total_pgs=paginas|length %}
