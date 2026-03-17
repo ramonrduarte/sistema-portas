@@ -227,8 +227,7 @@
 {% for pagina_itens in paginas %}
 <div class="pagina">
 
-  {% if forloop.first %}
-  <!-- ── Cabeçalho completo ───────────────────────────────── -->
+  <!-- ── Cabeçalho (todas as páginas) ────────────────────── -->
   <div class="cab">
     {% if config_empresa.logo_claro %}
       <div class="cab-logo-claro">
@@ -264,14 +263,6 @@
     <span style="font-size:7.5pt;color:#555;white-space:nowrap;">Prev: {{ pedido.data_previsao|date:"d/m/Y" }}</span>
     {% endif %}
   </div>
-
-  {% else %}
-  <!-- ── Cabeçalho de continuação ─────────────────────────── -->
-  <div class="cab-cont">
-    <strong>{{ config_empresa.nome_empresa }}</strong>
-    <span>Pedido #{{ pedido.numero }} — {{ pedido.cliente.nome }}</span>
-  </div>
-  {% endif %}
 
   <!-- ── Tabela de itens desta página ─────────────────────── -->
   <table class="itens">
