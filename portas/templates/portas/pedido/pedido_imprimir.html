@@ -195,8 +195,7 @@
       margin-top: 3mm;
       font-size: 7pt;
       color: #aaa;
-      display: flex;
-      justify-content: space-between;
+      text-align: right;
     }
 
     /* ── Botão de impressão (só na tela) ────────────────────── */
@@ -266,8 +265,6 @@
     {% endif %}
   </div>
 
-  <div class="sec-titulo">Itens do pedido</div>
-
   {% else %}
   <!-- ── Cabeçalho de continuação ─────────────────────────── -->
   <div class="cab-cont">
@@ -327,13 +324,6 @@
 
   <!-- ── Rodapé (em todas as páginas) ─────────────────────── -->
   <div class="rodape">
-    {% if forloop.last %}
-      <span>{{ config_empresa.nome_empresa }}</span>
-      <span>Emitido em {{ pedido.data|date:"d/m/Y" }}</span>
-    {% else %}
-      <span>Continua na próxima página…</span>
-      <span>&nbsp;</span>
-    {% endif %}
     <span>{{ forloop.counter }}/{{ total_pgs }}</span>
   </div>
 
