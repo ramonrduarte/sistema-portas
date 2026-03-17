@@ -78,17 +78,17 @@
       align-items: center;
       gap: 8px;
       border-bottom: 2px solid #1a4a8a;
-      padding-bottom: 4px;
-      margin-bottom: 4px;
+      padding-bottom: 3px;
+      margin-bottom: 3px;
     }
     .cab-logo { background: #1a1a2e; border-radius: 4px; padding: 3px 7px; display: flex; align-items: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .cab-logo-claro { display: flex; align-items: center; }
-    .cab img { max-height: 38px; max-width: 120px; width: auto; object-fit: contain; }
-    .cab-empresa h1 { font-size: 11pt; font-weight: bold; color: #1a4a8a; line-height: 1.2; }
+    .cab img { max-height: 28px; max-width: 100px; width: auto; object-fit: contain; }
+    .cab-empresa h1 { font-size: 10pt; font-weight: bold; color: #1a4a8a; line-height: 1.2; }
     .cab-pedido { margin-left: auto; text-align: right; }
-    .cab-pedido .lbl  { font-size: 7pt; color: #999; text-transform: uppercase; letter-spacing: .4px; }
-    .cab-pedido .num  { font-size: 13pt; font-weight: bold; color: #1a4a8a; line-height: 1.1; }
-    .cab-pedido .data { font-size: 7.5pt; color: #555; }
+    .cab-pedido .lbl  { font-size: 6.5pt; color: #999; text-transform: uppercase; letter-spacing: .4px; }
+    .cab-pedido .num  { font-size: 12pt; font-weight: bold; color: #1a4a8a; line-height: 1.1; }
+    .cab-pedido .data { font-size: 7pt; color: #555; }
 
     /* ── Cabeçalho de continuação (páginas seguintes) ───────── */
     .cab-cont {
@@ -110,21 +110,21 @@
       gap: 6px;
       background: #f0f4fb;
       border-left: 3px solid #1a4a8a;
-      padding: 3px 7px;
-      margin-bottom: 4px;
+      padding: 2px 7px;
+      margin-bottom: 3px;
       border-radius: 0 3px 3px 0;
     }
-    .cliente .cod  { font-size: 8pt; color: #666; white-space: nowrap; }
-    .cliente .nome { font-size: 10pt; font-weight: bold; }
+    .cliente .cod  { font-size: 7.5pt; color: #666; white-space: nowrap; }
+    .cliente .nome { font-size: 9pt; font-weight: bold; }
 
     /* ── Tabela de itens ────────────────────────────────────── */
     .sec-titulo {
-      font-size: 7.5pt;
+      font-size: 6.5pt;
       text-transform: uppercase;
       letter-spacing: .4px;
       color: #999;
       font-weight: bold;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
 
     table.itens {
@@ -149,6 +149,7 @@
       table.itens tbody tr { page-break-inside: avoid; break-inside: avoid; }
     }
     table.itens tbody tr { border-bottom: 1px solid #e8e8e8; }
+    table.itens tbody tr:last-child { border-bottom: none; }
     table.itens tbody tr:nth-child(even) { background: #f8f8f8; }
     table.itens tbody td {
       padding: 4px 4px;
