@@ -13,7 +13,7 @@
       color: #111;
     }
 
-    /* ── Tela: folhas A5 empilhadas sobre fundo cinza ───────── */
+    /* ── Tela: meias-folhas A4 empilhadas sobre fundo cinza ─── */
     @media screen {
       body {
         background: #c8c8c8;
@@ -21,19 +21,26 @@
         flex-direction: column;
         align-items: center;
         padding: 24px 0 48px;
-        gap: 18px;
+        gap: 4px;
       }
       .pagina {
         background: #fff;
-        width: 148mm;
-        min-height: 210mm;
-        padding: 8mm 12mm;
+        width: 210mm;
+        height: 148.5mm;
+        padding: 5mm 15mm 4mm;
+        box-sizing: border-box;
+        overflow: hidden;
         box-shadow: 0 3px 14px rgba(0,0,0,.3);
+      }
+      /* linha tracejada de corte entre os dois pedidos por folha */
+      .pagina + .pagina {
+        border-top: 1px dashed #bbb;
+        margin-top: 0;
       }
     }
 
-    /* ── Impressão: A5 retrato (meia folha A4) ───────────────── */
-    @page { size: A5 portrait; margin: 5mm 12mm 10mm; }
+    /* ── Impressão: A4 retrato, 2 meias-folhas por página ────── */
+    @page { size: A4 portrait; margin: 0 12mm; }
     @media print {
       body {
         background: #fff;
@@ -41,13 +48,12 @@
       }
       .pagina {
         width: 100%;
-        padding: 0;
-        page-break-after: always;
-        break-after: page;
-      }
-      .pagina:last-child {
-        page-break-after: auto;
-        break-after: auto;
+        height: 148.5mm;
+        padding: 4mm 0 3mm;
+        box-sizing: border-box;
+        overflow: hidden;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
       .btn-print { display: none !important; }
       .aviso-imp { display: none !important; }
@@ -55,7 +61,7 @@
 
     /* ── Aviso de configuração (só na tela) ─────────────────── */
     .aviso-imp {
-      width: 148mm;
+      width: 210mm;
       background: #fff8e1;
       border: 1px solid #f0c040;
       border-radius: 5px;
@@ -169,7 +175,7 @@
     }
 
     /* ── Retângulo de anotação ───────────────────────────────── */
-    .anot { width: 32mm; height: 44mm; border: 1px solid #aaa; }
+    .anot { width: 32mm; height: 38mm; border: 1px solid #aaa; }
 
     /* ── Observações ─────────────────────────────────────────── */
     .obs-wrap {
@@ -184,8 +190,8 @@
     /* ── Rodapé (em todas as páginas) ───────────────────────── */
     .rodape {
       border-top: 1px solid #ddd;
-      padding-top: 4px;
-      margin-top: 5mm;
+      padding-top: 3px;
+      margin-top: 3mm;
       font-size: 7pt;
       color: #aaa;
       display: flex;
@@ -213,7 +219,7 @@
 {% endif %}
 
 <div class="aviso-imp">
-  <strong>Como imprimir:</strong> selecione <strong>A5 Retrato</strong> (ou "2 páginas por folha" no A4), escala <strong>100%</strong>, sem ajuste de margens.
+  <strong>Como imprimir:</strong> selecione <strong>A4 Retrato</strong>, <strong>1 página por folha</strong>, escala <strong>100%</strong>, sem ajuste de margens. Cada folha A4 sai com 2 pedidos — corte ao meio.
 </div>
 
 {% with total_pgs=paginas|length %}
