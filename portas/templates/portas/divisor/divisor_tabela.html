@@ -3,6 +3,7 @@
       <tr>
         <th>Código</th>
         <th>Descrição</th>
+        <th>Modelo</th>
         <th>Preço</th>
         <th>Acabamento</th>
         <th>Encaixe</th>
@@ -15,6 +16,7 @@
         <tr class="{% if not d.ativo %}item-inativo{% endif %}">
           <td>{{ d.codigo }}</td>
           <td>{{ d.descricao }}</td>
+          <td>{{ d.modelo|default:"-" }}</td>
           <td>R$ {{ d.preco|floatformat:2 }}</td>
           <td>{{ d.acabamento }}</td>
           <td>{{ d.get_encaixe_display }}</td>
@@ -39,7 +41,7 @@
         </tr>
       {% empty %}
         <tr>
-          <td colspan="6" class="text-center text-muted py-4">Nenhum divisor cadastrado.</td>
+          <td colspan="7" class="text-center text-muted py-4">Nenhum divisor cadastrado.</td>
         </tr>
       {% endfor %}
     </tbody>
