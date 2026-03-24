@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.template.loader import render_to_string
 
 from ..models import Perfil, PerfilPuxador, Puxador, EspessuraVidro, VidroBase, Divisor, Acabamento
@@ -11,12 +11,37 @@ from ..forms import (
 )
 
 
+def _filtrar_ordenar(qs, request, campos_busca, sort_default="descricao", campos_sort=None):
+    """Aplica busca textual e ordenação ao queryset com base nos parâmetros GET."""
+    q = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", sort_default)
+    direction = request.GET.get("dir", "asc")
+    if campos_sort and sort not in campos_sort:
+        sort = sort_default
+    if direction not in ("asc", "desc"):
+        direction = "asc"
+    if q:
+        filtro = Q()
+        for campo in campos_busca:
+            filtro |= Q(**{f"{campo}__icontains": q})
+        qs = qs.filter(filtro)
+    order = sort if direction == "asc" else f"-{sort}"
+    return qs.order_by(order), q, sort, direction
+
+
 # ── PERFIL PUXADOR ────────────────────────────────────────────────────────────
 
 @login_required
 def lista_perfis_puxador(request):
-    perfis_puxador = PerfilPuxador.objects.select_related("acabamento").all().order_by("descricao")
-    return render(request, "portas/perfil_puxador/perfil_puxador_lista.html", {"perfis_puxador": perfis_puxador})
+    qs, q, sort, dir_ = _filtrar_ordenar(
+        PerfilPuxador.objects.select_related("acabamento").all(), request,
+        campos_busca=["codigo", "descricao", "modelo"],
+        campos_sort=["codigo", "descricao", "modelo", "acabamento__nome", "preco"],
+    )
+    ctx = {"perfis_puxador": qs, "q": q, "sort": sort, "dir": dir_}
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/perfil_puxador/perfil_puxador_tabela.html", ctx)
+    return render(request, "portas/perfil_puxador/perfil_puxador_lista.html", ctx)
 
 
 @login_required
@@ -123,13 +148,20 @@ def _perfil_qs():
             "divisores_compativeis", "vidros_compativeis", "espessuras_vidro_compativeis",
         )
         .all()
-        .order_by("descricao")
     )
 
 
 @login_required
 def lista_perfis(request):
-    return render(request, "portas/perfil/perfil_lista.html", {"perfis": _perfil_qs()})
+    qs, q, sort, dir_ = _filtrar_ordenar(
+        _perfil_qs(), request,
+        campos_busca=["codigo", "descricao", "modelo"],
+        campos_sort=["codigo", "descricao", "modelo", "acabamento__nome", "preco"],
+    )
+    ctx = {"perfis": qs, "q": q, "sort": sort, "dir": dir_}
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/perfil/perfil_tabela.html", ctx)
+    return render(request, "portas/perfil/perfil_lista.html", ctx)
 
 
 @login_required
@@ -189,8 +221,15 @@ def excluir_perfil(request, pk):
 
 @login_required
 def lista_puxadores(request):
-    puxadores = Puxador.objects.select_related("acabamento").all().order_by("descricao")
-    return render(request, "portas/puxador/puxador_lista.html", {"puxadores": puxadores})
+    qs, q, sort, dir_ = _filtrar_ordenar(
+        Puxador.objects.select_related("acabamento").all(), request,
+        campos_busca=["codigo", "descricao", "modelo"],
+        campos_sort=["codigo", "descricao", "modelo", "acabamento__nome", "preco"],
+    )
+    ctx = {"puxadores": qs, "q": q, "sort": sort, "dir": dir_}
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/puxador/puxador_tabela.html", ctx)
+    return render(request, "portas/puxador/puxador_lista.html", ctx)
 
 
 @login_required
@@ -304,8 +343,16 @@ def excluir_espessura(request, pk):
 
 @login_required
 def lista_vidros(request):
-    vidros = VidroBase.objects.select_related("espessura").all().order_by("espessura")
-    return render(request, "portas/vidro/vidro_lista.html", {"vidros": vidros})
+    qs, q, sort, dir_ = _filtrar_ordenar(
+        VidroBase.objects.select_related("espessura").all(), request,
+        campos_busca=["codigo", "descricao"],
+        sort_default="descricao",
+        campos_sort=["codigo", "descricao", "espessura__valor_mm", "preco"],
+    )
+    ctx = {"vidros": qs, "q": q, "sort": sort, "dir": dir_}
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/vidro/vidro_tabela.html", ctx)
+    return render(request, "portas/vidro/vidro_lista.html", ctx)
 
 
 @login_required
@@ -354,8 +401,15 @@ def excluir_vidro(request, pk):
 
 @login_required
 def lista_divisores(request):
-    divisores = Divisor.objects.select_related("acabamento").all().order_by("descricao")
-    return render(request, "portas/divisor/divisor_lista.html", {"divisores": divisores})
+    qs, q, sort, dir_ = _filtrar_ordenar(
+        Divisor.objects.select_related("acabamento").all(), request,
+        campos_busca=["codigo", "descricao", "modelo"],
+        campos_sort=["codigo", "descricao", "modelo", "preco", "acabamento__nome", "encaixe"],
+    )
+    ctx = {"divisores": qs, "q": q, "sort": sort, "dir": dir_}
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "portas/divisor/divisor_tabela.html", ctx)
+    return render(request, "portas/divisor/divisor_lista.html", ctx)
 
 
 @login_required

@@ -1,46 +1,43 @@
 <table class="table table-hover align-middle">
-    <thead class="table-light">
+  <thead class="table-light">
+    <tr>
+      <th style="width:120px;">{% include "portas/_th_sort.html" with field="codigo" label="Código" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="descricao" label="Descrição" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="modelo" label="Modelo" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="acabamento__nome" label="Acabamento" %}</th>
+      <th style="width:140px;">{% include "portas/_th_sort.html" with field="preco" label="Preço" %}</th>
+      <th style="width:220px;">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in perfis %}
       <tr>
-        <th style="width:120px;">Código</th>
-        <th>Descrição</th>
-        <th>Modelo</th>
-        <th>Acabamento</th>
-        <th style="width:140px;">Preço</th>
-        <th style="width:220px;">Ações</th>
+        <td>{{ p.codigo }}</td>
+        <td>{{ p.descricao }}</td>
+        <td>{{ p.modelo|default:"-" }}</td>
+        <td>{{ p.acabamento }}</td>
+        <td>R$ {{ p.preco|floatformat:2 }}</td>
+        <td class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary"
+                  hx-get="{% url 'editar_perfil' p.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Editar
+          </button>
+          <button class="btn btn-sm btn-outline-danger"
+                  hx-get="{% url 'excluir_perfil' p.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Excluir
+          </button>
+        </td>
       </tr>
-    </thead>
-  
-    <tbody>
-      {% for p in perfis %}
-        <tr>
-          <td>{{ p.codigo }}</td>
-          <td>{{ p.descricao }}</td>
-          <td>{{ p.modelo|default:"-" }}</td>
-          <td>{{ p.acabamento }}</td>
-          <td>R$ {{ p.preco|floatformat:2 }}</td>
-          <td class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-primary"
-                    hx-get="{% url 'editar_perfil' p.pk %}"
-                    hx-target="#modalConteudo"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro">
-              Editar
-            </button>
-  
-            <button class="btn btn-sm btn-outline-danger"
-                    hx-get="{% url 'excluir_perfil' p.pk %}"
-                    hx-target="#modalConteudo"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro">
-              Excluir
-            </button>
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="6" class="text-muted text-center py-4">Nenhum perfil cadastrado.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  
+    {% empty %}
+      <tr>
+        <td colspan="6" class="text-muted text-center py-4">Nenhum perfil cadastrado.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

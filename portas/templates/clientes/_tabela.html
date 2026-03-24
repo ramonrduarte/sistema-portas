@@ -1,14 +1,14 @@
 <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Código</th>
-        <th>Nome</th>
-        <th>CPF/CNPJ</th>
-        <th>Telefone</th>
-        <th>E-mail</th>
-        <th style="width:180px;">Ações</th>
-      </tr>
-    </thead>
+  <thead class="table-light">
+    <tr>
+      <th>{% include "portas/_th_sort.html" with field="codigo" label="Código" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="nome" label="Nome" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="cpf_cnpj" label="CPF/CNPJ" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="telefone" label="Telefone" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="email" label="E-mail" %}</th>
+      <th style="width:180px;">Ações</th>
+    </tr>
+  </thead>
     <tbody>
       {% for c in clientes %}
         <tr class="{% if not c.ativo %}item-inativo{% endif %}">
@@ -58,7 +58,7 @@
   <ul class="pagination pagination-sm mb-0">
     {% if page_obj.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&per_page={{ per_page }}">‹</a>
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&per_page={{ per_page }}&sort={{ sort|default:'nome' }}&dir={{ dir|default:'asc' }}">‹</a>
       </li>
     {% else %}
       <li class="page-item disabled"><span class="page-link">‹</span></li>
@@ -69,14 +69,14 @@
         <li class="page-item active"><span class="page-link">{{ num }}</span></li>
       {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ num }}&q={{ q }}&per_page={{ per_page }}">{{ num }}</a>
+          <a class="page-link" href="?page={{ num }}&q={{ q }}&per_page={{ per_page }}&sort={{ sort|default:'nome' }}&dir={{ dir|default:'asc' }}">{{ num }}</a>
         </li>
       {% endif %}
     {% endfor %}
 
     {% if page_obj.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&per_page={{ per_page }}">›</a>
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&per_page={{ per_page }}&sort={{ sort|default:'nome' }}&dir={{ dir|default:'asc' }}">›</a>
       </li>
     {% else %}
       <li class="page-item disabled"><span class="page-link">›</span></li>

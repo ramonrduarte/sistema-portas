@@ -34,7 +34,15 @@ class ClienteListView(LoginRequiredMixin, AtivoQuerysetMixin, ListView):
             return 20
 
     def get_queryset(self):
-        qs = super().get_queryset().order_by("nome")
+        _SORT_VALIDOS = {"codigo", "nome", "cpf_cnpj", "telefone", "email"}
+        sort = self.request.GET.get("sort", "nome")
+        if sort not in _SORT_VALIDOS:
+            sort = "nome"
+        direction = self.request.GET.get("dir", "asc")
+        if direction not in ("asc", "desc"):
+            direction = "asc"
+        order = sort if direction == "asc" else f"-{sort}"
+        qs = super().get_queryset().order_by(order)
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(
@@ -44,7 +52,12 @@ class ClienteListView(LoginRequiredMixin, AtivoQuerysetMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        _SORT_VALIDOS = {"codigo", "nome", "cpf_cnpj", "telefone", "email"}
+        sort = self.request.GET.get("sort", "nome")
+        direction = self.request.GET.get("dir", "asc")
         ctx["q"] = self.request.GET.get("q", "")
+        ctx["sort"] = sort if sort in _SORT_VALIDOS else "nome"
+        ctx["dir"] = direction if direction in ("asc", "desc") else "asc"
         ctx["per_page"] = self.get_paginate_by(self.get_queryset())
         ctx["per_page_opcoes"] = _PER_PAGE_OPCOES
         return ctx

@@ -31,7 +31,7 @@
                  hx-trigger="keyup changed delay:400ms"
                  hx-target="#conteudoTabela"
                  hx-swap="innerHTML"
-                 hx-include="[name='per_page']"
+                 hx-include="[name='per_page'],[name='sort'],[name='dir']"
                  autocomplete="off">
         </div>
       </div>
@@ -54,6 +54,8 @@
       </div>
 
     </div>
+    <input type="hidden" name="sort" value="{{ sort|default:'nome' }}">
+    <input type="hidden" name="dir" value="{{ dir|default:'asc' }}">
   </form>
 
   <div id="conteudoTabela">

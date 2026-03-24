@@ -1,44 +1,41 @@
 <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Código</th>
-        <th>Descrição</th>
-        <th>Espessura</th>
-        <th>Preço</th>
-        <th style="width:180px;">Ações</th>
+  <thead class="table-light">
+    <tr>
+      <th>{% include "portas/_th_sort.html" with field="codigo" label="Código" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="descricao" label="Descrição" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="espessura__valor_mm" label="Espessura" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="preco" label="Preço" %}</th>
+      <th style="width:180px;">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in vidros %}
+      <tr class="{% if not v.ativo %}item-inativo{% endif %}">
+        <td>{{ v.codigo }}</td>
+        <td>{{ v.descricao }}</td>
+        <td>{{ v.espessura }}</td>
+        <td>R$ {{ v.preco }}</td>
+        <td class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary"
+                  hx-get="{% url 'editar_vidro' v.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Editar
+          </button>
+          <button class="btn btn-sm btn-outline-danger"
+                  hx-get="{% url 'excluir_vidro' v.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Excluir
+          </button>
+        </td>
       </tr>
-    </thead>
-  
-    <tbody>
-      {% for v in vidros %}
-        <tr class="{% if not v.ativo %}item-inativo{% endif %}">
-          <td>{{ v.codigo }}</td>
-          <td>{{ v.descricao }}</td>
-          <td>{{ v.espessura }}</td>
-          <td>R$ {{ v.preco }}</td>
-          <td class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-primary"
-                    hx-get="{% url 'editar_vidro' v.pk %}"
-                    hx-target="#modalConteudo"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro">
-              Editar
-            </button>
-  
-            <button class="btn btn-sm btn-outline-danger"
-                    hx-get="{% url 'excluir_vidro' v.pk %}"
-                    hx-target="#modalConteudo"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro">
-              Excluir
-            </button>
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="5" class="text-center text-muted py-4">Nenhum vidro cadastrado.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  
+    {% empty %}
+      <tr>
+        <td colspan="5" class="text-center text-muted py-4">Nenhum vidro cadastrado.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

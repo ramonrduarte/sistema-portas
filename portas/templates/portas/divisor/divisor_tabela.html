@@ -1,49 +1,45 @@
 <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Código</th>
-        <th>Descrição</th>
-        <th>Modelo</th>
-        <th>Preço</th>
-        <th>Acabamento</th>
-        <th>Encaixe</th>
-        <th style="width:180px;">Ações</th>
+  <thead class="table-light">
+    <tr>
+      <th>{% include "portas/_th_sort.html" with field="codigo" label="Código" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="descricao" label="Descrição" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="modelo" label="Modelo" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="preco" label="Preço" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="acabamento__nome" label="Acabamento" %}</th>
+      <th>{% include "portas/_th_sort.html" with field="encaixe" label="Encaixe" %}</th>
+      <th style="width:180px;">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in divisores %}
+      <tr class="{% if not d.ativo %}item-inativo{% endif %}">
+        <td>{{ d.codigo }}</td>
+        <td>{{ d.descricao }}</td>
+        <td>{{ d.modelo|default:"-" }}</td>
+        <td>R$ {{ d.preco|floatformat:2 }}</td>
+        <td>{{ d.acabamento }}</td>
+        <td>{{ d.get_encaixe_display }}</td>
+        <td class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary"
+                  hx-get="{% url 'editar_divisor' d.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Editar
+          </button>
+          <button class="btn btn-sm btn-outline-danger"
+                  hx-get="{% url 'excluir_divisor' d.pk %}"
+                  hx-target="#modalConteudo"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalCadastro">
+            Excluir
+          </button>
+        </td>
       </tr>
-    </thead>
-  
-    <tbody>
-      {% for d in divisores %}
-        <tr class="{% if not d.ativo %}item-inativo{% endif %}">
-          <td>{{ d.codigo }}</td>
-          <td>{{ d.descricao }}</td>
-          <td>{{ d.modelo|default:"-" }}</td>
-          <td>R$ {{ d.preco|floatformat:2 }}</td>
-          <td>{{ d.acabamento }}</td>
-          <td>{{ d.get_encaixe_display }}</td>
-  
-          <td class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-primary"
-                    hx-get="{% url 'editar_divisor' d.pk %}"
-                    hx-target="#modalConteudo"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro">
-              Editar
-            </button>
-  
-            <button class="btn btn-sm btn-outline-danger"
-                    hx-get="{% url 'excluir_divisor' d.pk %}"
-                    hx-target="#modalConteudo"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalCadastro">
-              Excluir
-            </button>
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="7" class="text-center text-muted py-4">Nenhum divisor cadastrado.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  
+    {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted py-4">Nenhum divisor cadastrado.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

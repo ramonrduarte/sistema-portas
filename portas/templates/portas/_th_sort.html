@@ -1,0 +1,4 @@
+{% comment %}Sortable <th> content. Required extra vars: field, label. Inherits sort, dir, q from context.{% endcomment %}
+{% with cs=sort|default:"" cd=dir|default:"asc" cq=q|default:"" %}
+{% if cs == field %}<a href="?q={{ cq }}&sort={{ field }}&dir={% if cd == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-primary fw-semibold">{{ label }}&nbsp;<i class="bi bi-arrow-{% if cd == 'asc' %}up{% else %}down{% endif %}-short"></i></a>{% else %}<a href="?q={{ cq }}&sort={{ field }}&dir=asc" class="text-decoration-none text-dark">{{ label }}</a>{% endif %}
+{% endwith %}
