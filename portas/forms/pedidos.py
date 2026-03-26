@@ -28,6 +28,7 @@ class PedidoItemForm(forms.ModelForm):
             "adicional2_valor", "adicional2_obs",
             "adicional3_valor", "adicional3_obs",
             "adicional4_valor", "adicional4_obs",
+            "desconto",
         ]
         widgets = {
             "largura_mm": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
@@ -68,6 +69,7 @@ class PedidoItemForm(forms.ModelForm):
             "adicional3_obs":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
             "adicional4_valor": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
             "adicional4_obs":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
+            "desconto": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -13,7 +13,7 @@
       color: #111;
     }
 
-    /* ── Tela: meias-folhas A4 empilhadas sobre fundo cinza ─── */
+    /* ── Tela: folhas A4 empilhadas sobre fundo cinza ───────── */
     @media screen {
       body {
         background: #c8c8c8;
@@ -21,39 +21,32 @@
         flex-direction: column;
         align-items: center;
         padding: 24px 0 48px;
-        gap: 4px;
+        gap: 18px;
       }
       .pagina {
         background: #fff;
         width: 210mm;
-        height: 148.5mm;
-        padding: 5mm 15mm 4mm;
-        box-sizing: border-box;
-        overflow: hidden;
+        padding: 8mm 15mm 10mm;
         box-shadow: 0 3px 14px rgba(0,0,0,.3);
-      }
-      /* linha tracejada de corte entre os dois pedidos por folha */
-      .pagina + .pagina {
-        border-top: 1px dashed #bbb;
-        margin-top: 0;
       }
     }
 
-    /* ── Impressão: A4 retrato, 2 meias-folhas por página ────── */
-    @page { size: A4 portrait; margin: 0 12mm; }
+    /* ── Impressão: A4 retrato — 1 pagina por folha ─────────── */
+    /* Conteúdo desenhado para caber em meia-folha (~140mm):     */
+    /* ao imprimir com papel meia-folha na bandeja A4,           */
+    /* a impressora imprime o topo e encerra na borda do papel.  */
+    @page { size: A4 portrait; margin: 5mm 15mm 10mm; }
     @media print {
-      body {
-        background: #fff;
-        margin: 0; padding: 0;
-      }
+      body { background: #fff; margin: 0; padding: 0; }
       .pagina {
         width: 100%;
-        height: 148.5mm;
-        padding: 4mm 0 3mm;
-        box-sizing: border-box;
-        overflow: hidden;
-        page-break-inside: avoid;
-        break-inside: avoid;
+        padding: 0;
+        page-break-after: always;
+        break-after: page;
+      }
+      .pagina:last-child {
+        page-break-after: auto;
+        break-after: auto;
       }
       .btn-print { display: none !important; }
       .aviso-imp { display: none !important; }
@@ -72,7 +65,9 @@
     }
     .aviso-imp strong { color: #333; }
 
-    /* ── Cabeçalho completo (1ª página) ─────────────────────── */
+    /* ── Aviso de configuração (só na tela) ─────────────────── */
+
+    /* ── Cabeçalho ───────────────────────────────────────────── */
     .cab {
       display: flex;
       align-items: center;
@@ -90,19 +85,6 @@
     .cab-pedido .num  { font-size: 12pt; font-weight: bold; color: #1a4a8a; line-height: 1.1; }
     .cab-pedido .data { font-size: 7pt; color: #555; }
 
-    /* ── Cabeçalho de continuação (páginas seguintes) ───────── */
-    .cab-cont {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      border-bottom: 1px solid #1a4a8a;
-      padding-bottom: 3px;
-      margin-bottom: 5px;
-      font-size: 8pt;
-      color: #555;
-    }
-    .cab-cont strong { color: #1a4a8a; }
-
     /* ── Cliente ────────────────────────────────────────────── */
     .cliente {
       display: flex;
@@ -113,20 +95,12 @@
       padding: 2px 7px;
       margin-bottom: 2px;
       border-radius: 0 3px 3px 0;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
     .cliente .cod  { font-size: 7.5pt; color: #666; white-space: nowrap; }
     .cliente .nome { font-size: 9pt; font-weight: bold; }
 
     /* ── Tabela de itens ────────────────────────────────────── */
-    .sec-titulo {
-      font-size: 6.5pt;
-      text-transform: uppercase;
-      letter-spacing: .4px;
-      color: #999;
-      font-weight: bold;
-      margin-bottom: 1px;
-    }
-
     table.itens {
       width: 100%;
       border-collapse: collapse;
@@ -146,7 +120,6 @@
     @media print {
       table.itens thead tr { background: #d8d8d8 !important; color: #000 !important; }
       table.itens thead th { border-bottom: 2px solid #444; }
-      table.itens tbody tr { page-break-inside: avoid; break-inside: avoid; }
     }
     table.itens tbody tr { border-bottom: 1px solid #e8e8e8; }
     table.itens tbody tr:last-child { border-bottom: none; }
@@ -176,7 +149,7 @@
     }
 
     /* ── Retângulo de anotação ───────────────────────────────── */
-    .anot { width: 32mm; height: 38mm; border: 1px solid #aaa; }
+    .anot { width: 32mm; height: 44mm; border: 1px solid #aaa; }
 
     /* ── Observações ─────────────────────────────────────────── */
     .obs-wrap {
@@ -188,7 +161,7 @@
     .obs-wrap .obs-lbl { font-weight: bold; color: #555; margin-bottom: 1px; }
     .obs-wrap .obs-txt { color: #333; white-space: pre-wrap; }
 
-    /* ── Rodapé (em todas as páginas) ───────────────────────── */
+    /* ── Rodapé ─────────────────────────────────────────────── */
     .rodape {
       border-top: 1px solid #ddd;
       padding-top: 3px;
@@ -219,15 +192,14 @@
 {% endif %}
 
 <div class="aviso-imp">
-  <strong>Como imprimir:</strong> selecione <strong>A4 Retrato</strong>, <strong>1 página por folha</strong>, escala <strong>100%</strong>, sem ajuste de margens. Cada folha A4 sai com 2 pedidos — corte ao meio.
+  <strong>Como imprimir:</strong> selecione <strong>A4 Retrato</strong>, <strong>1 página por folha</strong>, escala <strong>100%</strong>, sem ajuste de margens. Com papel meia-folha na bandeja (configurada como A4), cada folha recebe uma pagina.
 </div>
 
 {% with total_pgs=paginas|length %}
-
 {% for pagina_itens in paginas %}
 <div class="pagina">
 
-  <!-- ── Cabeçalho (todas as páginas) ────────────────────── -->
+  <!-- ── Cabeçalho ────────────────────────────────────────── -->
   <div class="cab">
     {% if config_empresa.logo_claro %}
       <div class="cab-logo-claro">
@@ -264,15 +236,15 @@
     {% endif %}
   </div>
 
-  <!-- ── Tabela de itens desta página ─────────────────────── -->
+  <!-- ── Tabela de itens ───────────────────────────────────── -->
   <table class="itens">
     <thead>
       <tr>
         <th>Descrição</th>
         <th class="r" style="width:8mm;">Qtd</th>
-        <th class="r" style="width:19mm;">Unit.</th>
-        <th class="r" style="width:19mm;">Total</th>
-        <th style="width:19mm;"></th>
+        <th class="r" style="width:18mm;">Unit.</th>
+        <th class="r" style="width:18mm;">Total</th>
+        <th style="width:16mm;"></th>
       </tr>
     </thead>
     <tbody>
@@ -298,13 +270,13 @@
   </table>
 
   {% if forloop.last %}
-  <!-- ── Total (só na última página) ─────────────────────── -->
+  <!-- ── Total ────────────────────────────────────────────── -->
   <div class="total-wrap">
     <span>Total do pedido</span>
     <span>R$&nbsp;{{ total_pedido|floatformat:2 }}</span>
   </div>
 
-  <!-- ── Observações (última página) ──────────────────────── -->
+  <!-- ── Observações ──────────────────────────────────────── -->
   <div class="obs-wrap">
     <div class="obs-lbl">Observações:</div>
     {% if pedido.observacoes %}
@@ -313,14 +285,12 @@
   </div>
   {% endif %}
 
-  <!-- ── Rodapé (em todas as páginas) ─────────────────────── -->
-  <div class="rodape">
-    <span>{{ forloop.counter }}/{{ total_pgs }}</span>
-  </div>
+  <!-- ── Rodapé ────────────────────────────────────────────── -->
+  <div class="rodape">{{ forloop.counter }}/{{ total_pgs }}</div>
 
 </div>
 {% endfor %}
-
 {% endwith %}
+
 </body>
 </html>

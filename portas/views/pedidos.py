@@ -325,6 +325,7 @@ def pedido_item_temp_add(request):
             div_alt_1 = cd.get("divisor_altura_1") or None
             div_alt_2 = cd.get("divisor_altura_2") or None
             qtd = cd["quantidade"]
+            desconto = cd.get("desconto") or Decimal("0")
             adicional = sum(
                 cd.get(k) or Decimal("0")
                 for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
@@ -344,7 +345,7 @@ def pedido_item_temp_add(request):
                 qtd_divisor=(qtd_div or None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
-            ) + adicional
+            ) - desconto + adicional
 
             # Monta a descrição: Porta modelo1/modelo2 Acabamento LxA Vidro
             modelos = [m for m in [
@@ -385,6 +386,7 @@ def pedido_item_temp_add(request):
                 "adicional3_obs":   cd.get("adicional3_obs") or "",
                 "adicional4_valor": f"{cd.get('adicional4_valor') or 0:.2f}" if cd.get("adicional4_valor") else None,
                 "adicional4_obs":   cd.get("adicional4_obs") or "",
+                "desconto": f"{desconto:.2f}" if desconto else None,
                 "valor_unitario": f"{valor_unit:.2f}",
                 "valor_total": f"{valor_unit * Decimal(qtd):.2f}",
             }
@@ -420,7 +422,18 @@ def pedido_item_temp_remove(request, idx):
         itens.pop(idx)
         request.session[_SESSION_KEY] = itens
         request.session.modified = True
-    return _resp_atualiza_rascunho(request, itens)
+    # Retorna tabela como conteúdo primário (target=#tabelaRascunho) + resumo OOB
+    total = _total_rascunho(itens)
+    tabela_html = render_to_string(
+        "portas/pedido/_itens_rascunho.html", {"itens": itens}, request=request
+    )
+    oob = (
+        '<div hx-swap-oob="innerHTML:#resumoRascunho">'
+        '<div class="d-flex justify-content-between fw-semibold fs-5">'
+        f"<span>Total</span><span>R$\xa0{total:,.2f}</span>"
+        "</div></div>"
+    )
+    return HttpResponse(tabela_html + oob)
 
 
 # ── Detalhe do pedido ─────────────────────────────────────────────────────────
@@ -685,7 +698,7 @@ _ITENS_PGN = 2   # itens nas páginas A5 seguintes
 
 
 def _paginar(itens):
-    """Divide a lista de itens em sub-listas para cada página A5."""
+    """Divide a lista de itens em sub-listas (2 por meia-folha)."""
     lista = list(itens)
     if not lista:
         return [[]]
@@ -737,6 +750,7 @@ def pedido_item_novo(request, pedido_pk):
             div_alt_1 = cd.get("divisor_altura_1") or None
             div_alt_2 = cd.get("divisor_altura_2") or None
             qtd = cd["quantidade"]
+            desconto = cd.get("desconto") or Decimal("0")
             adicional = sum(
                 cd.get(k) or Decimal("0")
                 for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
@@ -756,7 +770,7 @@ def pedido_item_novo(request, pedido_pk):
                 qtd_divisor=(qtd_div or None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
-            ) + adicional
+            ) - desconto + adicional
 
             PedidoItem.objects.create(
                 pedido=pedido,
@@ -784,6 +798,7 @@ def pedido_item_novo(request, pedido_pk):
                 adicional3_obs=cd.get("adicional3_obs") or "",
                 adicional4_valor=(cd.get("adicional4_valor") or None),
                 adicional4_obs=cd.get("adicional4_obs") or "",
+                desconto=(desconto or None),
                 valor_unitario=valor_unit,
                 valor_total=(valor_unit * Decimal(qtd)),
             )
@@ -806,7 +821,18 @@ def htmx_remove_item(request, pedido_pk, item_pk):
     if pedido.status != "aberto":
         return HttpResponseForbidden("Itens só podem ser removidos de pedidos em aberto.")
     PedidoItem.objects.filter(pk=item_pk, pedido=pedido).delete()
-    return _resp_atualiza_tabela(request, pedido)
+    # Retorna tabela como conteúdo primário (target=#tabelaItens) + resumo OOB
+    itens, total = _itens_e_total(pedido)
+    tabela_html = render_to_string(
+        "portas/pedido/_itens_tabela.html", {"pedido": pedido, "itens": itens}, request=request
+    )
+    oob = (
+        '<div hx-swap-oob="innerHTML:#resumoPedido">'
+        '<div class="d-flex justify-content-between fw-semibold fs-5">'
+        f'<span>Total</span><span>R$\xa0{total:,.2f}</span>'
+        '</div></div>'
+    )
+    return HttpResponse(tabela_html + oob)
 
 
 # ── Cálculo em tempo real ─────────────────────────────────────────────────────
@@ -835,6 +861,7 @@ def htmx_calcular_item(request):
         div_id = request.GET.get("divisor")
         qtd_div = int(request.GET.get("qtd_divisor") or 0)
         vidro_id = request.GET.get("vidro")
+        desconto = Decimal(request.GET.get("desconto") or 0)
         adicional = sum(
             Decimal(request.GET.get(k) or 0)
             for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
@@ -863,8 +890,9 @@ def htmx_calcular_item(request):
 
         return render(request, _tmpl, {
             "valor_base": valor_base,
+            "desconto": desconto if desconto else None,
             "adicional": adicional if adicional else None,
-            "valor_total": (valor_base + adicional) * Decimal(qtd),
+            "valor_total": (valor_base - desconto + adicional) * Decimal(qtd),
         })
 
     except (ValueError, TypeError):

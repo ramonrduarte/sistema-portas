@@ -394,6 +394,12 @@ class PedidoItem(models.Model):
         help_text="Posicao do 2o divisor a partir da base (mm)",
     )
 
+    # Desconto sobre o valor unitário base
+    desconto = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, default=None,
+        verbose_name="Desconto (R$)",
+    )
+
     # Adicionais livres (até 4 itens avulsos por item do pedido)
     adicional_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
     adicional_obs   = models.CharField(max_length=255, blank=True, default="")

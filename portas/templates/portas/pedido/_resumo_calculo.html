@@ -5,13 +5,19 @@
     <span class="text-muted">Valor unitário</span>
     <strong>R$ {{ valor_base|floatformat:2 }}</strong>
   </div>
+  {% if desconto %}
+  <div class="d-flex justify-content-between">
+    <span class="text-muted">− Desconto</span>
+    <span class="text-danger">− R$ {{ desconto|floatformat:2 }}</span>
+  </div>
+  {% endif %}
   {% if adicional %}
   <div class="d-flex justify-content-between">
     <span class="text-muted">+ Adicional</span>
     <span class="text-secondary">R$ {{ adicional|floatformat:2 }}</span>
   </div>
-  <hr class="my-1">
   {% endif %}
+  {% if desconto or adicional %}<hr class="my-1">{% endif %}
   <div class="d-flex justify-content-between">
     <span class="text-muted">Total (quantidade)</span>
     <strong>R$ {{ valor_total|floatformat:2 }}</strong>
