@@ -326,7 +326,7 @@ def enviar_pedido_bimer(config, pedido):
             "IdentificadorProduto":   _BIMER_ID_PORTA,
             "IdentificadorSetorSaida": "00A0000005",
             "QuantidadePedida":       item.quantidade,
-            "Repasses": [{"IdentificadorPessoa": "00A00001RR"}],
+            "Repasses": [{"identificadorCategoria": "000000000R", "IdentificadorPessoa": "00A00001RR"}],
             "Valor":                  round(valor_total, 2),
             "ValorUnitario":          float(item.valor_unitario),
             "descricaoComplementar":  item.descricao,
