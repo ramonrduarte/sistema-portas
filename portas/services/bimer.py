@@ -316,7 +316,8 @@ def enviar_pedido_bimer(config, pedido):
             "Sincronize os clientes primeiro."
         )
 
-    data_str = pedido.data.strftime("%Y-%m-%d")
+    data_str         = pedido.data.strftime("%Y-%m-%d")
+    data_emissao_str = datetime.now().strftime("%Y-%m-%d")
 
     # ── Monta itens: uma linha por porta ─────────────────────────────────────
     itens_bimer = []
@@ -338,7 +339,8 @@ def enviar_pedido_bimer(config, pedido):
     payload = {
         "CodigoEmpresa":               1,
         "CodigoPedidoDeCompraCliente": str(pedido.numero),
-        "DataEmissao":                 data_str,
+        "DataCadastro":                data_str,
+        "DataEmissao":                 data_emissao_str,
         "DataEntrega":                 data_str,
         "IdentificadorCliente":        pedido.cliente.bimer_id,
         "IdentificadorOperacao":       "00A0000047",
