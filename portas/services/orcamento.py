@@ -139,7 +139,7 @@ def calc_total(
     if preco_vidro_m2 is not None:
         altura_vidro = altura_mm
         if divisor_abatimento_mm is not None and qtd_divisor:
-            altura_vidro = max(1, altura_mm - (divisor_abatimento_mm + 4) * int(qtd_divisor))
+            altura_vidro = altura_mm + (divisor_abatimento_mm + 4) * int(qtd_divisor)
         total += calc_valor_vidro(preco_vidro_m2, largura_mm, altura_vidro)
 
     if custo_mao_obra:
