@@ -339,7 +339,7 @@ def pedido_item_temp_add(request):
                 puxador_tamanho_mm=(pux_tam or None),
                 preco_divisor_m=(divisor.preco if divisor else None),
                 qtd_divisor=(qtd_div or None),
-                divisor_abatimento_mm=(int(divisor.abatimento_mm) if divisor else None),
+                divisor_abatimento_mm=(int(divisor.abatimento_mm) if divisor and divisor.encaixe == "aparente" else None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
             )
@@ -760,7 +760,7 @@ def pedido_item_novo(request, pedido_pk):
                 puxador_tamanho_mm=(pux_tam or None),
                 preco_divisor_m=(divisor.preco if divisor else None),
                 qtd_divisor=(qtd_div or None),
-                divisor_abatimento_mm=(int(divisor.abatimento_mm) if divisor else None),
+                divisor_abatimento_mm=(int(divisor.abatimento_mm) if divisor and divisor.encaixe == "aparente" else None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
             )
