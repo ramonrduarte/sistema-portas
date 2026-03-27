@@ -383,21 +383,11 @@ class PedidoItem(models.Model):
         blank=True
     )
     qtd_divisor = models.PositiveSmallIntegerField(null=True, blank=True)
-    divisor_altura_1 = models.PositiveIntegerField(
-        null=True, blank=True,
-        verbose_name="Altura divisor 1 (mm)",
-        help_text="Posicao do 1o divisor a partir da base (mm)",
-    )
-    divisor_altura_2 = models.PositiveIntegerField(
-        null=True, blank=True,
-        verbose_name="Altura divisor 2 (mm)",
-        help_text="Posicao do 2o divisor a partir da base (mm)",
-    )
 
     # Desconto sobre o valor unitário base
     desconto = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, default=None,
-        verbose_name="Desconto (R$)",
+        max_digits=5, decimal_places=2, null=True, blank=True, default=None,
+        verbose_name="Desconto (%)",
     )
 
     # Adicionais livres (até 4 itens avulsos por item do pedido)

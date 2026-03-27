@@ -56,16 +56,6 @@
     <label class="form-label fw-semibold mb-1">Qtd</label>
     {{ form.qtd_divisor }}
   </div>
-  <div class="col-3 d-none" id="col-div-alt-1">
-    <label class="form-label fw-semibold mb-1">Altura 1 (mm)</label>
-    {{ form.divisor_altura_1 }}
-    {% if form.divisor_altura_1.errors %}<div class="text-danger small mt-1">{{ form.divisor_altura_1.errors }}</div>{% endif %}
-  </div>
-  <div class="col-3 d-none" id="col-div-alt-2">
-    <label class="form-label fw-semibold mb-1">Altura 2 (mm)</label>
-    {{ form.divisor_altura_2 }}
-    {% if form.divisor_altura_2.errors %}<div class="text-danger small mt-1">{{ form.divisor_altura_2.errors }}</div>{% endif %}
-  </div>
   {% endif %}
 
   {% if form.vidro.field.queryset.exists %}
@@ -145,36 +135,10 @@
 
   var div    = document.getElementById('id_divisor');
   var qtdDiv = document.getElementById('id_qtd_divisor');
-  var colAlt1 = document.getElementById('col-div-alt-1');
-  var colAlt2 = document.getElementById('col-div-alt-2');
-  var alt1 = document.getElementById('id_divisor_altura_1');
-  var alt2 = document.getElementById('id_divisor_altura_2');
-
-  function updateDivisorAlturas() {
-    if (!div || !colAlt1) return;
-    // Precisaria saber se o divisor e aparente — simplificado: mostra sempre que ha divisor
-    var hasDivisor = div && div.value;
-    var qtd = qtdDiv ? qtdDiv.value : '';
-    if (hasDivisor && (qtd === '1' || qtd === '2')) {
-      colAlt1.classList.remove('d-none');
-    } else {
-      colAlt1.classList.add('d-none');
-      if (alt1) alt1.value = '';
-    }
-    if (hasDivisor && qtd === '2') {
-      colAlt2.classList.remove('d-none');
-    } else {
-      colAlt2.classList.add('d-none');
-      if (alt2) alt2.value = '';
-    }
-  }
 
   if (div) div.addEventListener('change', function () {
     if (!div.value && qtdDiv) qtdDiv.value = '';
-    updateDivisorAlturas();
   });
-  if (qtdDiv) qtdDiv.addEventListener('change', updateDivisorAlturas);
-  updateDivisorAlturas();
 
   update();
 })();

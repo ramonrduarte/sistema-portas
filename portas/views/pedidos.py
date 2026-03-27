@@ -276,8 +276,6 @@ def pedido_novo(request):
                     puxador_tamanho_mm=item_data.get("puxador_tamanho_mm"),
                     divisor_id=item_data.get("divisor_id"),
                     qtd_divisor=item_data.get("qtd_divisor"),
-                    divisor_altura_1=item_data.get("divisor_altura_1"),
-                    divisor_altura_2=item_data.get("divisor_altura_2"),
                     puxador_sobreposto=item_data.get("puxador_sobreposto", True),
                     vidro_id=item_data.get("vidro_id"),
                     adicional_valor=item_data.get("adicional_valor") or None,
@@ -322,17 +320,15 @@ def pedido_item_temp_add(request):
             pux_tam = cd.get("puxador_tamanho_mm") or 0
             pux_sobreposto = cd.get("puxador_sobreposto", True)
             qtd_div = int(cd.get("qtd_divisor") or 0)
-            div_alt_1 = cd.get("divisor_altura_1") or None
-            div_alt_2 = cd.get("divisor_altura_2") or None
             qtd = cd["quantidade"]
-            desconto = cd.get("desconto") or Decimal("0")
+            desconto_pct = cd.get("desconto") or Decimal("0")
             adicional = sum(
                 cd.get(k) or Decimal("0")
                 for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
             )
             config = ConfiguracaoEmpresa.get()
 
-            valor_unit = calc_total(
+            valor_base = calc_total(
                 preco_perfil_m=perfil.preco,
                 largura_mm=cd["largura_mm"],
                 altura_mm=cd["altura_mm"],
@@ -343,9 +339,11 @@ def pedido_item_temp_add(request):
                 puxador_tamanho_mm=(pux_tam or None),
                 preco_divisor_m=(divisor.preco if divisor else None),
                 qtd_divisor=(qtd_div or None),
+                divisor_abatimento_mm=(int(divisor.abatimento_mm) if divisor else None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
-            ) - desconto + adicional
+            )
+            valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
 
             # Monta a descrição: Porta modelo1/modelo2 Acabamento LxA Vidro
             modelos = [m for m in [
@@ -375,8 +373,6 @@ def pedido_item_temp_add(request):
                 "puxador_sobreposto": pux_sobreposto,
                 "divisor_id": divisor.pk if divisor else None,
                 "qtd_divisor": qtd_div or None,
-                "divisor_altura_1": div_alt_1,
-                "divisor_altura_2": div_alt_2,
                 "vidro_id": vidro.pk if vidro else None,
                 "adicional_valor":  f"{cd.get('adicional_valor') or 0:.2f}" if cd.get("adicional_valor") else None,
                 "adicional_obs":    cd.get("adicional_obs") or "",
@@ -386,7 +382,7 @@ def pedido_item_temp_add(request):
                 "adicional3_obs":   cd.get("adicional3_obs") or "",
                 "adicional4_valor": f"{cd.get('adicional4_valor') or 0:.2f}" if cd.get("adicional4_valor") else None,
                 "adicional4_obs":   cd.get("adicional4_obs") or "",
-                "desconto": f"{desconto:.2f}" if desconto else None,
+                "desconto": f"{desconto_pct:.2f}" if desconto_pct else None,
                 "valor_unitario": f"{valor_unit:.2f}",
                 "valor_total": f"{valor_unit * Decimal(qtd):.2f}",
             }
@@ -486,8 +482,6 @@ def pedido_duplicar(request, pk):
             vidro=item.vidro,
             divisor=item.divisor,
             qtd_divisor=item.qtd_divisor,
-            divisor_altura_1=item.divisor_altura_1,
-            divisor_altura_2=item.divisor_altura_2,
             adicional_valor=item.adicional_valor,
             adicional_obs=item.adicional_obs,
             adicional2_valor=item.adicional2_valor,
@@ -747,17 +741,15 @@ def pedido_item_novo(request, pedido_pk):
             pux_tam = cd.get("puxador_tamanho_mm") or 0
             pux_sobreposto = cd.get("puxador_sobreposto", True)
             qtd_div = int(cd.get("qtd_divisor") or 0)
-            div_alt_1 = cd.get("divisor_altura_1") or None
-            div_alt_2 = cd.get("divisor_altura_2") or None
             qtd = cd["quantidade"]
-            desconto = cd.get("desconto") or Decimal("0")
+            desconto_pct = cd.get("desconto") or Decimal("0")
             adicional = sum(
                 cd.get(k) or Decimal("0")
                 for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
             )
             config = ConfiguracaoEmpresa.get()
 
-            valor_unit = calc_total(
+            valor_base = calc_total(
                 preco_perfil_m=perfil.preco,
                 largura_mm=cd["largura_mm"],
                 altura_mm=cd["altura_mm"],
@@ -768,9 +760,11 @@ def pedido_item_novo(request, pedido_pk):
                 puxador_tamanho_mm=(pux_tam or None),
                 preco_divisor_m=(divisor.preco if divisor else None),
                 qtd_divisor=(qtd_div or None),
+                divisor_abatimento_mm=(int(divisor.abatimento_mm) if divisor else None),
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
-            ) - desconto + adicional
+            )
+            valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
 
             PedidoItem.objects.create(
                 pedido=pedido,
@@ -787,8 +781,6 @@ def pedido_item_novo(request, pedido_pk):
                 puxador_sobreposto=pux_sobreposto,
                 divisor=divisor,
                 qtd_divisor=(qtd_div or None),
-                divisor_altura_1=div_alt_1,
-                divisor_altura_2=div_alt_2,
                 vidro=vidro,
                 adicional_valor=(cd.get("adicional_valor") or None),
                 adicional_obs=cd.get("adicional_obs") or "",
@@ -798,7 +790,7 @@ def pedido_item_novo(request, pedido_pk):
                 adicional3_obs=cd.get("adicional3_obs") or "",
                 adicional4_valor=(cd.get("adicional4_valor") or None),
                 adicional4_obs=cd.get("adicional4_obs") or "",
-                desconto=(desconto or None),
+                desconto=(desconto_pct or None),
                 valor_unitario=valor_unit,
                 valor_total=(valor_unit * Decimal(qtd)),
             )
@@ -861,7 +853,7 @@ def htmx_calcular_item(request):
         div_id = request.GET.get("divisor")
         qtd_div = int(request.GET.get("qtd_divisor") or 0)
         vidro_id = request.GET.get("vidro")
-        desconto = Decimal(request.GET.get("desconto") or 0)
+        desconto_pct = Decimal(request.GET.get("desconto") or 0)
         adicional = sum(
             Decimal(request.GET.get(k) or 0)
             for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
@@ -884,15 +876,18 @@ def htmx_calcular_item(request):
             puxador_tamanho_mm=(pux_tam or None),
             preco_divisor_m=(divisor.preco if divisor else None),
             qtd_divisor=(qtd_div or None),
+            divisor_abatimento_mm=(int(divisor.abatimento_mm) if divisor else None),
             preco_vidro_m2=(vidro.preco if vidro else None),
             custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
         )
+        desconto_valor = valor_base * desconto_pct / Decimal(100)
 
         return render(request, _tmpl, {
             "valor_base": valor_base,
-            "desconto": desconto if desconto else None,
+            "desconto_pct": desconto_pct if desconto_pct else None,
+            "desconto_valor": desconto_valor if desconto_pct else None,
             "adicional": adicional if adicional else None,
-            "valor_total": (valor_base - desconto + adicional) * Decimal(qtd),
+            "valor_total": (valor_base - desconto_valor + adicional) * Decimal(qtd),
         })
 
     except (ValueError, TypeError):

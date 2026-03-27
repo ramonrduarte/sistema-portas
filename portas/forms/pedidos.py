@@ -22,7 +22,7 @@ class PedidoItemForm(forms.ModelForm):
             "acabamento", "perfil",
             "perfil_puxador", "qtd_perfil_puxador",
             "puxador", "qtd_puxador", "puxador_tamanho_mm", "puxador_sobreposto",
-            "divisor", "qtd_divisor", "divisor_altura_1", "divisor_altura_2",
+            "divisor", "qtd_divisor",
             "vidro",
             "adicional_valor",  "adicional_obs",
             "adicional2_valor", "adicional2_obs",
@@ -58,8 +58,6 @@ class PedidoItemForm(forms.ModelForm):
             "puxador_sobreposto": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "divisor": forms.Select(attrs={"class": "form-select"}),
             "qtd_divisor": forms.Select(attrs={"class": "form-select"}),
-            "divisor_altura_1": forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "Alt. 1 (mm)"}),
-            "divisor_altura_2": forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "Alt. 2 (mm)"}),
             "vidro": forms.Select(attrs={"class": "form-select"}),
             "adicional_valor":  forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
             "adicional_obs":    forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
@@ -69,7 +67,7 @@ class PedidoItemForm(forms.ModelForm):
             "adicional3_obs":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
             "adicional4_valor": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
             "adicional4_obs":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
-            "desconto": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
+            "desconto": forms.NumberInput(attrs={"class": "form-control", "min": "0", "max": "100", "step": "0.01", "placeholder": "0,00"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -77,8 +75,6 @@ class PedidoItemForm(forms.ModelForm):
         self.fields["qtd_perfil_puxador"].required = False
         self.fields["qtd_puxador"].required = False
         self.fields["qtd_divisor"].required = False
-        self.fields["divisor_altura_1"].required = False
-        self.fields["divisor_altura_2"].required = False
         self.fields["qtd_perfil_puxador"].choices = _QTD_CHOICES
         self.fields["qtd_puxador"].choices = _QTD_CHOICES
         self.fields["qtd_divisor"].choices = _QTD_CHOICES
@@ -120,14 +116,8 @@ class PedidoItemForm(forms.ModelForm):
             if not data.get("puxador_tamanho_mm"):
                 self.add_error("puxador_tamanho_mm", "Informe o tamanho do puxador.")
         if div:
-            qtd_div_str = str(data.get("qtd_divisor") or "")
-            if qtd_div_str not in ("1", "2"):
+            if str(data.get("qtd_divisor") or "") not in ("1", "2"):
                 self.add_error("qtd_divisor", "Informe 1 ou 2.")
-            elif div.encaixe == "aparente":
-                if not data.get("divisor_altura_1"):
-                    self.add_error("divisor_altura_1", "Para divisor aparente, informe a Altura 1.")
-                if qtd_div_str == "2" and not data.get("divisor_altura_2"):
-                    self.add_error("divisor_altura_2", "Para 2 divisores aparentes, informe a Altura 2.")
 
         return data
 
@@ -183,10 +173,6 @@ class PedidoNovoOrcamentoForm(forms.Form):
     puxador_tamanho_mm = forms.IntegerField(min_value=1, required=False)
     divisor = forms.ModelChoiceField(queryset=Divisor.objects.none(), required=False)
     qtd_divisor = forms.ChoiceField(choices=_QTD_CHOICES, required=False)
-    divisor_altura_1 = forms.IntegerField(min_value=1, required=False,
-                                          widget=forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "mm"}))
-    divisor_altura_2 = forms.IntegerField(min_value=1, required=False,
-                                          widget=forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "mm"}))
     vidro = forms.ModelChoiceField(queryset=VidroBase.objects.none(), required=False)
 
     def __init__(self, *args, **kwargs):
