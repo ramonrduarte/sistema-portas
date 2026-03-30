@@ -97,7 +97,6 @@ def calc_total(
     # divisor (opcional)
     preco_divisor_m: Decimal | None = None,
     qtd_divisor: int | None = None,
-    divisor_abatimento_mm: int | None = None,
 
     # vidro (opcional)
     preco_vidro_m2: Decimal | None = None,
@@ -137,10 +136,7 @@ def calc_total(
         total += calc_valor_divisor(preco_divisor_m, largura_mm, int(qtd_divisor))
 
     if preco_vidro_m2 is not None:
-        altura_vidro = altura_mm
-        if divisor_abatimento_mm is not None and qtd_divisor:
-            altura_vidro = altura_mm + (divisor_abatimento_mm + 4) * int(qtd_divisor)
-        total += calc_valor_vidro(preco_vidro_m2, largura_mm, altura_vidro)
+        total += calc_valor_vidro(preco_vidro_m2, largura_mm, altura_mm)
 
     if custo_mao_obra:
         total += custo_mao_obra
