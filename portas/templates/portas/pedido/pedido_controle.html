@@ -8,9 +8,12 @@
   <a href="{% url 'pedidos_lista' %}" class="btn btn-sm btn-outline-secondary">← Pedidos</a>
 </div>
 
-{% if request.GET.bimer_erro %}
+{% if status_filtro == 'montagem' and pedidos_com_erro %}
 <div class="alert alert-danger py-2 small mb-3">
-  <strong>Erro ao enviar para o Bimer:</strong> {{ request.GET.bimer_erro }}
+  <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Falha ao enviar para o Bimer:</strong>
+  os pedidos abaixo estão marcados com erro e precisam ser reenviados.
+  Use o botão <strong>Marcar Wise</strong> para tentar novamente, ou clique no ícone
+  <i class="bi bi-exclamation-triangle-fill text-danger"></i> para ver o detalhe do erro.
 </div>
 {% endif %}
 
@@ -64,6 +67,12 @@
             {% elif p.status == 'concluido' %}<span class="badge bg-dark">Concluído</span>
             {% else %}<span class="badge bg-secondary">{{ p.get_status_display }}</span>
             {% endif %}
+            {% if p.bimer_erro %}
+            <i class="bi bi-exclamation-triangle-fill text-danger ms-1"
+               title="{{ p.bimer_erro }}"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"></i>
+            {% endif %}
           </td>
           <td class="text-center">{{ p.nr_itens }}</td>
           <td>
@@ -73,6 +82,30 @@
             <a href="{% url 'pedido_imprimir' p.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Imprimir">
               <i class="bi bi-printer"></i>
             </a>
+            {% if perms_usuario.producao.alterar_status %}
+              {% if p.bimer_erro and p.status == 'montagem' %}
+              <button class="btn btn-sm btn-danger"
+                      hx-get="{% url 'pedido_enviar_wise' p.id %}"
+                      hx-target="#modalConteudo"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalCadastro"
+                      title="Reenviar para o Bimer">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>
+              {% endif %}
+              {% if p.status == 'wise' %}
+              <button class="btn btn-sm btn-outline-danger"
+                      hx-get="{% url 'pedido_reenviar_bimer' p.id %}"
+                      hx-target="#modalConteudo"
+                      hx-swap="innerHTML"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalCadastro"
+                      title="Reenviar para o Bimer (já em Wise)">
+                <i class="bi bi-cloud-upload"></i>
+              </button>
+              {% endif %}
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -144,6 +177,11 @@
 
 {% block extra_js %}
 <script>
+  // Ativa tooltips Bootstrap (usados nos ícones de erro Bimer)
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+    new bootstrap.Tooltip(el);
+  });
+
   const selecionarTodos = document.getElementById('selecionarTodos');
   if (selecionarTodos) {
     selecionarTodos.addEventListener('change', function () {

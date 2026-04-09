@@ -1,0 +1,56 @@
+<span id="modalTitulo" hx-swap-oob="true">Reenviar para o Bimer</span>
+
+<div hx-swap-oob="true" id="modalDialogClass">
+  modal-dialog modal-dialog-centered
+</div>
+
+<div class="mb-4">
+  <p class="mb-1">Pedido <strong>#{{ pedido.numero }}</strong></p>
+  <p class="text-muted small mb-0">
+    {{ pedido.data|date:"d/m/Y" }} &bull; {{ pedido.cliente.codigo }} – {{ pedido.cliente.nome }}
+  </p>
+
+  {% if sucesso %}
+  <div class="alert alert-success mt-3 mb-0 small py-2">
+    <strong>Enviado com sucesso!</strong><br>{{ sucesso }}
+  </div>
+
+  {% elif ja_registrado %}
+  <div class="alert alert-warning mt-3 mb-0 small py-2">
+    <strong>Este pedido já foi registrado no Bimer.</strong><br>
+    ID Bimer: <code>{{ pedido.bimer_pedido_id }}</code><br>
+    Reenviar criará um <strong>pedido duplicado</strong> no sistema. Confirme somente se tiver certeza
+    de que o registro original foi excluído no Bimer.
+  </div>
+
+  {% elif erro %}
+  <div class="alert alert-danger mt-3 mb-0 small py-2">
+    <strong>Erro ao enviar para o Bimer:</strong><br>{{ erro }}
+  </div>
+
+  {% else %}
+  <div class="alert alert-info mt-3 mb-0 small py-2">
+    O pedido está em status <strong>Wise</strong> mas não consta como registrado no Bimer.<br>
+    Clique em <strong>Reenviar</strong> para enviá-lo agora sem alterar o status.
+  </div>
+  {% endif %}
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+  {% if not sucesso %}
+    {% if ja_registrado %}
+    {# Permite forçar o reenvio, mas o POST vai bloquear novamente — só admin pode forçar via shell #}
+    <span class="text-muted small align-self-center">Contate o administrador para forçar o reenvio.</span>
+    {% else %}
+    <button class="btn btn-danger"
+            hx-post="{% url 'pedido_reenviar_bimer' pedido.id %}"
+            hx-target="#modalConteudo"
+            hx-swap="innerHTML"
+            hx-include="[name=csrfmiddlewaretoken]">
+      <i class="bi bi-arrow-repeat me-1"></i>Reenviar
+    </button>
+    {% endif %}
+  {% endif %}
+</div>
+{% csrf_token %}

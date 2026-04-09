@@ -322,6 +322,8 @@ class Pedido(models.Model):
     )
     observacoes = models.TextField(blank=True, null=True)
     data_previsao = models.DateField(null=True, blank=True, verbose_name="Previsão de entrega")
+    bimer_erro = models.TextField(blank=True, default="", verbose_name="Erro ao enviar para o Bimer")
+    bimer_pedido_id = models.CharField(max_length=30, blank=True, default="", verbose_name="ID do pedido no Bimer")
 
     def __str__(self):
         return f"Pedido #{self.id}"

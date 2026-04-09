@@ -14,6 +14,13 @@
   <div class="alert alert-danger mt-3 mb-0 small py-2">
     <strong>Erro ao enviar para o Bimer:</strong><br>{{ erro }}
   </div>
+  {% elif pedido.bimer_erro %}
+  <div class="alert alert-warning mt-3 mb-2 small py-2">
+    <strong>Última tentativa falhou:</strong><br>{{ pedido.bimer_erro }}
+  </div>
+  <div class="alert alert-info mt-0 mb-0 small py-2">
+    Clique em <strong>Reenviar</strong> para tentar novamente.
+  </div>
   {% else %}
   <div class="alert alert-warning mt-3 mb-0 small py-2">
     O pedido será enviado ao <strong>Bimer</strong> e o status mudará para <strong>Wise</strong>.<br>
@@ -25,12 +32,12 @@
 <div class="d-flex justify-content-end gap-2">
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
   {% if not erro %}
-  <button class="btn btn-warning"
+  <button class="btn {% if pedido.bimer_erro %}btn-danger{% else %}btn-warning{% endif %}"
           hx-post="{% url 'pedido_enviar_wise' pedido.id %}"
           hx-target="#modalConteudo"
           hx-swap="innerHTML"
           hx-include="[name=csrfmiddlewaretoken]">
-    Confirmar
+    {% if pedido.bimer_erro %}<i class="bi bi-arrow-repeat me-1"></i>Reenviar{% else %}Confirmar{% endif %}
   </button>
   {% endif %}
 </div>

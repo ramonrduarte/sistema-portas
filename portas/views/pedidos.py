@@ -587,20 +587,74 @@ def pedido_enviar_wise(request, pk):
         from ..services import bimer as svc_bimer
 
         config = BimerConfig.get()
-        ok, msg = svc_bimer.enviar_pedido_bimer(config, pedido)
+        ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
 
         if not ok:
+            pedido.bimer_erro = msg
+            pedido.save(update_fields=["bimer_erro"])
             return render(request, "portas/pedido/_confirm_wise.html", {
                 "pedido": pedido,
                 "erro": msg,
             })
 
         pedido.status = "wise"
-        pedido.save(update_fields=["status"])
+        pedido.bimer_erro = ""
+        pedido.bimer_pedido_id = bimer_id
+        pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
         _log_status(pedido, request)
         return _resp_atualizar_lista()
 
     return render(request, "portas/pedido/_confirm_wise.html", {"pedido": pedido})
+
+
+# ── Reenviar pedido para o Bimer (sem mudar status) ──────────────────────────
+
+@login_required
+def pedido_reenviar_bimer(request, pk):
+    """
+    Reenvia um pedido já em status 'wise' para o Bimer sem alterar o status.
+    Usado quando o pedido foi marcado como wise mas a chamada à API falhou.
+    """
+    if not _get_perms(request.user)["producao"]["alterar_status"]:
+        return _sem_permissao("Você não tem permissão para alterar o status de pedidos.")
+    pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
+
+    if request.method == "POST":
+        if pedido.status != "wise":
+            return HttpResponse(
+                '<div class="alert alert-warning m-3">Este pedido não está em status <strong>Wise</strong>.</div>',
+                status=400,
+            )
+
+        if pedido.bimer_pedido_id:
+            return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
+                "pedido": pedido,
+                "ja_registrado": True,
+            })
+
+        from ..models import BimerConfig
+        from ..services import bimer as svc_bimer
+
+        config = BimerConfig.get()
+        ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
+
+        if not ok:
+            pedido.bimer_erro = msg
+            pedido.save(update_fields=["bimer_erro"])
+            return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
+                "pedido": pedido,
+                "erro": msg,
+            })
+
+        pedido.bimer_erro = ""
+        pedido.bimer_pedido_id = bimer_id
+        pedido.save(update_fields=["bimer_erro", "bimer_pedido_id"])
+        return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
+            "pedido": pedido,
+            "sucesso": msg,
+        })
+
+    return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {"pedido": pedido})
 
 
 # ── Reabrir pedido ───────────────────────────────────────────────────────────
@@ -965,18 +1019,20 @@ def pedido_controle(request):
                 config = BimerConfig.get()
                 erros_bimer = []
                 for pedido in Pedido.objects.filter(pk__in=ids, status="montagem").select_related("cliente"):
-                    ok, msg = svc_bimer.enviar_pedido_bimer(config, pedido)
+                    ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
                     if ok:
                         pedido.status = "wise"
-                        pedido.save(update_fields=["status"])
+                        pedido.bimer_erro = ""
+                        pedido.bimer_pedido_id = bimer_id
+                        pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
                         _log_status(pedido, request)
                     else:
-                        erros_bimer.append(f"#{pedido.numero}: {msg}")
+                        pedido.bimer_erro = msg
+                        pedido.save(update_fields=["bimer_erro"])
+                        erros_bimer.append(f"#{pedido.numero}")
 
                 if erros_bimer:
-                    msgs_erro = " | ".join(erros_bimer)
-                    qs = urlencode({"status": "montagem", "bimer_erro": msgs_erro[:400]})
-                    return redirect(f"{reverse('pedido_controle')}?{qs}")
+                    return redirect(f"{reverse('pedido_controle')}?status=montagem")
                 return redirect(f"{reverse('pedido_controle')}?status=wise")
 
             qs_bulk = Pedido.objects.filter(pk__in=ids)
@@ -1008,10 +1064,15 @@ def pedido_controle(request):
         .annotate(nr_itens=Count("itens"))
         .order_by("-id")
     )
+    pedidos_com_erro = (
+        status_filtro == "montagem"
+        and qs.filter(bimer_erro__gt="").exists()
+    )
     return render(request, "portas/pedido/pedido_controle.html", {
         "pedidos": qs,
         "status_filtro": status_filtro,
         "status_choices": Pedido.STATUS_CHOICES,
+        "pedidos_com_erro": pedidos_com_erro,
     })
 
 

@@ -374,16 +374,16 @@ def enviar_pedido_bimer(config, pedido):
         obj = data[0] if isinstance(data, list) and data else (data if isinstance(data, dict) else {})
         bimer_id = obj.get("Identificador") or obj.get("identificador", "")
         codigo   = obj.get("Codigo") or obj.get("codigo", "")
-        return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}"
+        return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}", bimer_id
 
     except requests.HTTPError as e:
         url_usada = f"{config.base_url.rstrip('/')}/api/venda/pedidos"
         corpo = e.response.text[:400] if e.response is not None else ""
-        return False, f"Erro HTTP {e.response.status_code} — URL: {url_usada} — {corpo}"
+        return False, f"Erro HTTP {e.response.status_code} — URL: {url_usada} — {corpo}", ""
     except requests.ConnectionError:
-        return False, "Não foi possível conectar ao Bimer. Verifique a URL base."
+        return False, "Não foi possível conectar ao Bimer. Verifique a URL base.", ""
     except Exception as e:
-        return False, str(e)
+        return False, str(e), ""
 
 
 # ── Sincronização de clientes ─────────────────────────────────────────────────
