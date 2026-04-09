@@ -599,7 +599,7 @@ def pedido_enviar_wise(request, pk):
 
         pedido.status = "wise"
         pedido.bimer_erro = ""
-        pedido.bimer_pedido_id = bimer_id
+        pedido.bimer_pedido_id = bimer_id or f"PED-{pedido.numero}"
         pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
         _log_status(pedido, request)
         return _resp_atualizar_lista()
@@ -647,7 +647,7 @@ def pedido_reenviar_bimer(request, pk):
             })
 
         pedido.bimer_erro = ""
-        pedido.bimer_pedido_id = bimer_id
+        pedido.bimer_pedido_id = bimer_id or f"PED-{pedido.numero}"
         pedido.save(update_fields=["bimer_erro", "bimer_pedido_id"])
         return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
             "pedido": pedido,
@@ -1023,7 +1023,7 @@ def pedido_controle(request):
                     if ok:
                         pedido.status = "wise"
                         pedido.bimer_erro = ""
-                        pedido.bimer_pedido_id = bimer_id
+                        pedido.bimer_pedido_id = bimer_id or f"PED-{pedido.numero}"
                         pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
                         _log_status(pedido, request)
                     else:
