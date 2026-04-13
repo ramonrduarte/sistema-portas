@@ -38,8 +38,9 @@ def _parse_expires(expires_raw):
         pass
     return timezone.now() + timedelta(hours=1)
 
-_TIMEOUT = 30  # segundos para chamadas de auth
+_TIMEOUT = 30        # segundos para chamadas de auth
 _TIMEOUT_PRECO = 15  # segundos para chamadas de preço
+_TIMEOUT_ENVIO = 60  # segundos para envio de pedidos (POST pode demorar mais)
 
 
 # ── Autenticação ──────────────────────────────────────────────────────────────
@@ -367,7 +368,7 @@ def enviar_pedido_bimer(config, pedido):
 
     try:
         resp = _bimer_request(config, "post", "/api/venda/pedidos",
-                              json=payload, timeout=_TIMEOUT)
+                              json=payload, timeout=_TIMEOUT_ENVIO)
         data = resp.json()
 
         # Resposta pode ser objeto único ou lista
@@ -384,6 +385,51 @@ def enviar_pedido_bimer(config, pedido):
         return False, "Não foi possível conectar ao Bimer. Verifique a URL base.", ""
     except Exception as e:
         return False, str(e), ""
+
+
+def buscar_pedido_bimer(config, pedido_numero):
+    """
+    Verifica se um pedido já existe no Bimer pelo CodigoPedidoDeCompraCliente.
+
+    Usado antes de reenviar, para evitar duplicatas quando o envio anterior
+    teve timeout (POST chegou ao servidor mas a resposta nunca voltou).
+
+    Endpoint: GET /api/venda/pedidos?codigoPedidoDeCompraCliente={pedido_numero}
+    Resposta esperada: { "ListaObjetos": [{ "Identificador": "...", "Codigo": "..." }] }
+
+    Retorna dict {"bimer_id": ..., "codigo": ...} se encontrado, ou None se não existe.
+    Em caso de erro de comunicação, retorna None (assume não encontrado / seguro reenviar).
+    """
+    try:
+        resp = _bimer_request(
+            config, "get", "/api/venda/pedidos",
+            params={"codigoPedidoDeCompraCliente": str(pedido_numero)},
+            timeout=_TIMEOUT,
+        )
+        data = resp.json()
+
+        lista = []
+        if isinstance(data, list):
+            lista = data
+        elif isinstance(data, dict):
+            lista = data.get("ListaObjetos") or []
+
+        if not lista:
+            return None
+
+        obj = lista[0]
+        bimer_id = obj.get("Identificador") or obj.get("identificador", "")
+        codigo   = obj.get("Codigo") or obj.get("codigo", "")
+        return {"bimer_id": bimer_id, "codigo": codigo}
+
+    except Exception:
+        logger.warning(
+            "Não foi possível verificar pedido #%s no Bimer. "
+            "Assumindo não encontrado.",
+            pedido_numero,
+            exc_info=True,
+        )
+        return None
 
 
 # ── Sincronização de clientes ─────────────────────────────────────────────────

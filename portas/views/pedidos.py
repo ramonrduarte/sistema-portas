@@ -587,6 +587,20 @@ def pedido_enviar_wise(request, pk):
         from ..services import bimer as svc_bimer
 
         config = BimerConfig.get()
+
+        # Se já houve tentativa anterior com erro, verifica no Bimer antes de
+        # reenviar para evitar duplicata (o POST pode ter chegado mas a resposta
+        # retornou timeout).
+        if pedido.bimer_erro:
+            existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
+            if existente:
+                pedido.status = "wise"
+                pedido.bimer_erro = ""
+                pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
+                pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
+                _log_status(pedido, request)
+                return _resp_atualizar_lista()
+
         ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
 
         if not ok:
@@ -636,6 +650,19 @@ def pedido_reenviar_bimer(request, pk):
         from ..services import bimer as svc_bimer
 
         config = BimerConfig.get()
+
+        # Antes de reenviar, verifica se o pedido já existe no Bimer para
+        # evitar duplicata (envio anterior pode ter chegado mas dado timeout).
+        existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
+        if existente:
+            pedido.bimer_erro = ""
+            pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
+            pedido.save(update_fields=["bimer_erro", "bimer_pedido_id"])
+            return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
+                "pedido": pedido,
+                "sucesso": f"Pedido já existia no Bimer (ID: {existente['bimer_id']}). Registro local corrigido.",
+            })
+
         ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
 
         if not ok:
@@ -1019,6 +1046,18 @@ def pedido_controle(request):
                 config = BimerConfig.get()
                 erros_bimer = []
                 for pedido in Pedido.objects.filter(pk__in=ids, status="montagem").select_related("cliente"):
+                    # Se já houve tentativa anterior com erro, verifica no Bimer
+                    # antes de reenviar para evitar duplicata.
+                    if pedido.bimer_erro:
+                        existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
+                        if existente:
+                            pedido.status = "wise"
+                            pedido.bimer_erro = ""
+                            pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
+                            pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
+                            _log_status(pedido, request)
+                            continue
+
                     ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
                     if ok:
                         pedido.status = "wise"
