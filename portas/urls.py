@@ -97,6 +97,7 @@ urlpatterns = [
     path("pedidos/<int:pk>/corte/", views.pedido_enviar_corte, name="pedido_enviar_corte"),
     path("pedidos/<int:pk>/montagem/", views.pedido_enviar_montagem, name="pedido_enviar_montagem"),
     path("pedidos/<int:pk>/wise/", views.pedido_enviar_wise, name="pedido_enviar_wise"),
+    path("pedidos/<int:pk>/wise-manual/", views.pedido_marcar_wise_manual, name="pedido_marcar_wise_manual"),
     path("pedidos/<int:pk>/reenviar-bimer/", views.pedido_reenviar_bimer, name="pedido_reenviar_bimer"),
     path("pedidos/<int:pk>/duplicar/", views.pedido_duplicar, name="pedido_duplicar"),
 

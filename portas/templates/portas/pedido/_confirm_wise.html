@@ -14,6 +14,14 @@
   <div class="alert alert-danger mt-3 mb-0 small py-2">
     <strong>Erro ao enviar para o Bimer:</strong><br>{{ erro }}
   </div>
+  {% elif verificacao_falhou %}
+  <div class="alert alert-warning mt-3 mb-2 small py-2">
+    <strong>Não foi possível verificar no Bimer</strong> se o pedido já existe
+    (o endpoint de consulta não está disponível).<br>
+    Se você confirmar que o pedido <strong>já está registrado no Bimer</strong>,
+    clique em <strong>Já está no Bimer</strong> para corrigir o status local sem reenviar.
+    Caso contrário, clique em <strong>Reenviar</strong> para tentar novamente.
+  </div>
   {% elif pedido.bimer_erro %}
   <div class="alert alert-warning mt-3 mb-2 small py-2">
     <strong>Última tentativa falhou:</strong><br>{{ pedido.bimer_erro }}
@@ -31,7 +39,22 @@
 
 <div class="d-flex justify-content-end gap-2">
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
-  {% if not erro %}
+  {% if verificacao_falhou %}
+  <button class="btn btn-warning"
+          hx-post="{% url 'pedido_enviar_wise' pedido.id %}"
+          hx-target="#modalConteudo"
+          hx-swap="innerHTML"
+          hx-include="[name=csrfmiddlewaretoken]">
+    <i class="bi bi-arrow-repeat me-1"></i>Reenviar
+  </button>
+  <button class="btn btn-success"
+          hx-post="{% url 'pedido_marcar_wise_manual' pedido.id %}"
+          hx-target="#modalConteudo"
+          hx-swap="innerHTML"
+          hx-include="[name=csrfmiddlewaretoken]">
+    <i class="bi bi-check-circle me-1"></i>Já está no Bimer
+  </button>
+  {% elif not erro %}
   <button class="btn {% if pedido.bimer_erro %}btn-danger{% else %}btn-warning{% endif %}"
           hx-post="{% url 'pedido_enviar_wise' pedido.id %}"
           hx-target="#modalConteudo"

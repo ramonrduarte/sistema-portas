@@ -593,6 +593,13 @@ def pedido_enviar_wise(request, pk):
         # retornou timeout).
         if pedido.bimer_erro:
             existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
+            if existente is svc_bimer._BUSCA_ERRO_API:
+                # Não foi possível consultar o Bimer — não reenviar para evitar
+                # duplicata. Exibe opção para o usuário marcar manualmente.
+                return render(request, "portas/pedido/_confirm_wise.html", {
+                    "pedido": pedido,
+                    "verificacao_falhou": True,
+                })
             if existente:
                 pedido.status = "wise"
                 pedido.bimer_erro = ""
@@ -619,6 +626,38 @@ def pedido_enviar_wise(request, pk):
         return _resp_atualizar_lista()
 
     return render(request, "portas/pedido/_confirm_wise.html", {"pedido": pedido})
+
+
+# ── Marcar Wise manualmente (pedido já existe no Bimer, só corrige local) ─────
+
+@login_required
+def pedido_marcar_wise_manual(request, pk):
+    """
+    Marca o pedido como Wise sem chamar a API do Bimer.
+    Usado quando a verificação automática falha mas o usuário confirma que o
+    pedido já está registrado no Bimer (ex.: endpoint de consulta retorna 405).
+    """
+    if not _get_perms(request.user)["producao"]["alterar_status"]:
+        return _sem_permissao("Você não tem permissão para alterar o status de pedidos.")
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if request.method == "POST":
+        if pedido.status != "montagem":
+            return HttpResponse(
+                '<div class="alert alert-warning m-3">Só pedidos em <strong>Aguardando Montagem</strong> podem ser marcados como Wise.</div>',
+                status=400,
+            )
+        pedido.status = "wise"
+        pedido.bimer_erro = ""
+        pedido.bimer_pedido_id = pedido.bimer_pedido_id or f"PED-{pedido.numero}"
+        pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
+
+    return render(request, "portas/pedido/_confirm_wise.html", {
+        "pedido": pedido,
+        "verificacao_falhou": True,
+    })
 
 
 # ── Reenviar pedido para o Bimer (sem mudar status) ──────────────────────────
@@ -654,6 +693,11 @@ def pedido_reenviar_bimer(request, pk):
         # Antes de reenviar, verifica se o pedido já existe no Bimer para
         # evitar duplicata (envio anterior pode ter chegado mas dado timeout).
         existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
+        if existente is svc_bimer._BUSCA_ERRO_API:
+            return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
+                "pedido": pedido,
+                "verificacao_falhou": True,
+            })
         if existente:
             pedido.bimer_erro = ""
             pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
@@ -1050,6 +1094,10 @@ def pedido_controle(request):
                     # antes de reenviar para evitar duplicata.
                     if pedido.bimer_erro:
                         existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
+                        if existente is svc_bimer._BUSCA_ERRO_API:
+                            # Não foi possível verificar — não reenviar para evitar duplicata
+                            erros_bimer.append(f"#{pedido.numero}")
+                            continue
                         if existente:
                             pedido.status = "wise"
                             pedido.bimer_erro = ""

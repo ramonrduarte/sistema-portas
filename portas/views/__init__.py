@@ -62,6 +62,7 @@ from .pedidos import (
     pedido_enviar_corte,
     pedido_enviar_montagem,
     pedido_enviar_wise,
+    pedido_marcar_wise_manual,
     pedido_reenviar_bimer,
     pedido_duplicar,
 )
@@ -87,7 +88,8 @@ __all__ = [
     "htmx_remove_item", "htmx_calcular_item",
     "htmx_cliente_selecionar", "htmx_perfis_por_acabamento",
     "htmx_opcoes_por_perfil", "htmx_clientes_sugestoes", "pedido_observacoes", "pedido_previsao",
-    "pedido_enviar_corte", "pedido_enviar_montagem", "pedido_enviar_wise", "pedido_reenviar_bimer",
+    "pedido_enviar_corte", "pedido_enviar_montagem", "pedido_enviar_wise",
+    "pedido_marcar_wise_manual", "pedido_reenviar_bimer",
     # integrações
     "bimer_config", "bimer_testar_conexao", "bimer_sincronizar", "bimer_sincronizar_clientes",
     # configurações

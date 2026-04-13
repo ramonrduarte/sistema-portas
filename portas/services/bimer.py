@@ -387,6 +387,10 @@ def enviar_pedido_bimer(config, pedido):
         return False, str(e), ""
 
 
+_BUSCA_NAO_ENCONTRADO = None          # pedido não existe no Bimer
+_BUSCA_ERRO_API       = object()      # não foi possível verificar (erro de comunicação)
+
+
 def buscar_pedido_bimer(config, pedido_numero):
     """
     Verifica se um pedido já existe no Bimer pelo CodigoPedidoDeCompraCliente.
@@ -397,8 +401,10 @@ def buscar_pedido_bimer(config, pedido_numero):
     Endpoint: GET /api/venda/pedidos?codigoPedidoDeCompraCliente={pedido_numero}
     Resposta esperada: { "ListaObjetos": [{ "Identificador": "...", "Codigo": "..." }] }
 
-    Retorna dict {"bimer_id": ..., "codigo": ...} se encontrado, ou None se não existe.
-    Em caso de erro de comunicação, retorna None (assume não encontrado / seguro reenviar).
+    Retorna:
+      dict {"bimer_id": ..., "codigo": ...}  — pedido encontrado
+      None  (_BUSCA_NAO_ENCONTRADO)           — chamada OK mas pedido não existe
+      _BUSCA_ERRO_API                         — não foi possível verificar (não reenviar!)
     """
     try:
         resp = _bimer_request(
@@ -415,7 +421,7 @@ def buscar_pedido_bimer(config, pedido_numero):
             lista = data.get("ListaObjetos") or []
 
         if not lista:
-            return None
+            return _BUSCA_NAO_ENCONTRADO
 
         obj = lista[0]
         bimer_id = obj.get("Identificador") or obj.get("identificador", "")
@@ -424,12 +430,11 @@ def buscar_pedido_bimer(config, pedido_numero):
 
     except Exception:
         logger.warning(
-            "Não foi possível verificar pedido #%s no Bimer. "
-            "Assumindo não encontrado.",
+            "Não foi possível verificar pedido #%s no Bimer.",
             pedido_numero,
             exc_info=True,
         )
-        return None
+        return _BUSCA_ERRO_API
 
 
 # ── Sincronização de clientes ─────────────────────────────────────────────────
