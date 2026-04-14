@@ -591,7 +591,10 @@ def pedido_enviar_wise(request, pk):
         # Se já houve tentativa anterior com erro, verifica no Bimer antes de
         # reenviar para evitar duplicata (o POST pode ter chegado mas a resposta
         # retornou timeout).
-        if pedido.bimer_erro:
+        # Se o usuário enviou force=true, ele já foi avisado sobre o risco e quer
+        # reenviar mesmo sem poder verificar — pula a consulta.
+        forcar = request.POST.get("force") == "true"
+        if pedido.bimer_erro and not forcar:
             existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
             if existente is svc_bimer._BUSCA_ERRO_API:
                 # Não foi possível consultar o Bimer — não reenviar para evitar
@@ -692,7 +695,9 @@ def pedido_reenviar_bimer(request, pk):
 
         # Antes de reenviar, verifica se o pedido já existe no Bimer para
         # evitar duplicata (envio anterior pode ter chegado mas dado timeout).
-        existente = svc_bimer.buscar_pedido_bimer(config, pedido.numero)
+        # Se o usuário enviou force=true, ele já foi avisado e quer prosseguir.
+        forcar = request.POST.get("force") == "true"
+        existente = None if forcar else svc_bimer.buscar_pedido_bimer(config, pedido.numero)
         if existente is svc_bimer._BUSCA_ERRO_API:
             return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
                 "pedido": pedido,

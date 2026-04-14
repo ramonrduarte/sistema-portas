@@ -44,7 +44,8 @@
           hx-post="{% url 'pedido_enviar_wise' pedido.id %}"
           hx-target="#modalConteudo"
           hx-swap="innerHTML"
-          hx-include="[name=csrfmiddlewaretoken]">
+          hx-include="[name=csrfmiddlewaretoken]"
+          hx-vals='{"force": "true"}'>
     <i class="bi bi-arrow-repeat me-1"></i>Reenviar
   </button>
   <button class="btn btn-success"

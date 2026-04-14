@@ -318,12 +318,11 @@ def enviar_pedido_bimer(config, pedido):
         )
 
     data_str         = pedido.data.strftime("%Y-%m-%d")
-    data_emissao_str = datetime.now().strftime("%Y-%m-%d")
-    data_entrega_str = (
-        pedido.data_previsao.strftime("%Y-%m-%d")
-        if pedido.data_previsao
-        else data_emissao_str
-    )
+    hoje             = datetime.now().date()
+    data_emissao_str = hoje.strftime("%Y-%m-%d")
+    # DataEntrega nunca pode ser anterior à DataEmissao (regra do Bimer)
+    data_entrega = max(pedido.data_previsao, hoje) if pedido.data_previsao else hoje
+    data_entrega_str = data_entrega.strftime("%Y-%m-%d")
 
     # ── Monta itens: uma linha por porta ─────────────────────────────────────
     itens_bimer = []
