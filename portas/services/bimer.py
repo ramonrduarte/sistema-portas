@@ -319,6 +319,9 @@ def enviar_pedido_bimer(config, pedido):
 
     data_str         = pedido.data.strftime("%Y-%m-%d")
     data_emissao_str = data_str
+    # DataEntrega deve ser >= DataEmissao (regra do Bimer)
+    data_entrega = max(pedido.data_previsao, pedido.data) if pedido.data_previsao else pedido.data
+    data_entrega_str = data_entrega.strftime("%Y-%m-%d")
 
     # ── Monta itens: uma linha por porta ─────────────────────────────────────
     itens_bimer = []
@@ -342,6 +345,7 @@ def enviar_pedido_bimer(config, pedido):
         "CodigoPedidoDeCompraCliente": str(pedido.numero),
         "DataCadastro":                data_str,
         "DataEmissao":                 data_emissao_str,
+        "DataEntrega":                 data_entrega_str,
         "faturamentoParcial":          True,
         "IdentificadorCliente":        pedido.cliente.bimer_id,
         "IdentificadorOperacao":       "00A0000047",
