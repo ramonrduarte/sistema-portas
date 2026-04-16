@@ -318,8 +318,7 @@ def enviar_pedido_bimer(config, pedido):
         )
 
     data_str         = pedido.data.strftime("%Y-%m-%d")
-    hoje             = datetime.now().date()
-    data_emissao_str = hoje.strftime("%Y-%m-%d")
+    data_emissao_str = data_str
 
     # ── Monta itens: uma linha por porta ─────────────────────────────────────
     itens_bimer = []
