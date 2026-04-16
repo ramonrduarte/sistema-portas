@@ -45,14 +45,19 @@
           hx-target="#modalConteudo"
           hx-swap="innerHTML"
           hx-include="[name=csrfmiddlewaretoken]"
-          hx-vals='{"force": "true"}'>
-    <i class="bi bi-arrow-repeat me-1"></i>Reenviar
+          hx-vals='{"force": "true"}'
+          hx-disabled-elt="this"
+          hx-on:htmx:before-request="this.querySelector('.estado-normal').classList.add('d-none'); this.querySelector('.estado-loading').classList.remove('d-none')"
+          hx-on:htmx:after-request="this.querySelector('.estado-normal').classList.remove('d-none'); this.querySelector('.estado-loading').classList.add('d-none')">
+    <span class="estado-normal"><i class="bi bi-arrow-repeat me-1"></i>Reenviar</span>
+    <span class="estado-loading d-none"><span class="spinner-border spinner-border-sm me-1"></span>Enviando...</span>
   </button>
   <button class="btn btn-success"
           hx-post="{% url 'pedido_marcar_wise_manual' pedido.id %}"
           hx-target="#modalConteudo"
           hx-swap="innerHTML"
-          hx-include="[name=csrfmiddlewaretoken]">
+          hx-include="[name=csrfmiddlewaretoken]"
+          hx-disabled-elt="this">
     <i class="bi bi-check-circle me-1"></i>Já está no Bimer
   </button>
   {% elif not erro %}
@@ -60,8 +65,17 @@
           hx-post="{% url 'pedido_enviar_wise' pedido.id %}"
           hx-target="#modalConteudo"
           hx-swap="innerHTML"
-          hx-include="[name=csrfmiddlewaretoken]">
-    {% if pedido.bimer_erro %}<i class="bi bi-arrow-repeat me-1"></i>Reenviar{% else %}Confirmar{% endif %}
+          hx-include="[name=csrfmiddlewaretoken]"
+          hx-disabled-elt="this"
+          hx-on:htmx:before-request="this.querySelector('.estado-normal').classList.add('d-none'); this.querySelector('.estado-loading').classList.remove('d-none')"
+          hx-on:htmx:after-request="this.querySelector('.estado-normal').classList.remove('d-none'); this.querySelector('.estado-loading').classList.add('d-none')">
+    {% if pedido.bimer_erro %}
+    <span class="estado-normal"><i class="bi bi-arrow-repeat me-1"></i>Reenviar</span>
+    <span class="estado-loading d-none"><span class="spinner-border spinner-border-sm me-1"></span>Enviando...</span>
+    {% else %}
+    <span class="estado-normal">Confirmar</span>
+    <span class="estado-loading d-none"><span class="spinner-border spinner-border-sm me-1"></span>Enviando...</span>
+    {% endif %}
   </button>
   {% endif %}
 </div>
