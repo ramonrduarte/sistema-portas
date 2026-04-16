@@ -320,9 +320,6 @@ def enviar_pedido_bimer(config, pedido):
     data_str         = pedido.data.strftime("%Y-%m-%d")
     hoje             = datetime.now().date()
     data_emissao_str = hoje.strftime("%Y-%m-%d")
-    # DataEntrega nunca pode ser anterior à DataEmissao (regra do Bimer)
-    data_entrega = max(pedido.data_previsao, hoje) if pedido.data_previsao else hoje
-    data_entrega_str = data_entrega.strftime("%Y-%m-%d")
 
     # ── Monta itens: uma linha por porta ─────────────────────────────────────
     itens_bimer = []
@@ -346,7 +343,7 @@ def enviar_pedido_bimer(config, pedido):
         "CodigoPedidoDeCompraCliente": str(pedido.numero),
         "DataCadastro":                data_str,
         "DataEmissao":                 data_emissao_str,
-        "DataEntrega":                 data_entrega_str,
+        "faturamentoParcial":          True,
         "IdentificadorCliente":        pedido.cliente.bimer_id,
         "IdentificadorOperacao":       "00A0000047",
         "IdentificadorSetor":          "00A0000005",
