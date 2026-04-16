@@ -423,6 +423,20 @@ def buscar_pedido_bimer(config, pedido_numero):
         codigo   = obj.get("Codigo") or obj.get("codigo", "")
         return {"bimer_id": bimer_id, "codigo": codigo}
 
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 405:
+            # Endpoint não suporta GET — trata como "não encontrado" e deixa reenviar
+            logger.info(
+                "GET /api/venda/pedidos retornou 405 para pedido #%s; prosseguindo com envio.",
+                pedido_numero,
+            )
+            return _BUSCA_NAO_ENCONTRADO
+        logger.warning(
+            "Não foi possível verificar pedido #%s no Bimer.",
+            pedido_numero,
+            exc_info=True,
+        )
+        return _BUSCA_ERRO_API
     except Exception:
         logger.warning(
             "Não foi possível verificar pedido #%s no Bimer.",
