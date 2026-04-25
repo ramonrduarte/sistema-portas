@@ -15,7 +15,7 @@
       <tr>
         <td>{{ p.data|date:"d/m/Y" }}</td>
         <td>{{ p.numero }}</td>
-        <td>{{ p.cliente.codigo }} – {{ p.cliente.nome }}</td>
+        <td>{{ p.cliente.codigo }} – {{ p.cliente.nome|upper }}</td>
         <td class="text-muted small">{% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}</td>
         <td>
           {% if p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>

@@ -8,7 +8,7 @@
     display: flex;
     flex-wrap: nowrap;
     align-items: stretch;
-    height: 32px;
+    height: 44px;
     border: 1px solid #adb5bd;
     border-radius: 4px;
     overflow: hidden;
@@ -17,6 +17,7 @@
   }
   .barra-peca {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     font-size: 10px;
@@ -27,6 +28,12 @@
     overflow: hidden;
     white-space: nowrap;
     min-width: 1px;
+    line-height: 1.2;
+  }
+  .peca-label {
+    font-size: 8px;
+    font-weight: 500;
+    opacity: 0.9;
   }
   .barra-sobra {
     flex: 1;
@@ -101,18 +108,17 @@
       <div class="barra-visual">
         {% for peca in barra %}
         <div class="barra-peca"
-             style="width: {% widthratio peca bloco.barra_mm 100 %}%"
-             title="{{ peca }} mm">
-          {{ peca }}
+             style="width: {% widthratio peca.0 bloco.barra_mm 100 %}%"
+             title="{{ peca.0 }} mm | {{ peca.1 }}">
+          <div>{{ peca.0 }}</div>
+          <div class="peca-label">{{ peca.1 }}</div>
         </div>
         {% endfor %}
         <div class="barra-sobra"></div>
       </div>
       <small class="text-muted">
-        Peças: {% for p in barra %}{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %} mm
-        &nbsp;|&nbsp; Usado: {% with total=0 %}
-          {% for p in barra %}{{ p }}{% if not forloop.last %}+{% endif %}{% endfor %}
-        {% endwith %}
+        Peças: {% for p in barra %}{{ p.0 }} ({{ p.1 }}){% if not forloop.last %}, {% endif %}{% endfor %} mm
+        &nbsp;|&nbsp; Usado: {% for p in barra %}{{ p.0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
       </small>
     </div>
     {% endfor %}
@@ -142,15 +148,17 @@
       <div class="barra-visual">
         {% for peca in barra %}
         <div class="barra-peca"
-             style="width: {% widthratio peca bloco.barra_mm 100 %}%; background: #6f42c1;"
-             title="{{ peca }} mm">
-          {{ peca }}
+             style="width: {% widthratio peca.0 bloco.barra_mm 100 %}%; background: #6f42c1;"
+             title="{{ peca.0 }} mm | {{ peca.1 }}">
+          <div>{{ peca.0 }}</div>
+          <div class="peca-label">{{ peca.1 }}</div>
         </div>
         {% endfor %}
         <div class="barra-sobra"></div>
       </div>
       <small class="text-muted">
-        Peças: {% for p in barra %}{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %} mm
+        Peças: {% for p in barra %}{{ p.0 }} ({{ p.1 }}){% if not forloop.last %}, {% endif %}{% endfor %} mm
+        &nbsp;|&nbsp; Usado: {% for p in barra %}{{ p.0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
       </small>
     </div>
     {% endfor %}
@@ -180,15 +188,17 @@
       <div class="barra-visual">
         {% for peca in barra %}
         <div class="barra-peca"
-             style="width: {% widthratio peca bloco.barra_mm 100 %}%; background: #fd7e14;"
-             title="{{ peca }} mm">
-          {{ peca }}
+             style="width: {% widthratio peca.0 bloco.barra_mm 100 %}%; background: #fd7e14;"
+             title="{{ peca.0 }} mm | {{ peca.1 }}">
+          <div>{{ peca.0 }}</div>
+          <div class="peca-label">{{ peca.1 }}</div>
         </div>
         {% endfor %}
         <div class="barra-sobra"></div>
       </div>
       <small class="text-muted">
-        Peças: {% for p in barra %}{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %} mm
+        Peças: {% for p in barra %}{{ p.0 }} ({{ p.1 }}){% if not forloop.last %}, {% endif %}{% endfor %} mm
+        &nbsp;|&nbsp; Usado: {% for p in barra %}{{ p.0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
       </small>
     </div>
     {% endfor %}
@@ -218,15 +228,17 @@
       <div class="barra-visual">
         {% for peca in barra %}
         <div class="barra-peca"
-             style="width: {% widthratio peca bloco.barra_mm 100 %}%; background: #198754;"
-             title="{{ peca }} mm">
-          {{ peca }}
+             style="width: {% widthratio peca.0 bloco.barra_mm 100 %}%; background: #198754;"
+             title="{{ peca.0 }} mm | {{ peca.1 }}">
+          <div>{{ peca.0 }}</div>
+          <div class="peca-label">{{ peca.1 }}</div>
         </div>
         {% endfor %}
         <div class="barra-sobra"></div>
       </div>
       <small class="text-muted">
-        Peças: {% for p in barra %}{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %} mm
+        Peças: {% for p in barra %}{{ p.0 }} ({{ p.1 }}){% if not forloop.last %}, {% endif %}{% endfor %} mm
+        &nbsp;|&nbsp; Usado: {% for p in barra %}{{ p.0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
       </small>
     </div>
     {% endfor %}
@@ -254,8 +266,8 @@
     <div class="mb-3">
       <small class="text-muted fw-semibold">Chapa {{ forloop.counter }}</small>
       <div class="chapa-grid mt-1">
-        {% for l, a in chapa %}
-        <div class="chapa-peca">{{ l }}×{{ a }}<br><small class="text-muted">mm</small></div>
+        {% for peca in chapa %}
+        <div class="chapa-peca">{{ peca.0 }}×{{ peca.1 }}<br><small class="text-muted">mm</small><br><small class="text-muted fw-semibold">{{ peca.2 }}</small></div>
         {% endfor %}
       </div>
       <small class="text-muted">{{ chapa|length }} peça{{ chapa|length|pluralize:"s" }}</small>

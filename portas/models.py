@@ -438,6 +438,10 @@ class PedidoItem(models.Model):
             self.divisor.modelo if self.divisor_id else None,
         ] if m]
         desc = "Porta " + "/".join(modelos)
+        if self.puxador_id and self.puxador_tamanho_mm:
+            cm = self.puxador_tamanho_mm / 10
+            cm_str = str(int(cm)) if cm == int(cm) else str(cm)
+            desc += f" ({cm_str}cm)"
         desc += " " + self.acabamento.nome
         desc += " " + f"{self.largura_mm}×{self.altura_mm}"
         if self.vidro_id:

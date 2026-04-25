@@ -344,7 +344,7 @@ def pedido_item_temp_add(request):
             )
             valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
 
-            # Monta a descrição: Porta modelo1/modelo2 Acabamento LxA Vidro
+            # Monta a descrição: Porta modelo1/modelo2 (Xcm) Acabamento LxA Vidro
             modelos = [m for m in [
                 perfil.modelo,
                 pp.modelo if pp else None,
@@ -352,6 +352,10 @@ def pedido_item_temp_add(request):
                 divisor.modelo if divisor else None,
             ] if m]
             descricao = "Porta " + "/".join(modelos)
+            if pux and pux_tam:
+                cm = pux_tam / 10
+                cm_str = str(int(cm)) if cm == int(cm) else str(cm)
+                descricao += f" ({cm_str}cm)"
             descricao += " " + cd["acabamento"].nome
             descricao += " " + f"{cd['largura_mm']}×{cd['altura_mm']}"
             if vidro:

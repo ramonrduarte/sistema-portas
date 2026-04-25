@@ -182,16 +182,17 @@ def calcular_insumos(pedido_ids: list) -> dict:
 
 # ── Algoritmos de empacotamento ───────────────────────────────────────────────
 
-def _ffd_1d(pecas_mm: list, barra_mm: int = 5850) -> list:
+def _ffd_1d(pecas: list, barra_mm: int = 5850) -> list:
     """
     First Fit Decreasing para corte 1D em barras.
-    Retorna lista de barras, cada uma sendo lista de comprimentos (mm).
+    Recebe lista de tuplas (mm, label) e retorna lista de barras,
+    cada uma sendo lista de tuplas (mm, label).
     """
     barras = []
-    for peca in sorted(pecas_mm, reverse=True):
+    for peca in sorted(pecas, key=lambda p: -p[0]):
         colocado = False
         for barra in barras:
-            if sum(barra) + peca <= barra_mm:
+            if sum(p[0] for p in barra) + peca[0] <= barra_mm:
                 barra.append(peca)
                 colocado = True
                 break
@@ -202,10 +203,10 @@ def _ffd_1d(pecas_mm: list, barra_mm: int = 5850) -> list:
 
 def _shelf_2d(pecas: list, chapa_l: int, chapa_a: int) -> list:
     """
-    Shelf (strip) packing 2D: empacota peças (largura, altura) em chapas.
+    Shelf (strip) packing 2D: empacota peças (largura, altura, label) em chapas.
     Ordena por altura desc. Abre nova faixa horizontal quando a largura se esgota.
     Abre nova chapa quando a altura se esgota.
-    Retorna lista de chapas, cada uma sendo lista de tuplas (largura, altura).
+    Retorna lista de chapas, cada uma sendo lista de tuplas (largura, altura, label).
     """
     chapas = []
     chapa_atual = []
@@ -213,13 +214,14 @@ def _shelf_2d(pecas: list, chapa_l: int, chapa_a: int) -> list:
     y = 0
     h_faixa = 0
 
-    for l, a in sorted(pecas, key=lambda p: (-p[1], -p[0])):
+    for peca in sorted(pecas, key=lambda p: (-p[1], -p[0])):
+        l, a = peca[0], peca[1]
         # Peça não cabe nem em uma chapa vazia — adiciona isolada
         if l > chapa_l or a > chapa_a:
             if chapa_atual:
                 chapas.append(chapa_atual)
                 chapa_atual = []
-            chapas.append([(l, a)])
+            chapas.append([peca])
             x = 0
             y = 0
             h_faixa = 0
@@ -242,7 +244,7 @@ def _shelf_2d(pecas: list, chapa_l: int, chapa_a: int) -> list:
         if not h_faixa:
             h_faixa = a
 
-        chapa_atual.append((l, a))
+        chapa_atual.append(peca)
         x += l
 
     if chapa_atual:
@@ -277,19 +279,28 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
           ]
         }
     """
-    itens = (
+    itens = list(
         PedidoItem.objects
         .filter(pedido_id__in=pedido_ids)
         .select_related(
+            "pedido",
             "perfil__acabamento",
             "perfil_puxador__acabamento",
             "puxador__acabamento",
             "divisor__acabamento",
             "vidro__espessura",
         )
+        .order_by("pedido_id", "id")
     )
 
-    # Peças por perfil (pk → lista de mm)
+    # Atribui índice 1-base por pedido para cada item
+    pedido_item_idx: dict = defaultdict(int)
+    item_labels: dict = {}
+    for item in itens:
+        pedido_item_idx[item.pedido_id] += 1
+        item_labels[item.id] = f"#{item.pedido.numero}-{pedido_item_idx[item.pedido_id]}"
+
+    # Peças por perfil (pk → lista de (mm, label))
     pecas_perfil = defaultdict(list)
     pecas_pp = defaultdict(list)
     pecas_puxador = defaultdict(list)
@@ -308,17 +319,15 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
         L = item.largura_mm
         A = item.altura_mm
         qtd_pp = item.qtd_perfil_puxador or 0
+        lbl = item_labels[item.id]
 
         # Peças de perfil estrutural por porta
         if qtd_pp == 1:
-            # L×2 peças de perfil + A×1 peça de perfil
-            peca_perfil = [L, L, A] * qtd
+            peca_perfil = [(L, lbl), (L, lbl), (A, lbl)] * qtd
         elif qtd_pp == 2:
-            # L×2 peças de perfil
-            peca_perfil = [L, L] * qtd
+            peca_perfil = [(L, lbl), (L, lbl)] * qtd
         else:
-            # L×2 + A×2 peças de perfil
-            peca_perfil = [L, L, A, A] * qtd
+            peca_perfil = [(L, lbl), (L, lbl), (A, lbl), (A, lbl)] * qtd
 
         pecas_perfil[item.perfil_id].extend(peca_perfil)
         obj_perfis[item.perfil_id] = item.perfil
@@ -326,9 +335,9 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
         # Peças de perfil puxador por porta
         if item.perfil_puxador_id:
             if qtd_pp == 1:
-                peca_pp = [A] * qtd
+                peca_pp = [(A, lbl)] * qtd
             elif qtd_pp == 2:
-                peca_pp = [A, A] * qtd
+                peca_pp = [(A, lbl), (A, lbl)] * qtd
             else:
                 peca_pp = []
             if peca_pp:
@@ -337,13 +346,13 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
 
         # Peças de puxador simples por porta (comprimento = tamanho do puxador)
         if item.puxador_id and item.puxador_tamanho_mm and item.qtd_puxador:
-            peca_pux = [item.puxador_tamanho_mm] * (item.qtd_puxador * qtd)
+            peca_pux = [(item.puxador_tamanho_mm, lbl)] * (item.qtd_puxador * qtd)
             pecas_puxador[item.puxador_id].extend(peca_pux)
             obj_puxadores_plano[item.puxador_id] = item.puxador
 
         # Peças de divisor por porta (comprimento = largura da porta)
         if item.divisor_id and item.qtd_divisor:
-            peca_div = [L] * (item.qtd_divisor * qtd)
+            peca_div = [(L, lbl)] * (item.qtd_divisor * qtd)
             pecas_divisor[item.divisor_id].extend(peca_div)
             obj_divisores_plano[item.divisor_id] = item.divisor
 
@@ -351,17 +360,21 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
         if item.vidro_id:
             for gw, gh in _calcular_dimensoes_vidro(item):
                 for _ in range(qtd):
-                    pecas_vidro[item.vidro_id].append((gw, gh))
+                    pecas_vidro[item.vidro_id].append((gw, gh, lbl))
             obj_vidros_plano[item.vidro_id] = item.vidro
+
+    def _totais(barras):
+        usado = sum(sum(p[0] for p in b) for b in barras)
+        disponivel = len(barras) * _BARRA_MM
+        sobra = disponivel - usado
+        aprov = Decimal(usado) / Decimal(disponivel) * 100 if disponivel else Decimal(0)
+        return usado, disponivel, sobra, aprov
 
     # Montar resultado para perfis
     resultado_perfis = []
     for pk, pecas in sorted(pecas_perfil.items()):
         barras = _ffd_1d(pecas, _BARRA_MM)
-        total_usado = sum(sum(b) for b in barras)
-        total_disponivel = len(barras) * _BARRA_MM
-        sobra = total_disponivel - total_usado
-        aprov = Decimal(total_usado) / Decimal(total_disponivel) * 100 if total_disponivel else Decimal(0)
+        _, _, sobra, aprov = _totais(barras)
         resultado_perfis.append({
             "perfil": obj_perfis[pk],
             "barra_mm": _BARRA_MM,
@@ -375,10 +388,7 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
     resultado_pps = []
     for pk, pecas in sorted(pecas_pp.items()):
         barras = _ffd_1d(pecas, _BARRA_MM)
-        total_usado = sum(sum(b) for b in barras)
-        total_disponivel = len(barras) * _BARRA_MM
-        sobra = total_disponivel - total_usado
-        aprov = Decimal(total_usado) / Decimal(total_disponivel) * 100 if total_disponivel else Decimal(0)
+        _, _, sobra, aprov = _totais(barras)
         resultado_pps.append({
             "perfil": obj_pps[pk],
             "barra_mm": _BARRA_MM,
@@ -392,10 +402,7 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
     resultado_puxadores = []
     for pk, pecas in sorted(pecas_puxador.items()):
         barras = _ffd_1d(pecas, _BARRA_MM)
-        total_usado = sum(sum(b) for b in barras)
-        total_disponivel = len(barras) * _BARRA_MM
-        sobra = total_disponivel - total_usado
-        aprov = Decimal(total_usado) / Decimal(total_disponivel) * 100 if total_disponivel else Decimal(0)
+        _, _, sobra, aprov = _totais(barras)
         resultado_puxadores.append({
             "puxador": obj_puxadores_plano[pk],
             "barra_mm": _BARRA_MM,
@@ -409,10 +416,7 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
     resultado_divisores = []
     for pk, pecas in sorted(pecas_divisor.items()):
         barras = _ffd_1d(pecas, _BARRA_MM)
-        total_usado = sum(sum(b) for b in barras)
-        total_disponivel = len(barras) * _BARRA_MM
-        sobra = total_disponivel - total_usado
-        aprov = Decimal(total_usado) / Decimal(total_disponivel) * 100 if total_disponivel else Decimal(0)
+        _, _, sobra, aprov = _totais(barras)
         resultado_divisores.append({
             "divisor": obj_divisores_plano[pk],
             "barra_mm": _BARRA_MM,
@@ -429,7 +433,7 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
         chapa_l = vidro.chapa_largura_mm
         chapa_a = vidro.chapa_altura_mm
         chapas = _shelf_2d(pecas, chapa_l, chapa_a)
-        total_area_pecas = sum(l * a for chapa in chapas for l, a in chapa)
+        total_area_pecas = sum(p[0] * p[1] for chapa in chapas for p in chapa)
         total_area_chapas = len(chapas) * chapa_l * chapa_a
         aprov = Decimal(total_area_pecas) / Decimal(total_area_chapas) * 100 if total_area_chapas else Decimal(0)
         resultado_vidros.append({
