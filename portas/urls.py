@@ -68,6 +68,7 @@ urlpatterns = [
     # ==== PEDIDOS ====
     path("pedidos/", views.pedidos_lista, name="pedidos_lista"),
     path("pedidos/novo/", views.pedido_novo, name="pedido_novo"),
+    path("pedidos/novo/vidro/", views.pedido_novo_vidro, name="pedido_novo_vidro"),
     path("pedidos/controle/", views.pedido_controle, name="pedido_controle"),
     path("pedidos/insumos/", views.pedido_insumos, name="pedido_insumos"),
     path("pedidos/plano-corte/", views.pedido_plano_corte, name="pedido_plano_corte"),
@@ -83,6 +84,8 @@ urlpatterns = [
     path("pedidos/htmx/calcular-item/", views.htmx_calcular_item, name="htmx_calcular_item"),
     path("pedidos/htmx/item-temp/add/", views.pedido_item_temp_add, name="pedido_item_temp_add"),
     path("pedidos/htmx/item-temp/<int:idx>/remover/", views.pedido_item_temp_remove, name="pedido_item_temp_remove"),
+    path("pedidos/htmx/item-vidro-temp/add/", views.pedido_item_vidro_temp_add, name="pedido_item_vidro_temp_add"),
+    path("pedidos/htmx/item-vidro-temp/<int:idx>/remover/", views.pedido_item_vidro_temp_remove, name="pedido_item_vidro_temp_remove"),
 
     # Detalhe e itens (com <int:pk> devem vir DEPOIS das rotas htmx/)
     path("pedidos/<int:pk>/", views.pedido_detalhe, name="pedido_detalhe"),
@@ -92,6 +95,8 @@ urlpatterns = [
     path("pedidos/<int:pk>/imprimir/", views.pedido_imprimir, name="pedido_imprimir"),
     path("pedidos/<int:pedido_pk>/itens/novo/", views.pedido_item_novo, name="pedido_item_novo"),
     path("pedidos/<int:pedido_pk>/itens/<int:item_pk>/remover/", views.htmx_remove_item, name="htmx_remove_item"),
+    path("pedidos/<int:pedido_pk>/itens-vidro/novo/", views.pedido_item_vidro_novo, name="pedido_item_vidro_novo"),
+    path("pedidos/<int:pedido_pk>/itens-vidro/<int:item_pk>/remover/", views.pedido_item_vidro_remover, name="pedido_item_vidro_remover"),
     path("pedidos/<int:pk>/observacoes/", views.pedido_observacoes, name="pedido_observacoes"),
     path("pedidos/<int:pk>/previsao/", views.pedido_previsao, name="pedido_previsao"),
     path("pedidos/<int:pk>/corte/", views.pedido_enviar_corte, name="pedido_enviar_corte"),

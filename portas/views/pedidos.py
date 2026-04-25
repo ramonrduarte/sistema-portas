@@ -13,13 +13,14 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.html import format_html
 
-from ..forms import PedidoForm, PedidoItemForm, PedidoNovoOrcamentoForm
+from ..forms import PedidoForm, PedidoItemForm, PedidoNovoOrcamentoForm, PedidoItemVidroForm
 from ..models import (
     Cliente,
     ConfiguracaoEmpresa,
     Divisor,
     Pedido,
     PedidoItem,
+    PedidoItemVidro,
     PedidoStatusLog,
     Perfil,
     PerfilPuxador,
@@ -259,6 +260,7 @@ def pedido_novo(request):
         with transaction.atomic():
             pedido = Pedido.objects.create(
                 cliente=c, usuario=request.user, observacoes=obs,
+                tipo="porta",
                 data_previsao=Date.today() + timedelta(days=7),
             )
             for item_data in itens:
@@ -294,7 +296,10 @@ def pedido_novo(request):
         PedidoStatusLog.objects.create(pedido=pedido, status="aberto", usuario=request.user)
         return redirect("pedido_detalhe", pk=pedido.pk)
 
-    # GET: limpa rascunho e exibe a página de novo pedido
+    # GET sem tipo → seletor; GET com tipo=porta → inicia rascunho de porta
+    tipo = request.GET.get("tipo")
+    if tipo != "porta":
+        return render(request, "portas/pedido/pedido_tipo_seletor.html")
     request.session[_SESSION_KEY] = []
     return render(request, "portas/pedido/pedido_novo.html", {
         "itens": [],
@@ -435,6 +440,277 @@ def pedido_item_temp_remove(request, idx):
     return HttpResponse(tabela_html + oob)
 
 
+# ── Novo pedido de vidro (rascunho em sessão) ─────────────────────────────────
+
+_SESSION_KEY_VIDRO = "pedido_rascunho_vidro_itens"
+
+
+def _total_rascunho_vidro(itens):
+    return sum(Decimal(i["valor_total"]) for i in itens)
+
+
+def _resp_atualiza_rascunho_vidro(request, itens):
+    total = _total_rascunho_vidro(itens)
+    tabela_html = render_to_string(
+        "portas/pedido/_itens_vidro_rascunho.html",
+        {"itens": itens},
+        request=request,
+    )
+    oob_tabela = f'<div hx-swap-oob="innerHTML:#tabelaRascunhoVidro">{tabela_html}</div>'
+    oob_resumo = (
+        '<div hx-swap-oob="innerHTML:#resumoRascunhoVidro">'
+        '<div class="d-flex justify-content-between fw-semibold fs-5">'
+        f"<span>Total</span><span>R$\xa0{total:,.2f}</span>"
+        "</div></div>"
+    )
+    resp = HttpResponse(oob_tabela + oob_resumo)
+    resp["HX-Trigger"] = "fecharModalCadastro"
+    return resp
+
+
+@login_required
+def pedido_novo_vidro(request):
+    if not _get_perms(request.user)["pedidos"]["criar"]:
+        return _sem_permissao("Você não tem permissão para criar pedidos.")
+
+    if request.method == "POST":
+        cliente_id = request.POST.get("cliente", "").strip()
+        itens = request.session.get(_SESSION_KEY_VIDRO, [])
+        total = _total_rascunho_vidro(itens)
+
+        cliente_display = ""
+        erro_cliente = not cliente_id
+        erro_itens = not itens
+
+        if cliente_id:
+            try:
+                c = Cliente.objects.get(pk=cliente_id)
+                cliente_display = f"{c.codigo} – {c.nome}"
+            except Cliente.DoesNotExist:
+                erro_cliente = True
+                cliente_id = ""
+
+        if erro_cliente or erro_itens:
+            return render(request, "portas/pedido/pedido_novo_vidro.html", {
+                "itens": itens,
+                "total": total,
+                "cliente_id": cliente_id,
+                "cliente_display": cliente_display,
+                "erro_cliente": erro_cliente,
+                "erro_itens": erro_itens,
+            })
+
+        obs = request.POST.get("observacoes", "").strip() or None
+        with transaction.atomic():
+            pedido = Pedido.objects.create(
+                cliente=c, usuario=request.user, observacoes=obs,
+                tipo="vidro",
+                data_previsao=Date.today() + timedelta(days=7),
+            )
+            for item_data in itens:
+                PedidoItemVidro.objects.create(
+                    pedido=pedido,
+                    vidro_id=item_data["vidro_id"],
+                    largura_mm=item_data["largura_mm"],
+                    altura_mm=item_data["altura_mm"],
+                    quantidade=item_data["quantidade"],
+                    desconto=Decimal(item_data["desconto"]) if item_data.get("desconto") else None,
+                    adicional_valor=item_data.get("adicional_valor") or None,
+                    adicional_obs=item_data.get("adicional_obs") or "",
+                    adicional2_valor=item_data.get("adicional2_valor") or None,
+                    adicional2_obs=item_data.get("adicional2_obs") or "",
+                    adicional3_valor=item_data.get("adicional3_valor") or None,
+                    adicional3_obs=item_data.get("adicional3_obs") or "",
+                    adicional4_valor=item_data.get("adicional4_valor") or None,
+                    adicional4_obs=item_data.get("adicional4_obs") or "",
+                    valor_unitario=Decimal(item_data["valor_unitario"]),
+                    valor_total=Decimal(item_data["valor_total"]),
+                )
+
+        request.session.pop(_SESSION_KEY_VIDRO, None)
+        PedidoStatusLog.objects.create(pedido=pedido, status="aberto", usuario=request.user)
+        return redirect("pedido_detalhe", pk=pedido.pk)
+
+    request.session[_SESSION_KEY_VIDRO] = []
+    return render(request, "portas/pedido/pedido_novo_vidro.html", {
+        "itens": [],
+        "total": Decimal("0"),
+    })
+
+
+@login_required
+def pedido_item_vidro_temp_add(request):
+    if not _get_perms(request.user)["pedidos"]["criar"]:
+        return _sem_permissao()
+    if request.method == "POST":
+        form = PedidoItemVidroForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            vidro = cd["vidro"]
+            qtd = cd["quantidade"]
+            desconto_pct = cd.get("desconto") or Decimal("0")
+            adicional = sum(
+                cd.get(k) or Decimal("0")
+                for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
+            )
+            area_m2 = Decimal(cd["largura_mm"]) * Decimal(cd["altura_mm"]) / Decimal(1_000_000)
+            valor_base = area_m2 * vidro.preco
+            valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
+
+            item_data = {
+                "descricao": f"Vidro {vidro.descricao} {cd['largura_mm']}×{cd['altura_mm']}",
+                "vidro_id": vidro.pk,
+                "vidro_descricao": vidro.descricao,
+                "largura_mm": cd["largura_mm"],
+                "altura_mm": cd["altura_mm"],
+                "quantidade": qtd,
+                "desconto": f"{desconto_pct:.2f}" if desconto_pct else None,
+                "adicional_valor":  f"{cd.get('adicional_valor') or 0:.2f}" if cd.get("adicional_valor") else None,
+                "adicional_obs":    cd.get("adicional_obs") or "",
+                "adicional2_valor": f"{cd.get('adicional2_valor') or 0:.2f}" if cd.get("adicional2_valor") else None,
+                "adicional2_obs":   cd.get("adicional2_obs") or "",
+                "adicional3_valor": f"{cd.get('adicional3_valor') or 0:.2f}" if cd.get("adicional3_valor") else None,
+                "adicional3_obs":   cd.get("adicional3_obs") or "",
+                "adicional4_valor": f"{cd.get('adicional4_valor') or 0:.2f}" if cd.get("adicional4_valor") else None,
+                "adicional4_obs":   cd.get("adicional4_obs") or "",
+                "valor_unitario": f"{valor_unit:.2f}",
+                "valor_total": f"{valor_unit * Decimal(qtd):.2f}",
+            }
+            item_data["adicionais_list"] = [
+                (v, o) for v, o in [
+                    (item_data["adicional_valor"],  item_data["adicional_obs"]),
+                    (item_data["adicional2_valor"], item_data["adicional2_obs"]),
+                    (item_data["adicional3_valor"], item_data["adicional3_obs"]),
+                    (item_data["adicional4_valor"], item_data["adicional4_obs"]),
+                ] if v
+            ]
+            itens = request.session.get(_SESSION_KEY_VIDRO, [])
+            itens.append(item_data)
+            request.session[_SESSION_KEY_VIDRO] = itens
+            request.session.modified = True
+            return _resp_atualiza_rascunho_vidro(request, itens)
+
+        return render(request, "portas/pedido/item_vidro_form.html", {"form": form})
+
+    form = PedidoItemVidroForm()
+    return render(request, "portas/pedido/item_vidro_form.html", {"form": form})
+
+
+@login_required
+def pedido_item_vidro_temp_remove(request, idx):
+    if not _get_perms(request.user)["pedidos"]["criar"]:
+        return _sem_permissao()
+    itens = request.session.get(_SESSION_KEY_VIDRO, [])
+    if 0 <= idx < len(itens):
+        itens.pop(idx)
+        request.session[_SESSION_KEY_VIDRO] = itens
+        request.session.modified = True
+    total = _total_rascunho_vidro(itens)
+    tabela_html = render_to_string(
+        "portas/pedido/_itens_vidro_rascunho.html", {"itens": itens}, request=request
+    )
+    oob = (
+        '<div hx-swap-oob="innerHTML:#resumoRascunhoVidro">'
+        '<div class="d-flex justify-content-between fw-semibold fs-5">'
+        f"<span>Total</span><span>R$\xa0{total:,.2f}</span>"
+        "</div></div>"
+    )
+    return HttpResponse(tabela_html + oob)
+
+
+@login_required
+def pedido_item_vidro_novo(request, pedido_pk):
+    if not _get_perms(request.user)["pedidos"]["editar"]:
+        return _sem_permissao("Você não tem permissão para editar pedidos.")
+    pedido = get_object_or_404(Pedido, pk=pedido_pk, tipo="vidro")
+    if pedido.status != "aberto":
+        return HttpResponseForbidden("Itens só podem ser adicionados a pedidos em aberto.")
+
+    if request.method == "POST":
+        form = PedidoItemVidroForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            vidro = cd["vidro"]
+            qtd = cd["quantidade"]
+            desconto_pct = cd.get("desconto") or Decimal("0")
+            adicional = sum(
+                cd.get(k) or Decimal("0")
+                for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
+            )
+            area_m2 = Decimal(cd["largura_mm"]) * Decimal(cd["altura_mm"]) / Decimal(1_000_000)
+            valor_base = area_m2 * vidro.preco
+            valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
+
+            PedidoItemVidro.objects.create(
+                pedido=pedido,
+                vidro=vidro,
+                largura_mm=cd["largura_mm"],
+                altura_mm=cd["altura_mm"],
+                quantidade=qtd,
+                desconto=(desconto_pct or None),
+                adicional_valor=cd.get("adicional_valor") or None,
+                adicional_obs=cd.get("adicional_obs") or "",
+                adicional2_valor=cd.get("adicional2_valor") or None,
+                adicional2_obs=cd.get("adicional2_obs") or "",
+                adicional3_valor=cd.get("adicional3_valor") or None,
+                adicional3_obs=cd.get("adicional3_obs") or "",
+                adicional4_valor=cd.get("adicional4_valor") or None,
+                adicional4_obs=cd.get("adicional4_obs") or "",
+                valor_unitario=valor_unit,
+                valor_total=valor_unit * qtd,
+            )
+
+            itens = pedido.itens_vidro.all()
+            total = sum(i.valor_total for i in itens)
+            tabela_html = render_to_string(
+                "portas/pedido/_itens_vidro_tabela.html",
+                {"itens": itens, "pedido": pedido},
+                request=request,
+            )
+            oob_resumo = (
+                '<div hx-swap-oob="innerHTML:#resumoPedido">'
+                f'<div class="d-flex justify-content-between"><span>Total</span>'
+                f'<span class="fw-bold">R$\xa0{total:,.2f}</span></div>'
+                "</div>"
+            )
+            resp = HttpResponse(
+                f'<div hx-swap-oob="innerHTML:#tabelaItens">{tabela_html}</div>' + oob_resumo
+            )
+            resp["HX-Trigger"] = "fecharModalCadastro"
+            return resp
+
+        return render(request, "portas/pedido/item_vidro_form.html", {"form": form, "pedido": pedido})
+
+    form = PedidoItemVidroForm()
+    return render(request, "portas/pedido/item_vidro_form.html", {"form": form, "pedido": pedido})
+
+
+@login_required
+def pedido_item_vidro_remover(request, pedido_pk, item_pk):
+    if not _get_perms(request.user)["pedidos"]["editar"]:
+        return _sem_permissao()
+    pedido = get_object_or_404(Pedido, pk=pedido_pk, tipo="vidro")
+    if pedido.status != "aberto":
+        return HttpResponseForbidden()
+    PedidoItemVidro.objects.filter(pk=item_pk, pedido=pedido).delete()
+    itens = pedido.itens_vidro.all()
+    total = sum(i.valor_total for i in itens)
+    tabela_html = render_to_string(
+        "portas/pedido/_itens_vidro_tabela.html",
+        {"itens": itens, "pedido": pedido},
+        request=request,
+    )
+    oob_resumo = (
+        '<div hx-swap-oob="innerHTML:#resumoPedido">'
+        f'<div class="d-flex justify-content-between"><span>Total</span>'
+        f'<span class="fw-bold">R$\xa0{total:,.2f}</span></div>'
+        "</div>"
+    )
+    return HttpResponse(
+        f'<div hx-swap-oob="innerHTML:#tabelaItens">{tabela_html}</div>' + oob_resumo
+    )
+
+
 # ── Detalhe do pedido ─────────────────────────────────────────────────────────
 
 @login_required
@@ -442,6 +718,17 @@ def pedido_detalhe(request, pk):
     if not _get_perms(request.user)["pedidos"]["ver"]:
         return _sem_permissao("Você não tem permissão para visualizar pedidos.")
     pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
+
+    if pedido.tipo == "vidro":
+        itens = pedido.itens_vidro.select_related("vidro__espessura").order_by("id")
+        total = sum(i.valor_total for i in itens)
+        return render(request, "portas/pedido/pedido_detalhe_vidro.html", {
+            "pedido": pedido,
+            "itens": itens,
+            "total_pedido": total,
+            "obs_salva": request.GET.get("obs_salva") == "1",
+        })
+
     itens, total = _itens_e_total(pedido)
     return render(request, "portas/pedido/pedido_detalhe.html", {
         "pedido": pedido,

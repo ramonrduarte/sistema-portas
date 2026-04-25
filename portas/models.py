@@ -302,7 +302,18 @@ class Pedido(models.Model):
         ("concluido", "Concluído"),
     ]
 
+    TIPO_CHOICES = [
+        ("porta", "Porta"),
+        ("vidro", "Vidro"),
+    ]
+
     data = models.DateField(auto_now_add=True)
+    tipo = models.CharField(
+        max_length=10,
+        choices=TIPO_CHOICES,
+        default="porta",
+        verbose_name="Tipo",
+    )
     cliente = models.ForeignKey(
         "Cliente",
         on_delete=models.PROTECT,
@@ -450,6 +461,58 @@ class PedidoItem(models.Model):
 
     def __str__(self):
         return f"Item {self.id} do Pedido {self.pedido.id}"
+
+
+# ── Item de pedido de vidro avulso ────────────────────────────────────────────
+
+class PedidoItemVidro(models.Model):
+    pedido = models.ForeignKey(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name="itens_vidro",
+    )
+
+    vidro = models.ForeignKey("VidroBase", on_delete=models.PROTECT)
+    largura_mm = models.PositiveIntegerField(verbose_name="Largura (mm)")
+    altura_mm = models.PositiveIntegerField(verbose_name="Altura (mm)")
+    quantidade = models.PositiveIntegerField(default=1)
+
+    desconto = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True, default=None,
+        verbose_name="Desconto (%)",
+    )
+
+    adicional_valor  = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional_obs    = models.CharField(max_length=255, blank=True, default="")
+    adicional2_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional2_obs   = models.CharField(max_length=255, blank=True, default="")
+    adicional3_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional3_obs   = models.CharField(max_length=255, blank=True, default="")
+    adicional4_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    adicional4_obs   = models.CharField(max_length=255, blank=True, default="")
+
+    valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_total    = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    @property
+    def adicionais_list(self):
+        result = []
+        for val, obs in [
+            (self.adicional_valor,  self.adicional_obs),
+            (self.adicional2_valor, self.adicional2_obs),
+            (self.adicional3_valor, self.adicional3_obs),
+            (self.adicional4_valor, self.adicional4_obs),
+        ]:
+            if val:
+                result.append((val, obs))
+        return result
+
+    @property
+    def descricao(self):
+        return f"Vidro {self.vidro.descricao} {self.largura_mm}×{self.altura_mm}"
+
+    def __str__(self):
+        return f"Vidro {self.id} do Pedido {self.pedido.id}"
 
 
 # ── Histórico de status do pedido ─────────────────────────────────────────────

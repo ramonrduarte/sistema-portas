@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+
+  <!-- ── Cabeçalho ────────────────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h4 class="mb-1">Pedido #{{ pedido.numero }} <span class="badge bg-info text-dark ms-1" style="font-size:.65rem;">Vidro</span></h4>
+      <div class="text-muted small">
+        {{ pedido.data|date:"d/m/Y" }}
+        &bull; <strong>{{ pedido.cliente.codigo }}</strong> – {{ pedido.cliente.nome }}
+        &bull; {{ pedido.get_status_display }}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'pedidos_lista' %}" class="btn btn-outline-secondary btn-sm">← Voltar</a>
+      {% if perms_usuario.pedidos.editar and pedido.status == 'aberto' %}
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'pedido_item_vidro_novo' pedido.id %}"
+              hx-target="#modalConteudo"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#modalCadastro">
+        + Adicionar item
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Conteúdo ─────────────────────────────────────────────────── -->
+  <div class="row g-4">
+
+    <!-- Tabela de itens -->
+    <div class="col-lg-9">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Itens do pedido</div>
+        <div class="card-body p-0">
+          <div id="tabelaItens">
+            {% include "portas/pedido/_itens_vidro_tabela.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumo lateral -->
+    <div class="col-lg-3">
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Resumo</div>
+        <div class="card-body">
+          <div id="resumoPedido">
+            <div class="d-flex justify-content-between fw-semibold fs-5">
+              <span>Total</span>
+              <span>R$&nbsp;{{ total_pedido|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Previsão de entrega</div>
+        <div class="card-body">
+          {% if perms_usuario.pedidos.editar and pedido.status == 'aberto' %}
+          <form method="post" action="{% url 'pedido_previsao' pedido.id %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <input type="date" name="data_previsao" class="form-control form-control-sm"
+                   value="{{ pedido.data_previsao|date:'Y-m-d'|default:'' }}">
+            <button type="submit" class="btn btn-sm btn-secondary">Salvar</button>
+          </form>
+          {% elif pedido.data_previsao %}
+          <span class="fw-semibold">{{ pedido.data_previsao|date:"d/m/Y" }}</span>
+          {% else %}
+          <span class="text-muted small">Não definida</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if perms_usuario.pedidos.editar %}
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Observações</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'pedido_observacoes' pedido.id %}">
+            {% csrf_token %}
+            <textarea name="observacoes"
+                      class="form-control form-control-sm mb-2"
+                      rows="4"
+                      placeholder="Anotações sobre o pedido...">{{ pedido.observacoes|default:"" }}</textarea>
+            <button type="submit" class="btn btn-sm btn-secondary w-100">Salvar</button>
+          </form>
+          {% if obs_salva %}
+          <div class="text-success small mt-1">Salvo.</div>
+          {% endif %}
+        </div>
+      </div>
+      {% elif pedido.observacoes %}
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Observações</div>
+        <div class="card-body small">{{ pedido.observacoes }}</div>
+      </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

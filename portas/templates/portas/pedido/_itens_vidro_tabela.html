@@ -1,0 +1,49 @@
+{% csrf_token %}
+<table class="table table-sm align-middle mb-0">
+  <thead class="table-light">
+    <tr>
+      <th class="ps-3 text-muted text-center" style="width:36px;">#</th>
+      <th>Descrição</th>
+      <th class="text-center" style="width:50px;">Qtd</th>
+      <th class="text-end" style="width:110px;">Vl Unit.</th>
+      <th class="text-end" style="width:110px;">Total</th>
+      <th class="pe-3" style="width:42px;"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in itens %}
+    <tr>
+      <td class="ps-3 text-center text-muted small fw-semibold">{{ forloop.counter }}</td>
+      <td>
+        <div class="fw-semibold">{{ item.descricao }}</div>
+        {% for val, obs in item.adicionais_list %}
+          <div class="small text-muted mt-1">
+            <span class="badge bg-secondary">+ R$&nbsp;{{ val|floatformat:2 }}{% if obs %} — {{ obs }}{% endif %}</span>
+          </div>
+        {% endfor %}
+      </td>
+      <td class="text-center">{{ item.quantidade }}</td>
+      <td class="text-end">R$&nbsp;{{ item.valor_unitario|floatformat:2 }}</td>
+      <td class="text-end fw-semibold">R$&nbsp;{{ item.valor_total|floatformat:2 }}</td>
+      <td class="text-end pe-3">
+        {% if pedido.status == 'aberto' %}
+        <button class="btn btn-sm btn-outline-danger"
+                hx-post="{% url 'pedido_item_vidro_remover' pedido.id item.id %}"
+                hx-target="#tabelaItens"
+                hx-swap="innerHTML"
+                hx-include="[name=csrfmiddlewaretoken]"
+                hx-confirm="Remover este item?">
+          &times;
+        </button>
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6" class="text-center text-muted py-4 ps-3">
+        Nenhum item adicionado ainda.
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

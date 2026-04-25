@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h4 class="mb-1">Novo Pedido — Vidros</h4>
+      <div class="text-muted small">Selecione o cliente, adicione os itens e clique em Salvar.</div>
+    </div>
+    <a href="{% url 'pedido_novo' %}" class="btn btn-outline-secondary btn-sm">← Voltar</a>
+  </div>
+
+  {% if erro_cliente %}
+  <div class="alert alert-danger">Selecione um cliente antes de salvar.</div>
+  {% endif %}
+  {% if erro_itens %}
+  <div class="alert alert-danger">Adicione pelo menos um item ao pedido antes de salvar.</div>
+  {% endif %}
+
+  <form method="post" action="{% url 'pedido_novo_vidro' %}">
+    {% csrf_token %}
+    <input type="hidden" name="cliente" id="id_cliente" value="{{ cliente_id|default:'' }}">
+
+    <div class="row g-4">
+
+      <!-- ── Cliente ──────────────────────────────────────────────── -->
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header fw-semibold">Cliente</div>
+          <div class="card-body">
+            <div class="input-group" style="max-width:480px;">
+              <input
+                id="clienteBusca"
+                type="text"
+                name="q"
+                class="form-control"
+                placeholder="Digite o código ou parte do nome..."
+                value="{{ cliente_display|default:'' }}"
+                hx-get="{% url 'htmx_clientes_sugestoes' %}"
+                hx-trigger="keyup changed delay:400ms"
+                hx-target="#clienteSugestoes"
+                hx-swap="innerHTML"
+                autocomplete="off"
+              >
+              <span class="input-group-text text-muted">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.156a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+                </svg>
+              </span>
+            </div>
+            <div id="clienteResultados" class="small text-muted mt-1">
+              {% if cliente_display %}
+                Selecionado: <strong>{{ cliente_display }}</strong>
+              {% else %}
+                Nenhum cliente selecionado.
+              {% endif %}
+            </div>
+            <div id="clienteSugestoes" class="mt-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Itens ─────────────────────────────────────────────────── -->
+      <div class="col-lg-9">
+        <div class="card shadow-sm">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Itens</span>
+            <button type="button"
+                    class="btn btn-primary btn-sm"
+                    hx-get="{% url 'pedido_item_vidro_temp_add' %}"
+                    hx-target="#modalConteudo"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro">
+              + Adicionar item
+            </button>
+          </div>
+          <div class="card-body p-0">
+            <div id="tabelaRascunhoVidro">
+              {% include "portas/pedido/_itens_vidro_rascunho.html" %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Resumo + Salvar ────────────────────────────────────────── -->
+      <div class="col-lg-3">
+        <div class="card shadow-sm mb-3">
+          <div class="card-header fw-semibold">Resumo</div>
+          <div class="card-body">
+            <div id="resumoRascunhoVidro">
+              <div class="d-flex justify-content-between fw-semibold fs-5">
+                <span>Total</span>
+                <span>R$&nbsp;{{ total|floatformat:2 }}</span>
+              </div>
+            </div>
+            <div class="mt-3">
+              <button type="submit" class="btn btn-success w-100">Salvar pedido</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-header fw-semibold">Observações</div>
+          <div class="card-body">
+            <textarea name="observacoes"
+                      class="form-control form-control-sm"
+                      rows="4"
+                      placeholder="Anotações sobre o pedido..."></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </form>
+</div>
+{% endblock %}

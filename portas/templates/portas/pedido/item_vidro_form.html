@@ -1,0 +1,127 @@
+<span id="modalTitulo" hx-swap-oob="true">Adicionar vidro</span>
+
+<div hx-swap-oob="true" id="modalDialogClass">
+  modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable
+</div>
+
+<form method="post"
+      hx-post="{% if pedido %}{% url 'pedido_item_vidro_novo' pedido.id %}{% else %}{% url 'pedido_item_vidro_temp_add' %}{% endif %}"
+      hx-target="#modalConteudo"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  {{ form.non_field_errors }}
+
+  <!-- ── Vidro ──────────────────────────────────────────────────────── -->
+  <div class="mb-3">
+    <label class="form-label fw-semibold mb-1">
+      <span class="text-danger">*</span> Modelo de vidro
+    </label>
+    {{ form.vidro }}
+    <div class="text-danger small">{{ form.vidro.errors }}</div>
+  </div>
+
+  <!-- ── Medidas + Qtd ─────────────────────────────────────────────── -->
+  <div class="row g-2 mb-3">
+    <div class="col-4">
+      <label class="form-label fw-semibold mb-1">
+        <span class="text-danger">*</span> Largura (mm)
+      </label>
+      {{ form.largura_mm }}
+      <div class="text-danger small">{{ form.largura_mm.errors }}</div>
+    </div>
+    <div class="col-4">
+      <label class="form-label fw-semibold mb-1">
+        <span class="text-danger">*</span> Altura (mm)
+      </label>
+      {{ form.altura_mm }}
+      <div class="text-danger small">{{ form.altura_mm.errors }}</div>
+    </div>
+    <div class="col-4">
+      <label class="form-label fw-semibold mb-1">
+        <span class="text-danger">*</span> Qtd
+      </label>
+      {{ form.quantidade }}
+      <div class="text-danger small">{{ form.quantidade.errors }}</div>
+    </div>
+  </div>
+
+  <!-- ── Desconto ──────────────────────────────────────────────────── -->
+  <div class="row g-2 mb-3">
+    <div class="col-4">
+      <label class="form-label fw-semibold mb-1">Desconto (%)</label>
+      {{ form.desconto }}
+      <div class="text-danger small">{{ form.desconto.errors }}</div>
+    </div>
+  </div>
+
+  <!-- ── Adicionais ────────────────────────────────────────────────── -->
+  <div class="border rounded-3 p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <p class="fw-semibold text-secondary mb-0" style="font-size:.78rem;letter-spacing:.5px;text-transform:uppercase;">
+        Adicionais
+      </p>
+      <button type="button" id="btnAddAdicional" class="btn btn-outline-secondary btn-sm py-0">+ Adicionar</button>
+    </div>
+    <div id="adicionaisContainer">
+      {% for val_f, obs_f in adicional_pairs|default:"" %}
+      <div class="row g-2 align-items-center adicional-row mb-2"
+           {% if not val_f.value %}style="display:none"{% endif %}>
+        <div class="col-12 col-md-3">
+          <label class="form-label mb-1">Valor (R$)</label>
+          {{ val_f }}
+        </div>
+        <div class="col-12 col-md-8">
+          <label class="form-label mb-1">Descrição</label>
+          {{ obs_f }}
+        </div>
+        <div class="col-12 col-md-1 d-flex align-items-end pb-1">
+          <button type="button" class="btn btn-sm btn-outline-danger btn-remove-adicional">×</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Rodapé ────────────────────────────────────────────────────── -->
+  <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+    <button type="button"
+            class="btn btn-outline-secondary"
+            data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar item</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  var container = document.getElementById('adicionaisContainer');
+  var btnAdd    = document.getElementById('btnAddAdicional');
+  var rows      = container ? Array.from(container.querySelectorAll('.adicional-row')) : [];
+
+  function showRow(row) { row.style.display = ''; }
+  function hideRow(row) { row.style.display = 'none'; }
+
+  function nextHidden() {
+    return rows.find(function(r) { return r.style.display === 'none'; });
+  }
+
+  if (btnAdd) {
+    btnAdd.addEventListener('click', function () {
+      var row = nextHidden();
+      if (row) showRow(row);
+      if (!nextHidden()) btnAdd.disabled = true;
+    });
+  }
+
+  rows.forEach(function(row) {
+    var btn = row.querySelector('.btn-remove-adicional');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        row.querySelectorAll('input').forEach(function(i) { i.value = ''; });
+        hideRow(row);
+        if (btnAdd) btnAdd.disabled = false;
+      });
+    }
+  });
+})();
+</script>

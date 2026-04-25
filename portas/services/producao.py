@@ -4,7 +4,7 @@ Serviços para controle de produção: cálculo de insumos e plano de corte.
 from collections import defaultdict
 from decimal import Decimal
 
-from ..models import PedidoItem
+from ..models import PedidoItem, PedidoItemVidro
 
 
 # ── Dimensões reais do vidro ──────────────────────────────────────────────────
@@ -362,6 +362,20 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
                 for _ in range(qtd):
                     pecas_vidro[item.vidro_id].append((gw, gh, lbl))
             obj_vidros_plano[item.vidro_id] = item.vidro
+
+    # PedidoItemVidro: dimensões especificadas diretamente, sem abatimentos
+    itens_vidro_direct = list(
+        PedidoItemVidro.objects
+        .filter(pedido_id__in=pedido_ids)
+        .select_related("pedido", "vidro__espessura")
+        .order_by("pedido_id", "id")
+    )
+    for item in itens_vidro_direct:
+        pedido_item_idx[item.pedido_id] += 1
+        lbl = f"#{item.pedido.numero}-{pedido_item_idx[item.pedido_id]}"
+        for _ in range(item.quantidade):
+            pecas_vidro[item.vidro_id].append((item.largura_mm, item.altura_mm, lbl))
+        obj_vidros_plano[item.vidro_id] = item.vidro
 
     def _totais(barras):
         usado = sum(sum(p[0] for p in b) for b in barras)

@@ -65,6 +65,11 @@ from .pedidos import (
     pedido_marcar_wise_manual,
     pedido_reenviar_bimer,
     pedido_duplicar,
+    pedido_novo_vidro,
+    pedido_item_vidro_temp_add,
+    pedido_item_vidro_temp_remove,
+    pedido_item_vidro_novo,
+    pedido_item_vidro_remover,
 )
 
 __all__ = [
@@ -90,6 +95,8 @@ __all__ = [
     "htmx_opcoes_por_perfil", "htmx_clientes_sugestoes", "pedido_observacoes", "pedido_previsao",
     "pedido_enviar_corte", "pedido_enviar_montagem", "pedido_enviar_wise",
     "pedido_marcar_wise_manual", "pedido_reenviar_bimer",
+    "pedido_novo_vidro", "pedido_item_vidro_temp_add", "pedido_item_vidro_temp_remove",
+    "pedido_item_vidro_novo", "pedido_item_vidro_remover",
     # integrações
     "bimer_config", "bimer_testar_conexao", "bimer_sincronizar", "bimer_sincronizar_clientes",
     # configurações

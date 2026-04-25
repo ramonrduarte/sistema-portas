@@ -9,6 +9,7 @@ from ..models import (
     VidroBase,
     Pedido,
     PedidoItem,
+    PedidoItemVidro,
 )
 
 _QTD_CHOICES = [("", "—"), ("1", "1"), ("2", "2")]
@@ -251,3 +252,36 @@ class PedidoNovoOrcamentoForm(forms.Form):
                 self.add_error("qtd_divisor", "Remova a quantidade (sem Divisor).")
 
         return data
+
+
+class PedidoItemVidroForm(forms.ModelForm):
+    class Meta:
+        model = PedidoItemVidro
+        fields = [
+            "vidro", "largura_mm", "altura_mm", "quantidade",
+            "desconto",
+            "adicional_valor",  "adicional_obs",
+            "adicional2_valor", "adicional2_obs",
+            "adicional3_valor", "adicional3_obs",
+            "adicional4_valor", "adicional4_obs",
+        ]
+        widgets = {
+            "vidro":       forms.Select(attrs={"class": "form-select"}),
+            "largura_mm":  forms.NumberInput(attrs={"class": "form-control", "min": 1}),
+            "altura_mm":   forms.NumberInput(attrs={"class": "form-control", "min": 1}),
+            "quantidade":  forms.NumberInput(attrs={"class": "form-control", "min": 1}),
+            "desconto":    forms.NumberInput(attrs={"class": "form-control", "min": "0", "max": "100", "step": "0.01", "placeholder": "0,00"}),
+            "adicional_valor":  forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
+            "adicional_obs":    forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
+            "adicional2_valor": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
+            "adicional2_obs":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
+            "adicional3_valor": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
+            "adicional3_obs":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
+            "adicional4_valor": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01", "placeholder": "0,00"}),
+            "adicional4_obs":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Descrição..."}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vidro"].queryset = VidroBase.objects.filter(ativo=True).order_by("descricao")
+        self.fields["desconto"].required = False
