@@ -317,11 +317,10 @@ def enviar_pedido_bimer(config, pedido):
             "Sincronize os clientes primeiro."
         ), ""
 
-    data_str         = pedido.data.strftime("%Y-%m-%d")
+    hoje             = timezone.localdate()
+    data_str         = hoje.strftime("%Y-%m-%d")
     data_emissao_str = data_str
-    # DataEntrega deve ser >= DataEmissao (regra do Bimer)
-    data_entrega = max(pedido.data_previsao, pedido.data) if pedido.data_previsao else pedido.data
-    data_entrega_str = data_entrega.strftime("%Y-%m-%d")
+    data_entrega_str = data_str
 
     _id_porta = config.bimer_id_produto_porta or "00A0000AU5"
 
@@ -429,19 +428,30 @@ def enviar_pedido_bimer(config, pedido):
                               json=payload, timeout=_TIMEOUT_ENVIO)
         data = resp.json()
 
+        # Bimer pode retornar HTTP 200 com campo "Erros" no corpo indicando falha
+        if isinstance(data, dict):
+            erros = data.get("Erros") or []
+            if erros:
+                msg_erros = "; ".join(str(e) for e in erros[:3])
+                logger.error("Bimer retornou 200 com erros para pedido %s: %s", pedido.numero, msg_erros)
+                return False, f"Bimer recusou o pedido: {msg_erros}", ""
+
         # Resposta pode ser objeto único ou lista
         obj = data[0] if isinstance(data, list) and data else (data if isinstance(data, dict) else {})
         bimer_id = obj.get("Identificador") or obj.get("identificador", "")
         codigo   = obj.get("Codigo") or obj.get("codigo", "")
+        logger.info("Pedido %s enviado ao Bimer. Código: %s / ID: %s", pedido.numero, codigo, bimer_id)
         return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}", bimer_id
 
     except requests.HTTPError as e:
         url_usada = f"{config.base_url.rstrip('/')}/api/venda/pedidos"
         corpo = e.response.text[:400] if e.response is not None else ""
+        logger.error("Erro HTTP %s ao enviar pedido %s ao Bimer: %s", e.response.status_code, pedido.numero, corpo)
         return False, f"Erro HTTP {e.response.status_code} — URL: {url_usada} — {corpo}", ""
     except requests.ConnectionError:
         return False, "Não foi possível conectar ao Bimer. Verifique a URL base.", ""
     except Exception as e:
+        logger.error("Erro inesperado ao enviar pedido %s ao Bimer: %s", pedido.numero, e, exc_info=True)
         return False, str(e), ""
 
 
