@@ -4,10 +4,10 @@ from django.http import HttpResponse
 from django.db.models import ProtectedError, Q
 from django.template.loader import render_to_string
 
-from ..models import Perfil, PerfilPuxador, Puxador, EspessuraVidro, VidroBase, Divisor, Acabamento
+from ..models import Perfil, PerfilPuxador, Puxador, EspessuraVidro, VidroBase, Divisor, Acabamento, ServicoVidro, ServicoPorta
 from ..forms import (
     PerfilForm, PerfilPuxadorForm, PuxadorForm,
-    EspessuraVidroForm, VidroBaseForm, DivisorForm, AcabamentoForm,
+    EspessuraVidroForm, VidroBaseForm, DivisorForm, AcabamentoForm, ServicoVidroForm, ServicoPortaForm,
 )
 
 
@@ -336,6 +336,106 @@ def excluir_espessura(request, pk):
         "texto": f'Tem certeza que deseja excluir a espessura <strong>"{espessura.valor_mm}mm"</strong>?',
         "post_url": "excluir_espessura",
         "obj_id": espessura.pk,
+    })
+
+
+# ── SERVIÇOS DE VIDRO ─────────────────────────────────────────────────────────
+
+@login_required
+def lista_servicos_vidro(request):
+    servicos = ServicoVidro.objects.all()
+    return render(request, "portas/servico_vidro/lista.html", {"servicos": servicos})
+
+
+@login_required
+def cadastrar_servico_vidro(request, pk=None):
+    servico = get_object_or_404(ServicoVidro, pk=pk) if pk else None
+
+    if request.method == "POST":
+        form = ServicoVidroForm(request.POST, instance=servico)
+        if form.is_valid():
+            form.save()
+            servicos = ServicoVidro.objects.all()
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/servico_vidro/tabela.html", {"servicos": servicos})
+            return redirect("lista_servicos_vidro")
+    else:
+        form = ServicoVidroForm(instance=servico)
+
+    return render(request, "portas/servico_vidro/form.html", {"form": form, "servico": servico})
+
+
+@login_required
+def excluir_servico_vidro(request, pk):
+    servico = get_object_or_404(ServicoVidro, pk=pk)
+
+    if request.method == "POST":
+        try:
+            servico.delete()
+        except ProtectedError:
+            return render(request, "portas/_mensagem_erro.html", {
+                "mensagem": "Este serviço está em uso em pedidos e não pode ser excluído."
+            })
+        servicos = ServicoVidro.objects.all()
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "portas/servico_vidro/tabela.html", {"servicos": servicos})
+        return redirect("lista_servicos_vidro")
+
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Excluir serviço de vidro",
+        "texto": f'Tem certeza que deseja excluir o serviço <strong>"{servico.nome}"</strong>?',
+        "post_url": "excluir_servico_vidro",
+        "obj_id": servico.pk,
+    })
+
+
+# ── SERVIÇOS DE PORTA ─────────────────────────────────────────────────────────
+
+@login_required
+def lista_servicos_porta(request):
+    servicos = ServicoPorta.objects.all()
+    return render(request, "portas/servico_porta/lista.html", {"servicos": servicos})
+
+
+@login_required
+def cadastrar_servico_porta(request, pk=None):
+    servico = get_object_or_404(ServicoPorta, pk=pk) if pk else None
+
+    if request.method == "POST":
+        form = ServicoPortaForm(request.POST, instance=servico)
+        if form.is_valid():
+            form.save()
+            servicos = ServicoPorta.objects.all()
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "portas/servico_porta/tabela.html", {"servicos": servicos})
+            return redirect("lista_servicos_porta")
+    else:
+        form = ServicoPortaForm(instance=servico)
+
+    return render(request, "portas/servico_porta/form.html", {"form": form, "servico": servico})
+
+
+@login_required
+def excluir_servico_porta(request, pk):
+    servico = get_object_or_404(ServicoPorta, pk=pk)
+
+    if request.method == "POST":
+        try:
+            servico.delete()
+        except ProtectedError:
+            return render(request, "portas/_mensagem_erro.html", {
+                "mensagem": "Este serviço está em uso em pedidos e não pode ser excluído."
+            })
+        servicos = ServicoPorta.objects.all()
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "portas/servico_porta/tabela.html", {"servicos": servicos})
+        return redirect("lista_servicos_porta")
+
+    return render(request, "modais/excluir_produto.html", {
+        "titulo": "Excluir serviço de porta",
+        "texto": f'Tem certeza que deseja excluir o serviço <strong>"{servico.nome}"</strong>?',
+        "post_url": "excluir_servico_porta",
+        "obj_id": servico.pk,
     })
 
 

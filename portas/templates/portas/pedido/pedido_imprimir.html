@@ -252,6 +252,9 @@
       <tr>
         <td>
           <div class="item-nome">{{ item.descricao }}</div>
+          {% for sv in item.servicos.all %}
+          <div class="item-opc">{{ sv.servico.nome }}: R$&nbsp;{{ sv.valor|floatformat:2 }}</div>
+          {% endfor %}
           {% for val, obs in item.adicionais_list %}
           <div class="item-opc">+ R$&nbsp;{{ val|floatformat:2 }}{% if obs %} ({{ obs }}){% endif %}</div>
           {% endfor %}
@@ -259,7 +262,9 @@
         <td class="r">{{ item.quantidade }}</td>
         <td class="r">R$&nbsp;{{ item.valor_unitario|floatformat:2 }}</td>
         <td class="r">R$&nbsp;{{ item.valor_total|floatformat:2 }}</td>
-        <td style="padding-left:5mm;"><div class="anot"></div></td>
+        <td style="padding-left:5mm;">
+          {% if not item.is_vidro %}<div class="anot"></div>{% endif %}
+        </td>
       </tr>
       {% empty %}
       <tr>

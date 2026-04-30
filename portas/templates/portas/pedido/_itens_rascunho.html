@@ -14,6 +14,11 @@
     <tr>
       <td class="ps-3">
         <div class="fw-semibold">{{ item.descricao }}</div>
+        {% for sv in item.servicos_porta %}
+          <div class="small mt-1">
+            <span class="badge" style="background:rgba(108,117,125,.2);color:#adb5bd;">{{ sv.nome }} — R$&nbsp;{{ sv.valor }}</span>
+          </div>
+        {% endfor %}
         {% for val, obs in item.adicionais_list %}
           <div class="small text-muted mt-1">
             <span class="badge bg-secondary">+ R$&nbsp;{{ val }}{% if obs %} — {{ obs }}{% endif %}</span>

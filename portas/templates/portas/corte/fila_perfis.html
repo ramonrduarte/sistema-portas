@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Fila de Corte — Perfis{% endblock %}
+
+{% block extra_head %}
+<style>
+  .barra-visual {
+    display: flex; flex-wrap: nowrap; align-items: stretch;
+    height: 48px; border: 1px solid #adb5bd; border-radius: 4px 4px 0 0;
+    overflow: hidden; background: #e9ecef;
+  }
+  .barra-peca {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 11px; font-weight: 600;
+    color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    border-right: 1px solid rgba(255,255,255,0.3);
+    overflow: hidden; white-space: nowrap; min-width: 2px; line-height: 1.2;
+    cursor: default;
+  }
+  .barra-sobra { flex: 1; background: #e9ecef; }
+  .barra-legenda {
+    font-size: 11.5px; color: #555; background: #f8f9fa;
+    border: 1px solid #adb5bd; border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 3px 8px; margin-bottom: 6px;
+    display: flex; flex-wrap: wrap; gap: 0 8px;
+  }
+  .barra-legenda span { white-space: nowrap; }
+  .barra-legenda .sobra { margin-left: auto; color: #888; }
+  @media print {
+    .d-print-none { display: none !important; }
+    .barra-peca { color: #000 !important; background: #ccc !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-rulers me-2"></i>Fila de Corte — Perfis</h4>
+</div>
+
+{% include "portas/corte/_nav_filas.html" %}
+
+{% if not pedidos_grupos %}
+<div class="alert alert-success">
+  <i class="bi bi-check-circle-fill me-2"></i>Nenhum item de perfil pendente de corte.
+</div>
+{% else %}
+
+{# ── Plano de corte (apenas quando itens selecionados) ──────────────────── #}
+{% if plano %}
+<div class="card mb-4 d-print-none">
+  <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+    <span>Plano de Corte — itens selecionados</span>
+    <a href="{% url 'fila_corte_perfis' %}" class="btn btn-sm btn-outline-secondary">Limpar seleção</a>
+  </div>
+  <div class="card-body">
+
+    {% for bloco in plano.perfis %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-baseline mb-1">
+        <span class="fw-semibold text-dark">{{ bloco.perfil }}</span>
+        <span class="text-muted small">{{ bloco.total_barras }} barra(s) × {{ bloco.barra_mm }} mm &mdash; aproveitamento {{ bloco.aproveitamento_pct }}% &mdash; sobra {{ bloco.sobra_mm }} mm</span>
+      </div>
+      {% for barra in bloco.barras %}
+      <div class="barra-visual">
+        {% for peca_mm, lbl in barra %}
+        <div class="barra-peca" style="width:{% widthratio peca_mm bloco.barra_mm 100 %}%;background:#0d6efd;"
+             title="{{ peca_mm|floatformat:0 }} mm — {{ lbl }}">
+          <span>{{ peca_mm|floatformat:0 }}</span><span>{{ lbl }}</span>
+        </div>
+        {% endfor %}
+        <div class="barra-sobra"></div>
+      </div>
+      <div class="barra-legenda">
+        {% for peca_mm, lbl in barra %}
+        <span><strong>{{ peca_mm|floatformat:0 }}</strong> mm <span style="color:#777">{{ lbl }}</span></span>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    {% for bloco in plano.pps %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-baseline mb-1">
+        <span class="fw-semibold" style="color:#6f42c1">PP: {{ bloco.perfil }}</span>
+        <span class="text-muted small">{{ bloco.total_barras }} barra(s) × {{ bloco.barra_mm }} mm &mdash; aproveitamento {{ bloco.aproveitamento_pct }}%</span>
+      </div>
+      {% for barra in bloco.barras %}
+      <div class="barra-visual">
+        {% for peca_mm, lbl in barra %}
+        <div class="barra-peca" style="width:{% widthratio peca_mm bloco.barra_mm 100 %}%;background:#6f42c1;"
+             title="{{ peca_mm|floatformat:0 }} mm — {{ lbl }}">
+          <span>{{ peca_mm|floatformat:0 }}</span><span>{{ lbl }}</span>
+        </div>
+        {% endfor %}
+        <div class="barra-sobra"></div>
+      </div>
+      <div class="barra-legenda">
+        {% for peca_mm, lbl in barra %}
+        <span><strong>{{ peca_mm|floatformat:0 }}</strong> mm <span style="color:#777">{{ lbl }}</span></span>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    {% for bloco in plano.puxadores %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-baseline mb-1">
+        <span class="fw-semibold" style="color:#fd7e14">Pux: {{ bloco.puxador }}</span>
+        <span class="text-muted small">{{ bloco.total_barras }} barra(s) × {{ bloco.barra_mm }} mm &mdash; aproveitamento {{ bloco.aproveitamento_pct }}%</span>
+      </div>
+      {% for barra in bloco.barras %}
+      <div class="barra-visual">
+        {% for peca_mm, lbl in barra %}
+        <div class="barra-peca" style="width:{% widthratio peca_mm bloco.barra_mm 100 %}%;background:#fd7e14;"
+             title="{{ peca_mm|floatformat:0 }} mm — {{ lbl }}">
+          <span>{{ peca_mm|floatformat:0 }}</span><span>{{ lbl }}</span>
+        </div>
+        {% endfor %}
+        <div class="barra-sobra"></div>
+      </div>
+      <div class="barra-legenda">
+        {% for peca_mm, lbl in barra %}
+        <span><strong>{{ peca_mm|floatformat:0 }}</strong> mm <span style="color:#777">{{ lbl }}</span></span>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    {% for bloco in plano.divisores %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-baseline mb-1">
+        <span class="fw-semibold" style="color:#198754">Div: {{ bloco.divisor }}</span>
+        <span class="text-muted small">{{ bloco.total_barras }} barra(s) × {{ bloco.barra_mm }} mm &mdash; aproveitamento {{ bloco.aproveitamento_pct }}%</span>
+      </div>
+      {% for barra in bloco.barras %}
+      <div class="barra-visual">
+        {% for peca_mm, lbl in barra %}
+        <div class="barra-peca" style="width:{% widthratio peca_mm bloco.barra_mm 100 %}%;background:#198754;"
+             title="{{ peca_mm|floatformat:0 }} mm — {{ lbl }}">
+          <span>{{ peca_mm|floatformat:0 }}</span><span>{{ lbl }}</span>
+        </div>
+        {% endfor %}
+        <div class="barra-sobra"></div>
+      </div>
+      <div class="barra-legenda">
+        {% for peca_mm, lbl in barra %}
+        <span><strong>{{ peca_mm|floatformat:0 }}</strong> mm <span style="color:#777">{{ lbl }}</span></span>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+{% endif %}
+
+{# ── Lista de itens com checkboxes ───────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-3 mb-3 d-print-none">
+  <div class="form-check mb-0">
+    <input type="checkbox" id="selecionarTodos" class="form-check-input">
+    <label class="form-check-label" for="selecionarTodos">Selecionar todos</label>
+  </div>
+  <button type="button" class="btn btn-primary btn-sm" id="btnGerarPlano">
+    <i class="bi bi-grid-3x3-gap me-1"></i>Gerar Plano de Corte
+  </button>
+</div>
+
+{% for grupo in pedidos_grupos %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">
+      #{{ grupo.pedido.numero }} — {{ grupo.pedido.cliente.nome }}
+    </span>
+    {% if perms_usuario.producao.alterar_status %}
+    <form method="post" action="{% url 'marcar_perfil_cortado_pedido' grupo.pedido.id %}" class="d-print-none">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-success"
+              onclick="return confirm('Marcar todos os perfis deste pedido como cortados?')">
+        <i class="bi bi-check-all me-1"></i>Marcar pedido como pronto
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th class="d-print-none" style="width:2rem"></th>
+          <th>#</th>
+          <th>Peça</th>
+          <th>Medidas</th>
+          <th>Qtd</th>
+          {% if perms_usuario.producao.alterar_status %}<th class="d-print-none"></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in grupo.itens %}
+        {# Linha principal: perfil #}
+        <tr {% if item.id in plan_item_ids %}class="table-primary"{% endif %}>
+          <td class="d-print-none">
+            <input type="checkbox" class="form-check-input chk-item" value="{{ item.id }}"
+              {% if item.id in plan_item_ids %}checked{% endif %}>
+          </td>
+          <td class="text-muted small">{{ forloop.counter }}</td>
+          <td>{{ item.perfil }}</td>
+          <td>
+            {% if item.qtd_perfil_puxador == 2 %}
+              2&times; {{ item.perfil_largura_corte }}mm
+            {% elif item.qtd_perfil_puxador == 1 %}
+              2&times; {{ item.perfil_largura_corte }}mm + 1&times; {{ item.altura_mm }}mm
+            {% else %}
+              2&times; {{ item.perfil_largura_corte }}mm + 2&times; {{ item.altura_mm }}mm
+            {% endif %}
+          </td>
+          <td>{{ item.quantidade }}</td>
+          {% if perms_usuario.producao.alterar_status %}
+          <td class="d-print-none">
+            <form method="post" action="{% url 'marcar_perfil_cortado' item.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar este item como cortado">
+                <i class="bi bi-check-lg"></i>
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {# Sub-linha: perfil puxador (PP) #}
+        {% if item.perfil_puxador %}
+        <tr class="{% if item.id in plan_item_ids %}table-primary{% endif %}">
+          <td class="d-print-none"></td>
+          <td></td>
+          <td class="ps-3 small fw-semibold" style="color:#6f42c1">
+            <i class="bi bi-arrow-return-right me-1"></i>PP: {{ item.perfil_puxador }}
+          </td>
+          <td class="small">{{ item.altura_mm }} mm &times; {{ item.qtd_perfil_puxador }}ldo</td>
+          <td class="small">{{ item.quantidade }}</td>
+          {% if perms_usuario.producao.alterar_status %}<td class="d-print-none"></td>{% endif %}
+        </tr>
+        {% endif %}
+        {# Sub-linha: puxador simples #}
+        {% if item.puxador and item.puxador_tamanho_mm %}
+        <tr class="{% if item.id in plan_item_ids %}table-primary{% endif %}">
+          <td class="d-print-none"></td>
+          <td></td>
+          <td class="ps-3 small fw-semibold" style="color:#e65c00">
+            <i class="bi bi-arrow-return-right me-1"></i>Pux: {{ item.puxador }}
+            {% if item.puxador_sobreposto %}
+            <span class="badge text-bg-warning ms-1 fw-normal">Sobreposto</span>
+            {% else %}
+            <span class="badge text-bg-secondary ms-1 fw-normal">Embutido</span>
+            {% endif %}
+          </td>
+          <td class="small">{{ item.puxador_tamanho_mm }} mm &times; {{ item.qtd_puxador }}un</td>
+          <td class="small">{{ item.quantidade }}</td>
+          {% if perms_usuario.producao.alterar_status %}<td class="d-print-none"></td>{% endif %}
+        </tr>
+        {% endif %}
+        {# Sub-linha: divisor #}
+        {% if item.divisor and item.qtd_divisor %}
+        <tr class="{% if item.id in plan_item_ids %}table-primary{% endif %}">
+          <td class="d-print-none"></td>
+          <td></td>
+          <td class="ps-3 small fw-semibold" style="color:#198754">
+            <i class="bi bi-arrow-return-right me-1"></i>Div: {{ item.divisor }}
+          </td>
+          <td class="small">{{ item.largura_mm }} mm &times; {{ item.qtd_divisor }}</td>
+          <td class="small">{{ item.quantidade }}</td>
+          {% if perms_usuario.producao.alterar_status %}<td class="d-print-none"></td>{% endif %}
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const selecionarTodos = document.getElementById('selecionarTodos');
+  if (selecionarTodos) {
+    selecionarTodos.addEventListener('change', function () {
+      document.querySelectorAll('.chk-item').forEach(c => c.checked = this.checked);
+    });
+  }
+
+  document.getElementById('btnGerarPlano')?.addEventListener('click', function () {
+    const ids = Array.from(document.querySelectorAll('.chk-item:checked')).map(c => c.value);
+    if (!ids.length) { alert('Selecione ao menos um item para gerar o plano.'); return; }
+    window.location.href = '?' + ids.map(id => 'plan_items=' + id).join('&');
+  });
+</script>
+{% endblock %}

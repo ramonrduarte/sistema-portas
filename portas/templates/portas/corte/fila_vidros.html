@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Fila de Corte — {{ titulo_fila }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  @media print { .d-print-none { display: none !important; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    {% if fila_ativa == 'organico' %}
+      <i class="bi bi-circle me-2"></i>
+    {% else %}
+      <i class="bi bi-grid me-2"></i>
+    {% endif %}
+    Fila de Corte — {{ titulo_fila }}
+  </h4>
+</div>
+
+{% include "portas/corte/_nav_filas.html" %}
+
+{% if fila_ativa == 'organico' %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>Vidros orgânicos (redondo, oval, formatos especiais) — a otimização de corte é feita pela máquina.</span>
+</div>
+{% endif %}
+
+{% if not pedidos_grupos %}
+<div class="alert alert-success">
+  <i class="bi bi-check-circle-fill me-2"></i>Nenhum item de {{ titulo_fila|lower }} pendente de corte.
+</div>
+{% else %}
+
+{# ── Lista consolidada (apenas quando itens selecionados) ───────────────── #}
+{% if lista_vidros %}
+<div class="card mb-4">
+  <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-list-ul me-1"></i>Lista de peças para corte — itens selecionados</span>
+    <a href="." class="btn btn-sm btn-outline-secondary d-print-none">Limpar seleção</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Vidro</th>
+          <th class="text-center">Largura (mm)</th>
+          <th class="text-center">Altura (mm)</th>
+          <th class="text-center">Qtd total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in lista_vidros %}
+        <tr>
+          <td>{{ linha.vidro }}</td>
+          <td class="text-center fw-semibold">{{ linha.largura_mm }}</td>
+          <td class="text-center fw-semibold">{{ linha.altura_mm }}</td>
+          <td class="text-center">{{ linha.quantidade }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ── Seleção de itens ────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-3 mb-3 d-print-none">
+  <div class="form-check mb-0">
+    <input type="checkbox" id="selecionarTodos" class="form-check-input">
+    <label class="form-check-label" for="selecionarTodos">Selecionar todos</label>
+  </div>
+  <button type="button" class="btn btn-primary btn-sm" id="btnGerarLista">
+    <i class="bi bi-list-check me-1"></i>Gerar Lista para Corte
+  </button>
+</div>
+
+{# ── Lista de pedidos com itens pendentes ─────────────────────────────────── #}
+{% for grupo in pedidos_grupos %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">
+      #{{ grupo.pedido.numero }} — {{ grupo.pedido.cliente.nome }}
+      <span class="badge bg-{{ grupo.pedido.tipo|yesno:'info,secondary' }} text-dark ms-1">
+        {{ grupo.pedido.get_tipo_display }}
+      </span>
+    </span>
+    {% if perms_usuario.producao.alterar_status %}
+    <form method="post" action="{% url 'marcar_vidro_cortado_pedido' grupo.pedido.id %}" class="d-print-none">
+      {% csrf_token %}
+      <input type="hidden" name="fila" value="{{ fila_ativa }}">
+      <button type="submit" class="btn btn-sm btn-success"
+              onclick="return confirm('Marcar todos os vidros deste pedido como cortados?')">
+        <i class="bi bi-check-all me-1"></i>Marcar pedido como pronto
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th class="d-print-none" style="width:2rem"></th>
+          <th>#</th>
+          <th>Vidro</th>
+          <th class="text-center">Largura (mm)</th>
+          <th class="text-center">Altura (mm)</th>
+          <th class="text-center">Qtd</th>
+          {% if perms_usuario.producao.alterar_status %}<th class="d-print-none"></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in grupo.itens_porta %}
+        <tr {% if item.id in plan_porta_ids %}class="table-primary"{% endif %}>
+          <td class="d-print-none">
+            <input type="checkbox" class="form-check-input chk-item chk-porta" value="{{ item.id }}"
+              {% if item.id in plan_porta_ids %}checked{% endif %}>
+          </td>
+          <td class="text-muted small">P{{ forloop.counter }}</td>
+          <td>{{ item.vidro }} <span class="text-muted small">(porta)</span></td>
+          <td class="text-center fw-semibold">{{ item.vidro_largura_corte }}</td>
+          <td class="text-center fw-semibold">{{ item.vidro_altura_corte }}</td>
+          <td class="text-center">{{ item.quantidade }}</td>
+          {% if perms_usuario.producao.alterar_status %}
+          <td class="d-print-none">
+            <form method="post" action="{% url 'marcar_vidro_cortado_item_porta' item.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar como cortado">
+                <i class="bi bi-check-lg"></i>
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+        {% for item in grupo.itens_avulso %}
+        <tr {% if item.id in plan_avulso_ids %}class="table-primary"{% endif %}>
+          <td class="d-print-none">
+            <input type="checkbox" class="form-check-input chk-item chk-avulso" value="{{ item.id }}"
+              {% if item.id in plan_avulso_ids %}checked{% endif %}>
+          </td>
+          <td class="text-muted small">V{{ forloop.counter }}</td>
+          <td>{{ item.vidro }}</td>
+          <td class="text-center fw-semibold">{{ item.largura_mm }}</td>
+          <td class="text-center fw-semibold">{{ item.altura_mm }}</td>
+          <td class="text-center">{{ item.quantidade }}</td>
+          {% if perms_usuario.producao.alterar_status %}
+          <td class="d-print-none">
+            <form method="post" action="{% url 'marcar_vidro_cortado_item_avulso' item.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar como cortado">
+                <i class="bi bi-check-lg"></i>
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const selecionarTodos = document.getElementById('selecionarTodos');
+  if (selecionarTodos) {
+    selecionarTodos.addEventListener('change', function () {
+      document.querySelectorAll('.chk-item').forEach(c => c.checked = this.checked);
+    });
+  }
+
+  document.getElementById('btnGerarLista')?.addEventListener('click', function () {
+    const portaIds = Array.from(document.querySelectorAll('.chk-porta:checked')).map(c => c.value);
+    const avulsoIds = Array.from(document.querySelectorAll('.chk-avulso:checked')).map(c => c.value);
+    if (!portaIds.length && !avulsoIds.length) {
+      alert('Selecione ao menos um item para gerar a lista.');
+      return;
+    }
+    const params = [
+      ...portaIds.map(id => 'plan_items=' + id),
+      ...avulsoIds.map(id => 'plan_avulsos=' + id),
+    ].join('&');
+    window.location.href = '?' + params;
+  });
+</script>
+{% endblock %}

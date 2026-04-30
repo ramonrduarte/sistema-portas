@@ -6,7 +6,6 @@ Foca em:
   - _ffd_1d: algoritmo de empacotamento 1D
   - _shelf_2d: algoritmo de empacotamento 2D
 """
-from decimal import Decimal
 from django.test import SimpleTestCase
 from unittest.mock import MagicMock
 
@@ -75,12 +74,13 @@ class CalcDimensoesVidroTest(SimpleTestCase):
         # largura: 900 - 2×5 = 890; altura: 2100 - 2×5 = 2090
         self.assertEqual(pecas[0], (890, 2090))
 
-    def test_polimento_adiciona_2mm(self):
-        """vidro_polido=True adiciona 2mm em cada dimensão."""
+    def test_polimento_adiciona_2mm_por_lado(self):
+        """vidro_polido=True adiciona 2mm por lado que encosta no perfil (4mm total por dimensão)."""
         item = _item(900, 2100, perfil=_perfil(abatimento=0, vidro_polido=True))
         pecas = _calcular_dimensoes_vidro(item)
-        # largura: 900+2=902; altura: 2100+2=2102
-        self.assertEqual(pecas[0], (902, 2102))
+        # largura: 900 + 2×2 = 904 (2mm × 2 lados perfil)
+        # altura:  2100 + 2×2 = 2104
+        self.assertEqual(pecas[0], (904, 2104))
 
     def test_perfil_puxador_qtd1_ajusta_largura(self):
         """Com 1 perfil puxador: largura perde abatimento_perfil + abatimento_pp."""
@@ -171,6 +171,54 @@ class CalcDimensoesVidroTest(SimpleTestCase):
         )
         pecas = _calcular_dimensoes_vidro(item)
         self.assertEqual(len(pecas), 1)
+
+    def test_divisor_aparente_desconta_abatimento_e_soma_polimento(self):
+        """Divisor aparente qtd=1: desconta ab_div e soma 4mm de polimento (sempre)."""
+        item = _item(
+            900, 2100,
+            perfil=_perfil(abatimento=10),
+            divisor=_divisor(encaixe="aparente", abatimento=8),
+            qtd_divisor=1,
+        )
+        pecas = _calcular_dimensoes_vidro(item)
+        # altura: 2100 - 2×10 + 1×(4-8) = 2076
+        self.assertEqual(pecas[0][1], 2076)
+
+    def test_divisor_aparente_qtd2(self):
+        """Divisor aparente qtd=2: aplica (4-ab_div) por divisor."""
+        item = _item(
+            900, 2100,
+            perfil=_perfil(abatimento=10),
+            divisor=_divisor(encaixe="aparente", abatimento=8),
+            qtd_divisor=2,
+        )
+        pecas = _calcular_dimensoes_vidro(item)
+        # altura: 2100 - 2×10 + 2×(4-8) = 2072
+        self.assertEqual(pecas[0][1], 2072)
+
+    def test_divisor_aparente_com_vidro_polido(self):
+        """Divisor aparente + vidro_polido: pol_perfil + (4-ab_div) por divisor."""
+        item = _item(
+            900, 2100,
+            perfil=_perfil(abatimento=10, vidro_polido=True),
+            divisor=_divisor(encaixe="aparente", abatimento=8),
+            qtd_divisor=1,
+        )
+        pecas = _calcular_dimensoes_vidro(item)
+        # altura: 2100 - 2×10 + 4(pol_perfil) + 1×(4-8) = 2080
+        self.assertEqual(pecas[0][1], 2080)
+
+    def test_divisor_embutido_nao_afeta_altura(self):
+        """Divisor embutido: não altera a altura."""
+        item = _item(
+            900, 2100,
+            perfil=_perfil(abatimento=10),
+            divisor=_divisor(encaixe="embutido", abatimento=8),
+            qtd_divisor=1,
+        )
+        pecas = _calcular_dimensoes_vidro(item)
+        # altura: 2100 - 2×10 = 2080 (divisor embutido não altera)
+        self.assertEqual(pecas[0][1], 2080)
 
 
 # ── Testes de _ffd_1d ─────────────────────────────────────────────────────────

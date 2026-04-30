@@ -40,6 +40,18 @@ urlpatterns = [
     path('espessuras/<int:pk>/editar/', views.cadastrar_espessura, name='editar_espessura'),
     path('espessuras/<int:pk>/excluir/', views.excluir_espessura, name='excluir_espessura'),
 
+    # Serviços de vidro
+    path('servicos-vidro/', views.lista_servicos_vidro, name='lista_servicos_vidro'),
+    path('servicos-vidro/novo/', views.cadastrar_servico_vidro, name='cadastrar_servico_vidro'),
+    path('servicos-vidro/<int:pk>/editar/', views.cadastrar_servico_vidro, name='editar_servico_vidro'),
+    path('servicos-vidro/<int:pk>/excluir/', views.excluir_servico_vidro, name='excluir_servico_vidro'),
+
+    # Serviços de porta
+    path('servicos-porta/', views.lista_servicos_porta, name='lista_servicos_porta'),
+    path('servicos-porta/novo/', views.cadastrar_servico_porta, name='cadastrar_servico_porta'),
+    path('servicos-porta/<int:pk>/editar/', views.cadastrar_servico_porta, name='editar_servico_porta'),
+    path('servicos-porta/<int:pk>/excluir/', views.excluir_servico_porta, name='excluir_servico_porta'),
+
     # Vidros
     path("vidros/", views.lista_vidros, name="lista_vidros"),
     path("vidros/novo/", views.cadastrar_vidro, name="cadastrar_vidro"),
@@ -82,6 +94,7 @@ urlpatterns = [
     path("pedidos/htmx/perfis-por-acabamento/", views.htmx_perfis_por_acabamento, name="htmx_perfis_por_acabamento"),
     path("pedidos/htmx/opcoes-por-perfil/", views.htmx_opcoes_por_perfil, name="htmx_opcoes_por_perfil"),
     path("pedidos/htmx/calcular-item/", views.htmx_calcular_item, name="htmx_calcular_item"),
+    path("pedidos/htmx/calcular-item-vidro/", views.htmx_calcular_item_vidro, name="htmx_calcular_item_vidro"),
     path("pedidos/htmx/item-temp/add/", views.pedido_item_temp_add, name="pedido_item_temp_add"),
     path("pedidos/htmx/item-temp/<int:idx>/remover/", views.pedido_item_temp_remove, name="pedido_item_temp_remove"),
     path("pedidos/htmx/item-vidro-temp/add/", views.pedido_item_vidro_temp_add, name="pedido_item_vidro_temp_add"),
@@ -99,12 +112,24 @@ urlpatterns = [
     path("pedidos/<int:pedido_pk>/itens-vidro/<int:item_pk>/remover/", views.pedido_item_vidro_remover, name="pedido_item_vidro_remover"),
     path("pedidos/<int:pk>/observacoes/", views.pedido_observacoes, name="pedido_observacoes"),
     path("pedidos/<int:pk>/previsao/", views.pedido_previsao, name="pedido_previsao"),
-    path("pedidos/<int:pk>/corte/", views.pedido_enviar_corte, name="pedido_enviar_corte"),
-    path("pedidos/<int:pk>/montagem/", views.pedido_enviar_montagem, name="pedido_enviar_montagem"),
+    path("pedidos/<int:pk>/producao/", views.pedido_enviar_producao, name="pedido_enviar_producao"),
     path("pedidos/<int:pk>/wise/", views.pedido_enviar_wise, name="pedido_enviar_wise"),
     path("pedidos/<int:pk>/wise-manual/", views.pedido_marcar_wise_manual, name="pedido_marcar_wise_manual"),
     path("pedidos/<int:pk>/reenviar-bimer/", views.pedido_reenviar_bimer, name="pedido_reenviar_bimer"),
     path("pedidos/<int:pk>/duplicar/", views.pedido_duplicar, name="pedido_duplicar"),
+
+    # Filas de corte e montagem
+    path("corte/perfis/", views.fila_corte_perfis, name="fila_corte_perfis"),
+    path("corte/vidros/retangulares/", views.fila_corte_vidros_retangulares, name="fila_corte_vidros_retangulares"),
+    path("corte/vidros/organicos/", views.fila_corte_vidros_organicos, name="fila_corte_vidros_organicos"),
+    path("montagem/", views.fila_montagem, name="fila_montagem"),
+    path("corte/perfis/item/<int:item_pk>/marcar/", views.marcar_perfil_cortado, name="marcar_perfil_cortado"),
+    path("corte/perfis/pedido/<int:pedido_pk>/marcar/", views.marcar_perfil_cortado_pedido, name="marcar_perfil_cortado_pedido"),
+    path("corte/vidros/item-porta/<int:item_pk>/marcar/", views.marcar_vidro_cortado_item_porta, name="marcar_vidro_cortado_item_porta"),
+    path("corte/vidros/item-avulso/<int:item_pk>/marcar/", views.marcar_vidro_cortado_item_avulso, name="marcar_vidro_cortado_item_avulso"),
+    path("corte/vidros/pedido/<int:pedido_pk>/marcar/", views.marcar_vidro_cortado_pedido, name="marcar_vidro_cortado_pedido"),
+    path("montagem/item/<int:item_pk>/marcar/", views.marcar_montagem_feita, name="marcar_montagem_feita"),
+    path("montagem/pedido/<int:pedido_pk>/marcar/", views.marcar_montagem_feita_pedido, name="marcar_montagem_feita_pedido"),
 
     # Integrações
     path("integracoes/bimer/",                      views.bimer_config,                name="bimer_config"),
@@ -114,5 +139,9 @@ urlpatterns = [
 
     # Configurações
     path("configuracoes/", views.configuracoes_empresa, name="configuracoes_empresa"),
+
+    # Backup
+    path("backup/", views.backup_config, name="backup_config"),
+    path("backup/testar-diretorio/", views.backup_testar_diretorio, name="backup_testar_diretorio"),
 
 ]

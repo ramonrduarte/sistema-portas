@@ -6,6 +6,8 @@ from .produtos import (
     PerfilForm,
     EspessuraVidroForm,
     VidroBaseForm,
+    ServicoVidroForm,
+    ServicoPortaForm,
 )
 from .clientes import ClienteForm
 from .usuarios import UsuarioPerfilForm
@@ -29,4 +31,6 @@ __all__ = [
     "PedidoItemVidroForm",
     "BimerConfigForm",
     "ConfiguracaoEmpresaForm",
+    "ServicoVidroForm",
+    "ServicoPortaForm",
 ]

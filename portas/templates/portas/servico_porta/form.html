@@ -1,0 +1,55 @@
+<span id="modalTitulo" hx-swap-oob="true">
+  {% if servico %}Editar Serviço de Porta{% else %}Cadastrar Serviço de Porta{% endif %}
+</span>
+
+<form method="post"
+      hx-post="{% if servico %}{% url 'editar_servico_porta' servico.pk %}{% else %}{% url 'cadastrar_servico_porta' %}{% endif %}"
+      hx-target="#conteudoTabela"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.nome.label }}</label>
+      {{ form.nome }}
+      <div class="text-danger small">{{ form.nome.errors }}</div>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.tipo_calculo.label }}</label>
+      {{ form.tipo_calculo }}
+      <div class="text-danger small">{{ form.tipo_calculo.errors }}</div>
+    </div>
+
+    <div class="col-6">
+      <label class="form-label fw-semibold">{{ form.preco.label }}</label>
+      <div class="input-group">
+        <span class="input-group-text">R$</span>
+        {{ form.preco }}
+      </div>
+      <div class="form-text">{{ form.preco.help_text }}</div>
+      <div class="text-danger small">{{ form.preco.errors }}</div>
+    </div>
+
+    <div class="col-6">
+      <label class="form-label fw-semibold">{{ form.ordem.label }}</label>
+      {{ form.ordem }}
+      <div class="form-text">{{ form.ordem.help_text }}</div>
+      <div class="text-danger small">{{ form.ordem.errors }}</div>
+    </div>
+
+    <div class="col-6 d-flex align-items-end pb-1">
+      <div class="form-check">
+        {{ form.ativo }}
+        <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
+          {{ form.ativo.label }}
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <button class="btn btn-primary" type="submit">Salvar</button>
+    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+  </div>
+</form>

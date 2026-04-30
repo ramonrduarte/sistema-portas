@@ -296,8 +296,7 @@ class Pedido(models.Model):
     STATUS_CHOICES = [
         ("aberto", "Aberto"),
         ("cancelado", "Cancelado"),
-        ("corte", "Aguardando Corte"),
-        ("montagem", "Aguardando Montagem"),
+        ("producao", "Em Produção"),
         ("wise", "Wise"),
         ("concluido", "Concluído"),
     ]
@@ -413,6 +412,11 @@ class PedidoItem(models.Model):
     adicional4_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
     adicional4_obs   = models.CharField(max_length=255, blank=True, default="")
 
+    # Etapas de produção
+    perfil_cortado  = models.BooleanField(default=False, verbose_name="Perfil cortado")
+    vidro_cortado   = models.BooleanField(default=False, verbose_name="Vidro cortado")
+    montagem_feita  = models.BooleanField(default=False, verbose_name="Montagem feita")
+
     # Valores
     valor_unitario = models.DecimalField(
         max_digits=12,
@@ -491,6 +495,8 @@ class PedidoItemVidro(models.Model):
     adicional4_valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
     adicional4_obs   = models.CharField(max_length=255, blank=True, default="")
 
+    vidro_cortado = models.BooleanField(default=False, verbose_name="Vidro cortado")
+
     valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     valor_total    = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
@@ -513,6 +519,128 @@ class PedidoItemVidro(models.Model):
 
     def __str__(self):
         return f"Vidro {self.id} do Pedido {self.pedido.id}"
+
+
+class PedidoItemVidroServico(models.Model):
+    """Serviços aplicados a um item de vidro (jateado, pintura, etc.)."""
+    item = models.ForeignKey(
+        PedidoItemVidro,
+        on_delete=models.CASCADE,
+        related_name="servicos",
+    )
+    servico = models.ForeignKey(
+        "ServicoVidro",
+        on_delete=models.PROTECT,
+        verbose_name="Serviço",
+    )
+    valor = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Valor calculado",
+        help_text="Valor congelado no momento do pedido",
+    )
+
+    def __str__(self):
+        return f"{self.servico.nome} — R$ {self.valor}"
+
+
+# ── Serviços de vidro ─────────────────────────────────────────────────────────
+
+class ServicoVidro(models.Model):
+    """Serviços extras aplicáveis a itens de vidro (jateado, pintura, etc.)."""
+    nome = models.CharField(max_length=100, verbose_name="Nome")
+    preco_m2 = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Preço por m² (R$)",
+    )
+    valor_fixo = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Valor fixo adicional (R$)",
+        help_text="Somado ao resultado de m² × preço. Use para cobranças fixas (ex: Jateado).",
+    )
+    corte_especial = models.BooleanField(
+        default=False,
+        verbose_name="Corte especial",
+        help_text="Itens com este serviço vão para a fila de vidros orgânicos (molde, redondo, oval, etc.)",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Ordem de exibição",
+    )
+
+    class Meta:
+        verbose_name = "Serviço de Vidro"
+        verbose_name_plural = "Serviços de Vidro"
+        ordering = ["ordem", "nome"]
+
+    def calcular(self, area_m2) -> "Decimal":
+        from decimal import Decimal
+        return Decimal(area_m2) * self.preco_m2 + self.valor_fixo
+
+    def __str__(self):
+        return self.nome
+
+
+# ── Serviços de porta ────────────────────────────────────────────────────────
+
+class ServicoPorta(models.Model):
+    TIPO_CALCULO_CHOICES = [
+        ("metro_linear_perfil", "Metro linear de perfil (perfil + PP + puxador + divisor)"),
+        ("m2_vidro",            "M² de vidro"),
+        ("metro_linear_vidro",  "Metro linear de vidro (perímetro)"),
+    ]
+    nome = models.CharField(max_length=100, verbose_name="Nome")
+    tipo_calculo = models.CharField(
+        max_length=25,
+        choices=TIPO_CALCULO_CHOICES,
+        verbose_name="Base de cálculo",
+    )
+    preco = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        verbose_name="Preço por unidade (R$)",
+        help_text="Por metro linear ou por m², conforme a base de cálculo.",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem de exibição")
+
+    class Meta:
+        verbose_name = "Serviço de Porta"
+        verbose_name_plural = "Serviços de Porta"
+        ordering = ["ordem", "nome"]
+
+    def calcular(self, quantidade) -> "Decimal":
+        from decimal import Decimal
+        return Decimal(quantidade) * self.preco
+
+    def __str__(self):
+        return self.nome
+
+
+class PedidoItemServicoPorta(models.Model):
+    """Serviços aplicados a um item de porta (pintura, película, etc.)."""
+    item = models.ForeignKey(
+        "PedidoItem",
+        on_delete=models.CASCADE,
+        related_name="servicos",
+    )
+    servico = models.ForeignKey(
+        ServicoPorta,
+        on_delete=models.PROTECT,
+        verbose_name="Serviço",
+    )
+    valor = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        verbose_name="Valor calculado",
+        help_text="Valor congelado no momento do pedido",
+    )
+
+    def __str__(self):
+        return f"{self.servico.nome} — R$ {self.valor}"
 
 
 # ── Histórico de status do pedido ─────────────────────────────────────────────
@@ -591,6 +719,13 @@ class BimerConfig(models.Model):
         help_text="Código da tabela de preços no Bimer (parâmetro identificadorTabelaPrecos)",
     )
 
+    # Identificador de produto para envio de pedidos de porta
+    bimer_id_produto_porta = models.CharField(
+        max_length=50, blank=True, default="00A0000AU5",
+        verbose_name="ID produto Porta no Bimer",
+        help_text="Identificador do produto 'Porta' usado ao enviar pedidos. Para vidros, cada VidroBase possui seu próprio ID Bimer.",
+    )
+
     # Status
     ativo                = models.BooleanField(default=False, verbose_name="Integração ativa")
     ultima_sincronizacao = models.DateTimeField(null=True, blank=True)
@@ -665,7 +800,7 @@ class ConfiguracaoEmpresa(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0,
-        verbose_name="Custo m�o de obra (por porta)",
+        verbose_name="Custo mão de obra (por porta)",
         help_text="Valor fixo adicionado em cada porta calculada",
     )
 
@@ -683,3 +818,87 @@ class ConfiguracaoEmpresa(models.Model):
 
     def __str__(self):
         return self.nome_empresa
+
+
+# ── Backup ────────────────────────────────────────────────────────────────────
+
+class ConfiguracaoBackup(models.Model):
+    diretorio = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="Diretório de destino",
+        help_text="Caminho absoluto onde os backups serão salvos",
+    )
+    padrao_nome = models.CharField(
+        max_length=200,
+        default="portas_{data}_{hora}",
+        verbose_name="Padrão do nome do arquivo",
+        help_text="Use {data} para AAAAMMDD, {hora} para HHMM. Ex: portas_{data}_{hora}",
+    )
+    ativo = models.BooleanField(
+        default=False,
+        verbose_name="Agendamento ativo",
+    )
+
+    class Meta:
+        verbose_name = "Configuração de Backup"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1, defaults={"padrao_nome": "portas_{data}_{hora}"})
+        return obj
+
+    def __str__(self):
+        return "Configuração de Backup"
+
+
+class AgendamentoBackup(models.Model):
+    DIAS = [
+        ("mon", "Segunda-feira"),
+        ("tue", "Terça-feira"),
+        ("wed", "Quarta-feira"),
+        ("thu", "Quinta-feira"),
+        ("fri", "Sexta-feira"),
+        ("sat", "Sábado"),
+        ("sun", "Domingo"),
+    ]
+    dia_semana = models.CharField(max_length=3, choices=DIAS, verbose_name="Dia da semana")
+    horario = models.TimeField(verbose_name="Horário")
+
+    class Meta:
+        verbose_name = "Agendamento de Backup"
+        verbose_name_plural = "Agendamentos de Backup"
+        ordering = ["dia_semana", "horario"]
+        unique_together = [["dia_semana", "horario"]]
+
+    def __str__(self):
+        return f"{self.get_dia_semana_display()} às {self.horario.strftime('%H:%M')}"
+
+
+class HistoricoBackup(models.Model):
+    data_hora = models.DateTimeField(auto_now_add=True, verbose_name="Data/hora")
+    arquivo = models.CharField(max_length=500, blank=True, verbose_name="Arquivo")
+    tamanho_bytes = models.BigIntegerField(null=True, blank=True, verbose_name="Tamanho")
+    sucesso = models.BooleanField(default=True, verbose_name="Sucesso")
+    mensagem = models.TextField(blank=True, verbose_name="Mensagem")
+
+    class Meta:
+        verbose_name = "Histórico de Backup"
+        verbose_name_plural = "Histórico de Backups"
+        ordering = ["-data_hora"]
+
+    def tamanho_formatado(self):
+        if not self.tamanho_bytes:
+            return "—"
+        for unit in ("B", "KB", "MB", "GB"):
+            if self.tamanho_bytes < 1024:
+                return f"{self.tamanho_bytes:.1f} {unit}"
+            self.tamanho_bytes /= 1024
+        return f"{self.tamanho_bytes:.1f} TB"
+
+    def __str__(self):
+        return f"Backup {self.data_hora:%d/%m/%Y %H:%M} — {'OK' if self.sucesso else 'ERRO'}"

@@ -48,7 +48,8 @@ class BimerConfigForm(forms.ModelForm):
     class Meta:
         model  = BimerConfig
         fields = ["base_url", "username", "password", "identificador_empresa",
-                  "identificador_tabela_precos", "identificador_caracteristica_clientes", "ativo"]
+                  "identificador_tabela_precos", "identificador_caracteristica_clientes",
+                  "bimer_id_produto_porta", "ativo"]
         widgets = {
             "base_url": forms.URLInput(attrs={
                 "class": "form-control",
@@ -69,6 +70,10 @@ class BimerConfigForm(forms.ModelForm):
             "identificador_caracteristica_clientes": forms.TextInput(attrs={
                 "class": "form-control",
                 "placeholder": "Ex.: 00A000000N",
+            }),
+            "bimer_id_produto_porta": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Ex.: 00A0000AU5",
             }),
             "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }

@@ -1,0 +1,34 @@
+{# Navegação entre as filas de corte e montagem, com badges de pendentes #}
+<div class="d-flex gap-2 flex-wrap mb-4">
+  <a href="{% url 'fila_corte_perfis' %}"
+     class="btn btn-sm {% if fila_ativa == 'perfis' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-rulers me-1"></i>Perfis
+    {% if contadores.perfis %}
+      <span class="badge {% if fila_ativa == 'perfis' %}bg-light text-secondary{% else %}bg-secondary{% endif %} ms-1">{{ contadores.perfis }}</span>
+    {% endif %}
+  </a>
+  <a href="{% url 'fila_corte_vidros_retangulares' %}"
+     class="btn btn-sm {% if fila_ativa == 'retangular' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+    <i class="bi bi-grid me-1"></i>Vidros Ret.
+    {% if contadores.vidros_ret %}
+      <span class="badge {% if fila_ativa == 'retangular' %}bg-light text-primary{% else %}bg-primary{% endif %} ms-1">{{ contadores.vidros_ret }}</span>
+    {% endif %}
+  </a>
+  <a href="{% url 'fila_corte_vidros_organicos' %}"
+     class="btn btn-sm {% if fila_ativa == 'organico' %}btn-info text-white{% else %}btn-outline-info{% endif %}">
+    <i class="bi bi-circle me-1"></i>Vidros Org.
+    {% if contadores.vidros_org %}
+      <span class="badge {% if fila_ativa == 'organico' %}bg-light text-info{% else %}bg-info{% endif %} ms-1">{{ contadores.vidros_org }}</span>
+    {% endif %}
+  </a>
+  <a href="{% url 'fila_montagem' %}"
+     class="btn btn-sm {% if fila_ativa == 'montagem' %}btn-success{% else %}btn-outline-success{% endif %}">
+    <i class="bi bi-tools me-1"></i>Montagem
+    {% if contadores.montagem %}
+      <span class="badge {% if fila_ativa == 'montagem' %}bg-light text-success{% else %}bg-success{% endif %} ms-1">{{ contadores.montagem }}</span>
+    {% endif %}
+  </a>
+  <span class="ms-auto">
+    <a href="{% url 'pedido_controle' %}" class="btn btn-sm btn-outline-secondary">← Controle</a>
+  </span>
+</div>

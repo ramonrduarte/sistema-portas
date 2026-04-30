@@ -292,30 +292,30 @@ def sincronizar_precos():
 
 # ── Envio de pedido para o Bimer ─────────────────────────────────────────────
 
-_BIMER_ID_PORTA = "00A0000AU5"  # Identificador fixo do produto "Porta" no Bimer
-
-
 def enviar_pedido_bimer(config, pedido):
     """
     Envia um Pedido de Venda para o Bimer ao mover para status 'wise'.
 
     Endpoint: POST /api/venda/pedidos
-    Cada PedidoItem vira uma linha com produto fixo '00A0000AU5' (Porta),
-    descrição do sistema, quantidade e valor unitário.
 
-    Retorna (True, msg) em caso de sucesso ou (False, msg) em caso de erro.
+    Porta: uma linha por PedidoItem, QuantidadePedida = qtd peças, ValorUnitario calculado.
+    Vidro: uma linha por PedidoItemVidro, QuantidadePedida = área em m², ValorUnitario = preço
+           do vidro no cadastro. Serviços/adicionais positivos → Acrescimo.Valor; negativos
+           (descontos de serviço) e desconto percentual → Desconto.Valor.
+
+    Retorna (True, msg, bimer_id) em caso de sucesso ou (False, msg, "") em caso de erro.
     """
     if not config.ativo:
-        return False, "Integração Bimer desativada."
+        return False, "Integração Bimer desativada.", ""
 
     if not config.identificador_empresa:
-        return False, "Configure o Identificador da empresa no Bimer."
+        return False, "Configure o Identificador da empresa no Bimer.", ""
 
     if not pedido.cliente.bimer_id:
         return False, (
             f"Cliente '{pedido.cliente.nome}' não possui identificador Bimer. "
             "Sincronize os clientes primeiro."
-        )
+        ), ""
 
     data_str         = pedido.data.strftime("%Y-%m-%d")
     data_emissao_str = data_str
@@ -323,21 +323,80 @@ def enviar_pedido_bimer(config, pedido):
     data_entrega = max(pedido.data_previsao, pedido.data) if pedido.data_previsao else pedido.data
     data_entrega_str = data_entrega.strftime("%Y-%m-%d")
 
-    # ── Monta itens: uma linha por porta ─────────────────────────────────────
+    _id_porta = config.bimer_id_produto_porta or "00A0000AU5"
+
     itens_bimer = []
+
+    # ── Itens de porta ───────────────────────────────────────────────────────
     for item in pedido.itens.all():
         valor_total = float(item.valor_unitario) * item.quantidade
         itens_bimer.append({
-            "IdentificadorProduto":   _BIMER_ID_PORTA,
+            "IdentificadorProduto":    _id_porta,
             "IdentificadorSetorSaida": "00A0000005",
-            "QuantidadePedida":       item.quantidade,
+            "QuantidadePedida":        item.quantidade,
             "Repasses": [{"identificadorCategoria": "000000000R", "IdentificadorPessoa": "00A00001RR"}],
-            "Valor":                  round(valor_total, 2),
-            "ValorUnitario":          float(item.valor_unitario),
-            "descricaoComplementar":  item.descricao,
+            "Valor":                   round(valor_total, 2),
+            "ValorUnitario":           float(item.valor_unitario),
+            "descricaoComplementar":   item.descricao,
             "PIS":    {"CodigoSituacaoTributaria": "01"},
             "COFINS": {"CodigoSituacaoTributaria": "01"},
         })
+
+    # ── Itens de vidro ───────────────────────────────────────────────────────
+    for item in pedido.itens_vidro.select_related("vidro").prefetch_related("servicos").all():
+        if not item.vidro.bimer_id:
+            return (
+                False,
+                f"Vidro '{item.vidro.descricao}' não possui ID Bimer. "
+                "Sincronize o catálogo de preços no Bimer para obter os identificadores.",
+                "",
+            )
+
+        from decimal import Decimal as D
+        area_m2 = D(item.largura_mm) * D(item.altura_mm) / D(1_000_000)
+        qtd_m2  = area_m2 * D(item.quantidade)
+        preco_m2_catalogo = item.vidro.preco
+
+        acrescimo = D("0")
+        desconto  = D("0")
+
+        # Serviços: positivos → acréscimo, negativos → desconto
+        for sv in item.servicos.all():
+            if sv.valor >= 0:
+                acrescimo += sv.valor
+            else:
+                desconto += abs(sv.valor)
+
+        # Adicionais manuais
+        for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor"):
+            v = getattr(item, k, None)
+            if v:
+                if v >= 0:
+                    acrescimo += v
+                else:
+                    desconto += abs(v)
+
+        # Desconto percentual sobre o valor base (m² × preço)
+        if item.desconto:
+            desconto += qtd_m2 * preco_m2_catalogo * item.desconto / D(100)
+
+        entrada = {
+            "IdentificadorProduto":    item.vidro.bimer_id,
+            "IdentificadorSetorSaida": "00A0000005",
+            "QuantidadePedida":        round(float(qtd_m2), 4),
+            "Repasses": [{"identificadorCategoria": "000000000R", "IdentificadorPessoa": "00A00001RR"}],
+            "Valor":                   round(float(qtd_m2 * preco_m2_catalogo), 2),
+            "ValorUnitario":           round(float(preco_m2_catalogo), 2),
+            "descricaoComplementar":   item.descricao,
+            "PIS":    {"CodigoSituacaoTributaria": "01"},
+            "COFINS": {"CodigoSituacaoTributaria": "01"},
+        }
+        if acrescimo:
+            entrada["Acrescimo"] = {"Valor": round(float(acrescimo), 2), "Tipo": "V"}
+        if desconto:
+            entrada["Desconto"] = {"Valor": round(float(desconto), 2), "Tipo": "V"}
+
+        itens_bimer.append(entrada)
 
     # ── Payload baseado no JSON de exemplo confirmado ─────────────────────────
     payload = {

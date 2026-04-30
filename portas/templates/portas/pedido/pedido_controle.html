@@ -8,7 +8,7 @@
   <a href="{% url 'pedidos_lista' %}" class="btn btn-sm btn-outline-secondary">← Pedidos</a>
 </div>
 
-{% if status_filtro == 'montagem' and pedidos_com_erro %}
+{% if status_filtro == 'producao' and pedidos_com_erro %}
 <div class="alert alert-danger py-2 small mb-3">
   <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Falha ao enviar para o Bimer:</strong>
   os pedidos abaixo estão marcados com erro e precisam ser reenviados.
@@ -17,14 +17,51 @@
 </div>
 {% endif %}
 
-{# Filtro por status #}
-<div class="btn-group mb-3 flex-wrap" role="group">
-  {% for s_key, s_label in status_choices %}
-  <a href="?status={{ s_key }}"
-     class="btn btn-sm {% if status_filtro == s_key %}btn-dark{% else %}btn-outline-secondary{% endif %}">
-    {{ s_label }}
+{# Links rápidos para as filas quando em produção #}
+{% if status_filtro == 'producao' %}
+<div class="d-flex gap-2 mb-3 d-print-none flex-wrap">
+  <a href="{% url 'fila_corte_perfis' %}" class="btn btn-sm btn-outline-dark">
+    <i class="bi bi-rulers me-1"></i>Fila Perfis
   </a>
-  {% endfor %}
+  <a href="{% url 'fila_corte_vidros_retangulares' %}" class="btn btn-sm btn-outline-primary">
+    <i class="bi bi-grid me-1"></i>Fila Vidros Ret.
+  </a>
+  <a href="{% url 'fila_corte_vidros_organicos' %}" class="btn btn-sm btn-outline-info">
+    <i class="bi bi-circle me-1"></i>Fila Vidros Org.
+  </a>
+  <a href="{% url 'fila_montagem' %}" class="btn btn-sm btn-outline-success">
+    <i class="bi bi-tools me-1"></i>Fila Montagem
+  </a>
+</div>
+{% endif %}
+
+{# Filtros #}
+<div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+
+  {# Status #}
+  <div class="btn-group flex-wrap" role="group">
+    {% for s_key, s_label in status_choices %}
+    <a href="?status={{ s_key }}&tipo={{ tipo_filtro }}"
+       class="btn btn-sm {% if status_filtro == s_key %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      {{ s_label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {# Tipo #}
+  <div class="btn-group" role="group">
+    <a href="?status={{ status_filtro }}&tipo="
+       class="btn btn-sm {% if not tipo_filtro %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+      Todos
+    </a>
+    {% for t_key, t_label in tipo_choices %}
+    <a href="?status={{ status_filtro }}&tipo={{ t_key }}"
+       class="btn btn-sm {% if tipo_filtro == t_key %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+      {{ t_label }}
+    </a>
+    {% endfor %}
+  </div>
+
 </div>
 
 <form method="post" id="formControle">
@@ -39,11 +76,13 @@
             <input type="checkbox" id="selecionarTodos" class="form-check-input" title="Selecionar todos">
           </th>
           <th>#</th>
+          <th>Tipo</th>
           <th>Cliente</th>
           <th>Data</th>
           <th>Usuário</th>
           <th>Status</th>
           <th class="text-center">Itens</th>
+          <th class="text-center">Etapas</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -54,6 +93,13 @@
             <input type="checkbox" name="pedido_ids" value="{{ p.id }}" class="form-check-input chk-pedido">
           </td>
           <td class="fw-semibold">#{{ p.numero }}</td>
+          <td>
+            {% if p.tipo == 'vidro' %}
+              <span class="badge bg-info text-dark">Vidro</span>
+            {% else %}
+              <span class="badge bg-secondary">Porta</span>
+            {% endif %}
+          </td>
           <td>{{ p.cliente.nome }}</td>
           <td>{{ p.data|date:"d/m/Y" }}</td>
           <td>
@@ -61,8 +107,7 @@
           </td>
           <td>
             {% if p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
-            {% elif p.status == 'corte' %}<span class="badge bg-warning text-dark">Ag. Corte</span>
-            {% elif p.status == 'montagem' %}<span class="badge bg-primary">Ag. Montagem</span>
+            {% elif p.status == 'producao' %}<span class="badge bg-warning text-dark">Em Produção</span>
             {% elif p.status == 'wise' %}<span class="badge bg-info text-dark">Wise</span>
             {% elif p.status == 'concluido' %}<span class="badge bg-dark">Concluído</span>
             {% else %}<span class="badge bg-secondary">{{ p.get_status_display }}</span>
@@ -75,6 +120,62 @@
             {% endif %}
           </td>
           <td class="text-center">{{ p.nr_itens }}</td>
+
+          {# ── Etapas de produção com badges coloridos ──────────────────── #}
+          <td class="text-center" style="white-space:nowrap">
+            {% if p.status == 'producao' %}
+              {% if p.tipo == 'porta' %}
+                {# Perfil #}
+                {% if p.tem_perfil_pendente %}
+                  <a href="{% url 'fila_corte_perfis' %}" class="badge bg-warning text-dark text-decoration-none me-1" title="Perfil pendente de corte">
+                    <i class="bi bi-rulers"></i> Perfil
+                  </a>
+                {% else %}
+                  <span class="badge bg-success me-1" title="Perfis cortados">
+                    <i class="bi bi-rulers"></i> Perfil ✓
+                  </span>
+                {% endif %}
+
+                {# Vidro (se o pedido tiver itens com vidro) #}
+                {% if p.tem_itens_com_vidro %}
+                  {% if p.tem_vidro_pendente %}
+                    <a href="{% url 'fila_corte_vidros_retangulares' %}" class="badge bg-warning text-dark text-decoration-none me-1" title="Vidro pendente de corte">
+                      <i class="bi bi-grid"></i> Vidro
+                    </a>
+                  {% else %}
+                    <span class="badge bg-success me-1" title="Vidros cortados">
+                      <i class="bi bi-grid"></i> Vidro ✓
+                    </span>
+                  {% endif %}
+                {% endif %}
+
+                {# Montagem #}
+                {% if p.tem_montagem_pendente %}
+                  <a href="{% url 'fila_montagem' %}" class="badge bg-warning text-dark text-decoration-none" title="Montagem pendente">
+                    <i class="bi bi-tools"></i> Mont.
+                  </a>
+                {% else %}
+                  <span class="badge bg-success" title="Montagem concluída">
+                    <i class="bi bi-tools"></i> Mont. ✓
+                  </span>
+                {% endif %}
+
+              {% else %}{# tipo vidro #}
+                {% if p.tem_vidro_avulso_pendente %}
+                  <a href="{% url 'fila_corte_vidros_retangulares' %}" class="badge bg-warning text-dark text-decoration-none" title="Vidro pendente de corte">
+                    <i class="bi bi-grid"></i> Vidro
+                  </a>
+                {% else %}
+                  <span class="badge bg-success" title="Vidros cortados — pronto para Wise">
+                    <i class="bi bi-grid"></i> Vidro ✓
+                  </span>
+                {% endif %}
+              {% endif %}
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
           <td>
             <a href="{% url 'pedido_detalhe' p.id %}" class="btn btn-sm btn-outline-secondary" title="Detalhes">
               <i class="bi bi-eye"></i>
@@ -83,7 +184,7 @@
               <i class="bi bi-printer"></i>
             </a>
             {% if perms_usuario.producao.alterar_status %}
-              {% if p.bimer_erro and p.status == 'montagem' %}
+              {% if p.bimer_erro and p.status == 'producao' %}
               <button class="btn btn-sm btn-danger"
                       hx-get="{% url 'pedido_enviar_wise' p.id %}"
                       hx-target="#modalConteudo"
@@ -113,29 +214,20 @@
     </table>
   </div>
 
-  {# Botões de ação em massa — exibidos conforme o status atual #}
+  {# Botões de ação em massa #}
   <div class="d-flex gap-2 flex-wrap align-items-center">
     <span class="text-muted small me-1">Com selecionados:</span>
 
     {% if status_filtro == 'aberto' %}
-    <button type="submit" name="action" value="corte" class="btn btn-warning btn-sm text-dark">
-      <i class="bi bi-scissors me-1"></i>Enviar para Corte
+    <button type="submit" name="action" value="producao" class="btn btn-primary btn-sm">
+      <i class="bi bi-play-fill me-1"></i>Enviar para Produção
     </button>
     <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
       Cancelar
     </button>
     {% endif %}
 
-    {% if status_filtro == 'corte' %}
-    <button type="submit" name="action" value="montagem" class="btn btn-primary btn-sm">
-      <i class="bi bi-tools me-1"></i>Enviar para Montagem
-    </button>
-    <button type="submit" name="action" value="aberto" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir
-    </button>
-    {% endif %}
-
-    {% if status_filtro == 'montagem' %}
+    {% if status_filtro == 'producao' %}
     <button type="submit" name="action" value="wise" class="btn btn-info btn-sm text-dark">
       <i class="bi bi-cloud-upload me-1"></i>Marcar Wise
     </button>
@@ -162,7 +254,7 @@
       <i class="bi bi-list-ul me-1"></i>Ver insumos
     </button>
 
-    {% if status_filtro == 'corte' or status_filtro == 'montagem' %}
+    {% if status_filtro == 'producao' %}
     <button type="submit" name="action" value="ver_plano_corte" class="btn btn-outline-info btn-sm">
       <i class="bi bi-grid-3x3-gap me-1"></i>Ver plano de corte
     </button>
@@ -177,7 +269,6 @@
 
 {% block extra_js %}
 <script>
-  // Ativa tooltips Bootstrap (usados nos ícones de erro Bimer)
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
     new bootstrap.Tooltip(el);
   });

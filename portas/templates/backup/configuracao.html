@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Backup{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h4 class="mb-0"><i class="bi bi-archive me-2"></i>Backup do Sistema</h4>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="backup_agora">
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-download me-1"></i>Fazer backup agora
+      </button>
+    </form>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- ── Configuração ──────────────────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold">Configuração</div>
+    <div class="card-body">
+      <form method="post" id="formConfig">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="salvar_config">
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Diretório de destino</label>
+          <div class="input-group">
+            <input type="text" name="diretorio" id="inputDiretorio" class="form-control font-monospace"
+                   value="{{ config.diretorio }}"
+                   placeholder="Ex: C:\Backups\Portas ou /home/user/backups">
+            <button type="button" class="btn btn-outline-secondary" id="btnTestarDir">
+              <i class="bi bi-folder-check me-1"></i>Testar acesso
+            </button>
+          </div>
+          <div id="resultadoTesteDir" class="mt-1"></div>
+          <div class="form-text">Caminho absoluto onde os arquivos .zip serão salvos.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Padrão do nome do arquivo</label>
+          <input type="text" name="padrao_nome" class="form-control font-monospace"
+                 value="{{ config.padrao_nome }}"
+                 placeholder="portas_{data}_{hora}">
+          <div class="form-text">
+            Variáveis disponíveis: <code>{data}</code> (AAAAMMDD) e <code>{hora}</code> (HHMM).
+            Resultado: <code>portas_20260427_1430.zip</code>
+          </div>
+        </div>
+
+        <div class="mb-3 form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="ativo" id="chkAtivo"
+                 {% if config.ativo %}checked{% endif %}>
+          <label class="form-check-label fw-semibold" for="chkAtivo">
+            Agendamento automático ativo
+          </label>
+        </div>
+
+        <!-- ── Agendamentos ───────────────────────────────────────────── -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Horários agendados</label>
+          <div id="agendamentosContainer">
+            {% for ag in agendamentos %}
+            <div class="row g-2 mb-2 agendamento-row">
+              <div class="col-5">
+                <select name="dia_semana" class="form-select form-select-sm">
+                  {% for val, label in dias_choices %}
+                    <option value="{{ val }}" {% if ag.dia_semana == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-4">
+                <input type="time" name="horario" class="form-control form-control-sm"
+                       value="{{ ag.horario|time:'H:i' }}">
+              </div>
+              <div class="col-3">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ag w-100">Remover</button>
+              </div>
+            </div>
+            {% empty %}
+            <!-- linha vazia inicial -->
+            {% endfor %}
+          </div>
+          <button type="button" id="btnAddAgendamento" class="btn btn-sm btn-outline-secondary mt-1">
+            <i class="bi bi-plus-lg me-1"></i>Adicionar horário
+          </button>
+        </div>
+
+        <div class="d-flex justify-content-end">
+          <button type="submit" class="btn btn-primary">Salvar configurações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Histórico ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header fw-semibold">Últimos backups</div>
+    <div class="card-body p-0">
+      {% if historico %}
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Data/hora</th>
+            <th>Arquivo</th>
+            <th>Tamanho</th>
+            <th>Status</th>
+            <th>Mensagem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in historico %}
+          <tr>
+            <td class="text-nowrap">{{ h.data_hora|date:"d/m/Y H:i" }}</td>
+            <td class="font-monospace small text-break">{{ h.arquivo|default:"—" }}</td>
+            <td class="text-nowrap">{{ h.tamanho_formatado }}</td>
+            <td>
+              {% if h.sucesso %}
+                <span class="badge bg-success">OK</span>
+              {% else %}
+                <span class="badge bg-danger">Erro</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ h.mensagem|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="text-muted p-3 mb-0">Nenhum backup realizado ainda.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var container = document.getElementById('agendamentosContainer');
+  var btnAdd    = document.getElementById('btnAddAgendamento');
+  var diasOpts  = `{% for val, label in dias_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}`;
+
+  function novaLinha() {
+    var div = document.createElement('div');
+    div.className = 'row g-2 mb-2 agendamento-row';
+    div.innerHTML =
+      '<div class="col-5"><select name="dia_semana" class="form-select form-select-sm">' + diasOpts + '</select></div>' +
+      '<div class="col-4"><input type="time" name="horario" class="form-control form-control-sm"></div>' +
+      '<div class="col-3"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-ag w-100">Remover</button></div>';
+    return div;
+  }
+
+  container.addEventListener('click', function (e) {
+    if (e.target.classList.contains('btn-remove-ag')) {
+      e.target.closest('.agendamento-row').remove();
+    }
+  });
+
+  btnAdd.addEventListener('click', function () {
+    container.appendChild(novaLinha());
+  });
+})();
+
+// ── Testar diretório ──────────────────────────────────────────────────────────
+(function () {
+  var btn       = document.getElementById('btnTestarDir');
+  var input     = document.getElementById('inputDiretorio');
+  var resultado = document.getElementById('resultadoTesteDir');
+
+  btn.addEventListener('click', function () {
+    var dir = input.value.trim();
+    if (!dir) {
+      resultado.innerHTML = '<span class="text-warning small"><i class="bi bi-exclamation-triangle me-1"></i>Informe um diretório antes de testar.</span>';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testando...';
+    resultado.innerHTML = '';
+
+    fetch("{% url 'backup_testar_diretorio' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+      },
+      body: 'diretorio=' + encodeURIComponent(dir),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        resultado.innerHTML = '<span class="text-success small"><i class="bi bi-check-circle me-1"></i>' + data.mensagem + '</span>';
+      } else {
+        resultado.innerHTML = '<span class="text-danger small"><i class="bi bi-x-circle me-1"></i>' + data.mensagem + '</span>';
+      }
+    })
+    .catch(function () {
+      resultado.innerHTML = '<span class="text-danger small"><i class="bi bi-x-circle me-1"></i>Erro ao contactar o servidor.</span>';
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-folder-check me-1"></i>Testar acesso';
+    });
+  });
+})();
+</script>
+{% endblock %}

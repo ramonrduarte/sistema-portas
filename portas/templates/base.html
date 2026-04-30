@@ -160,6 +160,31 @@
             <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório
           </a>
         </li>
+        <li><div class="nav-section mt-2">Filas de Produção</div></li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'fila_corte_perfis' %}active{% endif %}"
+             href="{% url 'fila_corte_perfis' %}">
+            <i class="bi bi-rulers me-2"></i>Corte Perfis
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'fila_corte_vidros_retangulares' %}active{% endif %}"
+             href="{% url 'fila_corte_vidros_retangulares' %}">
+            <i class="bi bi-grid me-2"></i>Corte Vidros Ret.
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'fila_corte_vidros_organicos' %}active{% endif %}"
+             href="{% url 'fila_corte_vidros_organicos' %}">
+            <i class="bi bi-circle me-2"></i>Corte Vidros Org.
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'fila_montagem' %}active{% endif %}"
+             href="{% url 'fila_montagem' %}">
+            <i class="bi bi-tools me-2"></i>Montagem
+          </a>
+        </li>
         {% endif %}
 
         <!-- Clientes -->
@@ -208,6 +233,18 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_servicos_vidro' %}active{% endif %}"
+             href="{% url 'lista_servicos_vidro' %}">
+            <i class="bi bi-scissors me-2"></i>Serviços de Vidro
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'lista_servicos_porta' %}active{% endif %}"
+             href="{% url 'lista_servicos_porta' %}">
+            <i class="bi bi-tools me-2"></i>Serviços de Porta
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.url_name == 'lista_acabamentos' %}active{% endif %}"
              href="{% url 'lista_acabamentos' %}">
             <i class="bi bi-palette me-2"></i>Acabamentos
@@ -241,6 +278,12 @@
           <a class="nav-link {% if request.resolver_match.url_name == 'configuracoes_empresa' %}active{% endif %}"
              href="{% url 'configuracoes_empresa' %}">
             <i class="bi bi-gear me-2"></i>Configurações
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'backup_config' %}active{% endif %}"
+             href="{% url 'backup_config' %}">
+            <i class="bi bi-archive me-2"></i>Backup
           </a>
         </li>
         {% endif %}

@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -21,10 +21,14 @@ from ..models import (
     Pedido,
     PedidoItem,
     PedidoItemVidro,
+    PedidoItemVidroServico,
+    PedidoItemServicoPorta,
     PedidoStatusLog,
     Perfil,
     PerfilPuxador,
     Puxador,
+    ServicoVidro,
+    ServicoPorta,
     VidroBase,
 )
 from ..services.orcamento import calc_total
@@ -44,17 +48,33 @@ def _adicional_pairs(form):
     ]
 
 
-def _ctx_item_form(form, pedido=None):
-    ctx = {"form": form, "adicional_pairs": _adicional_pairs(form)}
+def _ctx_item_form(form, pedido=None, servicos_selecionados=None):
+    ctx = {
+        "form": form,
+        "adicional_pairs": _adicional_pairs(form),
+        "servicos_porta": ServicoPorta.objects.filter(ativo=True),
+        "servicos_selecionados": [str(pk) for pk in (servicos_selecionados or [])],
+    }
     if pedido:
         ctx["pedido"] = pedido
     return ctx
 
 
 def _itens_e_total(pedido):
-    itens = list(pedido.itens.select_related(
+    itens_porta = list(pedido.itens.select_related(
         "perfil", "acabamento", "perfil_puxador", "puxador", "divisor", "vidro"
-    ).all())
+    ).prefetch_related("servicos__servico").all())
+
+    itens_vidro = list(
+        pedido.itens_vidro
+        .select_related("vidro")
+        .prefetch_related("servicos__servico")
+        .all()
+    )
+    for item in itens_vidro:
+        item.is_vidro = True
+
+    itens = itens_porta + itens_vidro
     total = sum(item.valor_total for item in itens)
     return itens, total
 
@@ -101,13 +121,18 @@ def pedidos_lista(request):
 
     valid_statuses = [v for v, _ in Pedido.STATUS_CHOICES]
 
+    valid_tipos = [v for v, _ in Pedido.TIPO_CHOICES]
+
     if params:
         # Usuário enviou filtros → lê da requisição e salva na sessão
         data_de  = params.get("data_de", "").strip()
         data_ate = params.get("data_ate", "").strip()
         status   = params.get("status", "").strip()
+        tipo     = params.get("tipo", "").strip()
         if status not in valid_statuses:
             status = ""
+        if tipo not in valid_tipos:
+            tipo = ""
         try:
             per_page = int(params["per_page"]) if "per_page" in params else 10
             if per_page not in _PER_PAGE_OPCOES:
@@ -117,7 +142,7 @@ def pedidos_lista(request):
         if not request.headers.get("HX-Request"):
             request.session[_FILTROS_SESSION_KEY] = {
                 "data_de": data_de, "data_ate": data_ate,
-                "status": status, "per_page": per_page,
+                "status": status, "tipo": tipo, "per_page": per_page,
             }
     else:
         # Sem parâmetros → carrega da sessão ou usa padrões (hoje / 10)
@@ -125,6 +150,7 @@ def pedidos_lista(request):
         data_de  = saved.get("data_de") or Date.today().strftime("%Y-%m-%d")
         data_ate = saved.get("data_ate", "")
         status   = saved.get("status", "")
+        tipo     = saved.get("tipo", "")
         per_page = saved.get("per_page", 10)
 
     q = params.get("q", "").strip()
@@ -153,6 +179,9 @@ def pedidos_lista(request):
     if status:
         qs = qs.filter(status=status)
 
+    if tipo:
+        qs = qs.filter(tipo=tipo)
+
     paginator = Paginator(qs, per_page)
     try:
         page_num = int(request.GET.get("page", 1))
@@ -167,6 +196,8 @@ def pedidos_lista(request):
         "data_de": data_de,
         "data_ate": data_ate,
         "status": status,
+        "tipo": tipo,
+        "tipo_choices": Pedido.TIPO_CHOICES,
         "status_choices": Pedido.STATUS_CHOICES,
         "per_page": per_page,
         "per_page_opcoes": _PER_PAGE_OPCOES,
@@ -264,7 +295,7 @@ def pedido_novo(request):
                 data_previsao=Date.today() + timedelta(days=7),
             )
             for item_data in itens:
-                PedidoItem.objects.create(
+                item = PedidoItem.objects.create(
                     pedido=pedido,
                     largura_mm=item_data["largura_mm"],
                     altura_mm=item_data["altura_mm"],
@@ -291,6 +322,12 @@ def pedido_novo(request):
                     valor_unitario=Decimal(item_data["valor_unitario"]),
                     valor_total=Decimal(item_data["valor_total"]),
                 )
+                for svc in item_data.get("servicos_porta", []):
+                    PedidoItemServicoPorta.objects.create(
+                        item=item,
+                        servico_id=svc["servico_id"],
+                        valor=Decimal(svc["valor"]),
+                    )
 
         request.session.pop(_SESSION_KEY, None)
         PedidoStatusLog.objects.create(pedido=pedido, status="aberto", usuario=request.user)
@@ -347,6 +384,33 @@ def pedido_item_temp_add(request):
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
             )
+            # Serviços de porta
+            L_perf = Decimal(cd["largura_mm"])
+            if pp and qtd_pp:
+                L_perf = L_perf - qtd_pp * pp.abatimento_mm + qtd_pp * perfil.abatimento_mm
+            if pux and qtd_pux and pux_sobreposto:
+                L_perf = L_perf - qtd_pux * pux.abatimento_mm
+            metro_linear_perfil = (L_perf * 2 + Decimal(cd["altura_mm"]) * 2) / Decimal(1000)
+            if pux and qtd_pux and pux_tam:
+                metro_linear_perfil += Decimal(qtd_pux * pux_tam) / Decimal(1000)
+            if divisor and qtd_div:
+                metro_linear_perfil += Decimal(qtd_div * cd["largura_mm"]) / Decimal(1000)
+            m2_vidro_base = Decimal(cd["largura_mm"]) * Decimal(cd["altura_mm"]) / Decimal(1_000_000)
+            metro_linear_vidro = (Decimal(cd["largura_mm"]) * 2 + Decimal(cd["altura_mm"]) * 2) / Decimal(1000)
+
+            ids_servicos_porta = request.POST.getlist("servico_porta")
+            servicos_porta_data = []
+            for sv in ServicoPorta.objects.filter(pk__in=ids_servicos_porta, ativo=True):
+                if sv.tipo_calculo == "metro_linear_perfil":
+                    base = metro_linear_perfil
+                elif sv.tipo_calculo == "m2_vidro":
+                    base = m2_vidro_base
+                else:
+                    base = metro_linear_vidro
+                val = sv.calcular(base)
+                valor_base += val
+                servicos_porta_data.append({"servico_id": sv.pk, "nome": sv.nome, "valor": f"{val:.2f}"})
+
             valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
 
             # Monta a descrição: Porta modelo1/modelo2 (Xcm) Acabamento LxA Vidro
@@ -393,6 +457,7 @@ def pedido_item_temp_add(request):
                 "desconto": f"{desconto_pct:.2f}" if desconto_pct else None,
                 "valor_unitario": f"{valor_unit:.2f}",
                 "valor_total": f"{valor_unit * Decimal(qtd):.2f}",
+                "servicos_porta": servicos_porta_data,
             }
             # Monta adicionais_list p/ compatibilidade com o template (igual à property do modelo)
             item_data["adicionais_list"] = [
@@ -508,7 +573,7 @@ def pedido_novo_vidro(request):
                 data_previsao=Date.today() + timedelta(days=7),
             )
             for item_data in itens:
-                PedidoItemVidro.objects.create(
+                item = PedidoItemVidro.objects.create(
                     pedido=pedido,
                     vidro_id=item_data["vidro_id"],
                     largura_mm=item_data["largura_mm"],
@@ -526,6 +591,14 @@ def pedido_novo_vidro(request):
                     valor_unitario=Decimal(item_data["valor_unitario"]),
                     valor_total=Decimal(item_data["valor_total"]),
                 )
+                for sv_data in item_data.get("servicos", []):
+                    try:
+                        sv = ServicoVidro.objects.get(pk=sv_data["servico_id"])
+                        PedidoItemVidroServico.objects.create(
+                            item=item, servico=sv, valor=Decimal(sv_data["valor"])
+                        )
+                    except ServicoVidro.DoesNotExist:
+                        pass
 
         request.session.pop(_SESSION_KEY_VIDRO, None)
         PedidoStatusLog.objects.create(pedido=pedido, status="aberto", usuario=request.user)
@@ -542,6 +615,9 @@ def pedido_novo_vidro(request):
 def pedido_item_vidro_temp_add(request):
     if not _get_perms(request.user)["pedidos"]["criar"]:
         return _sem_permissao()
+
+    servicos_vidro = ServicoVidro.objects.filter(ativo=True)
+
     if request.method == "POST":
         form = PedidoItemVidroForm(request.POST)
         if form.is_valid():
@@ -555,6 +631,15 @@ def pedido_item_vidro_temp_add(request):
             )
             area_m2 = Decimal(cd["largura_mm"]) * Decimal(cd["altura_mm"]) / Decimal(1_000_000)
             valor_base = area_m2 * vidro.preco
+
+            ids_servicos = request.POST.getlist("servico_vidro")
+            servicos_sel = list(servicos_vidro.filter(pk__in=ids_servicos))
+            servicos_data = []
+            for sv in servicos_sel:
+                val = sv.calcular(area_m2)
+                valor_base += val
+                servicos_data.append({"servico_id": sv.pk, "nome": sv.nome, "valor": f"{val:.2f}"})
+
             valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
 
             item_data = {
@@ -573,6 +658,7 @@ def pedido_item_vidro_temp_add(request):
                 "adicional3_obs":   cd.get("adicional3_obs") or "",
                 "adicional4_valor": f"{cd.get('adicional4_valor') or 0:.2f}" if cd.get("adicional4_valor") else None,
                 "adicional4_obs":   cd.get("adicional4_obs") or "",
+                "servicos": servicos_data,
                 "valor_unitario": f"{valor_unit:.2f}",
                 "valor_total": f"{valor_unit * Decimal(qtd):.2f}",
             }
@@ -590,10 +676,20 @@ def pedido_item_vidro_temp_add(request):
             request.session.modified = True
             return _resp_atualiza_rascunho_vidro(request, itens)
 
-        return render(request, "portas/pedido/item_vidro_form.html", {"form": form})
+        return render(request, "portas/pedido/item_vidro_form.html", {
+            "form": form,
+            "adicional_pairs": _adicional_pairs(form),
+            "servicos_vidro": servicos_vidro,
+            "servicos_selecionados": request.POST.getlist("servico_vidro"),
+        })
 
     form = PedidoItemVidroForm()
-    return render(request, "portas/pedido/item_vidro_form.html", {"form": form})
+    return render(request, "portas/pedido/item_vidro_form.html", {
+        "form": form,
+        "adicional_pairs": _adicional_pairs(form),
+        "servicos_vidro": servicos_vidro,
+        "servicos_selecionados": [],
+    })
 
 
 @login_required
@@ -626,6 +722,8 @@ def pedido_item_vidro_novo(request, pedido_pk):
     if pedido.status != "aberto":
         return HttpResponseForbidden("Itens só podem ser adicionados a pedidos em aberto.")
 
+    servicos_vidro = ServicoVidro.objects.filter(ativo=True)
+
     if request.method == "POST":
         form = PedidoItemVidroForm(request.POST)
         if form.is_valid():
@@ -639,9 +737,15 @@ def pedido_item_vidro_novo(request, pedido_pk):
             )
             area_m2 = Decimal(cd["largura_mm"]) * Decimal(cd["altura_mm"]) / Decimal(1_000_000)
             valor_base = area_m2 * vidro.preco
+
+            ids_servicos = request.POST.getlist("servico_vidro")
+            servicos_sel = list(servicos_vidro.filter(pk__in=ids_servicos))
+            for sv in servicos_sel:
+                valor_base += sv.calcular(area_m2)
+
             valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
 
-            PedidoItemVidro.objects.create(
+            item = PedidoItemVidro.objects.create(
                 pedido=pedido,
                 vidro=vidro,
                 largura_mm=cd["largura_mm"],
@@ -659,6 +763,10 @@ def pedido_item_vidro_novo(request, pedido_pk):
                 valor_unitario=valor_unit,
                 valor_total=valor_unit * qtd,
             )
+            for sv in servicos_sel:
+                PedidoItemVidroServico.objects.create(
+                    item=item, servico=sv, valor=sv.calcular(area_m2)
+                )
 
             itens = pedido.itens_vidro.all()
             total = sum(i.valor_total for i in itens)
@@ -679,10 +787,22 @@ def pedido_item_vidro_novo(request, pedido_pk):
             resp["HX-Trigger"] = "fecharModalCadastro"
             return resp
 
-        return render(request, "portas/pedido/item_vidro_form.html", {"form": form, "pedido": pedido})
+        return render(request, "portas/pedido/item_vidro_form.html", {
+            "form": form,
+            "adicional_pairs": _adicional_pairs(form),
+            "pedido": pedido,
+            "servicos_vidro": servicos_vidro,
+            "servicos_selecionados": request.POST.getlist("servico_vidro"),
+        })
 
     form = PedidoItemVidroForm()
-    return render(request, "portas/pedido/item_vidro_form.html", {"form": form, "pedido": pedido})
+    return render(request, "portas/pedido/item_vidro_form.html", {
+        "form": form,
+        "adicional_pairs": _adicional_pairs(form),
+        "pedido": pedido,
+        "servicos_vidro": servicos_vidro,
+        "servicos_selecionados": [],
+    })
 
 
 @login_required
@@ -815,10 +935,10 @@ def pedido_previsao(request, pk):
     return redirect(reverse("pedido_detalhe", args=[pk]))
 
 
-# ── Enviar pedido para Aguardando Corte ───────────────────────────────────────
+# ── Enviar pedido para Em Produção ────────────────────────────────────────────
 
 @login_required
-def pedido_enviar_corte(request, pk):
+def pedido_enviar_producao(request, pk):
     if not _get_perms(request.user)["producao"]["alterar_status"]:
         return _sem_permissao("Você não tem permissão para alterar o status de pedidos.")
     pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
@@ -826,37 +946,15 @@ def pedido_enviar_corte(request, pk):
     if request.method == "POST":
         if pedido.status != "aberto":
             return HttpResponse(
-                '<div class="alert alert-warning m-3">Só pedidos <strong>Abertos</strong> podem ser enviados para Corte.</div>',
+                '<div class="alert alert-warning m-3">Só pedidos <strong>Abertos</strong> podem ser enviados para Produção.</div>',
                 status=400,
             )
-        pedido.status = "corte"
+        pedido.status = "producao"
         pedido.save(update_fields=["status"])
         _log_status(pedido, request)
         return _resp_atualizar_lista()
 
-    return render(request, "portas/pedido/_confirm_corte.html", {"pedido": pedido})
-
-
-# ── Enviar pedido para Aguardando Montagem ─────────────────────────────────────
-
-@login_required
-def pedido_enviar_montagem(request, pk):
-    if not _get_perms(request.user)["producao"]["alterar_status"]:
-        return _sem_permissao("Você não tem permissão para alterar o status de pedidos.")
-    pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
-
-    if request.method == "POST":
-        if pedido.status != "corte":
-            return HttpResponse(
-                '<div class="alert alert-warning m-3">Só pedidos em <strong>Aguardando Corte</strong> podem ser enviados para Montagem.</div>',
-                status=400,
-            )
-        pedido.status = "montagem"
-        pedido.save(update_fields=["status"])
-        _log_status(pedido, request)
-        return _resp_atualizar_lista()
-
-    return render(request, "portas/pedido/_confirm_montagem.html", {"pedido": pedido})
+    return render(request, "portas/pedido/_confirm_producao.html", {"pedido": pedido})
 
 
 # ── Enviar pedido para Wise (integração Bimer) ────────────────────────────────
@@ -868,9 +966,24 @@ def pedido_enviar_wise(request, pk):
     pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
 
     if request.method == "POST":
-        if pedido.status != "montagem":
+        if pedido.status != "producao":
             return HttpResponse(
-                '<div class="alert alert-warning m-3">Só pedidos em <strong>Aguardando Montagem</strong> podem ser enviados para Wise.</div>',
+                '<div class="alert alert-warning m-3">Só pedidos em <strong>Em Produção</strong> podem ser enviados para Wise.</div>',
+                status=400,
+            )
+
+        if pedido.tipo == "porta":
+            tem_pendencia = PedidoItem.objects.filter(pedido=pedido, montagem_feita=False).exists()
+            msg_pendencia = "montagem pendente. Finalize a montagem na <strong>fila de montagem</strong>"
+        else:
+            tem_pendencia = PedidoItemVidro.objects.filter(pedido=pedido, vidro_cortado=False).exists()
+            msg_pendencia = "corte de vidro pendente. Finalize o corte na <strong>fila de vidros</strong>"
+        if tem_pendencia:
+            return HttpResponse(
+                f'<div class="alert alert-danger m-3">'
+                f'<i class="bi bi-exclamation-triangle-fill me-2"></i>'
+                f'Este pedido possui {msg_pendencia} antes de enviar para Wise.'
+                f'</div>',
                 status=400,
             )
 
@@ -936,9 +1049,9 @@ def pedido_marcar_wise_manual(request, pk):
     pedido = get_object_or_404(Pedido, pk=pk)
 
     if request.method == "POST":
-        if pedido.status != "montagem":
+        if pedido.status != "producao":
             return HttpResponse(
-                '<div class="alert alert-warning m-3">Só pedidos em <strong>Aguardando Montagem</strong> podem ser marcados como Wise.</div>',
+                '<div class="alert alert-warning m-3">Só pedidos em <strong>Em Produção</strong> podem ser marcados como Wise.</div>',
                 status=400,
             )
         pedido.status = "wise"
@@ -1086,9 +1199,9 @@ def pedido_cancelar(request, pk):
                 '<div class="alert alert-danger m-3">Pedidos Wise ou Concluídos não podem ser cancelados.</div>',
                 status=403,
             )
-        if pedido.status in ("corte", "montagem"):
+        if pedido.status == "producao":
             return HttpResponse(
-                '<div class="alert alert-danger m-3">Pedidos em <strong>Aguardando Corte</strong> ou <strong>Aguardando Montagem</strong> precisam ser reabertos antes de cancelar.</div>',
+                '<div class="alert alert-danger m-3">Pedidos <strong>Em Produção</strong> precisam ser reabertos antes de cancelar.</div>',
                 status=403,
             )
         if pedido.status == "cancelado":
@@ -1183,9 +1296,37 @@ def pedido_item_novo(request, pedido_pk):
                 preco_vidro_m2=(vidro.preco if vidro else None),
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
             )
+
+            # Serviços de porta
+            L_perf = Decimal(cd["largura_mm"])
+            if pp and qtd_pp:
+                L_perf = L_perf - qtd_pp * pp.abatimento_mm + qtd_pp * perfil.abatimento_mm
+            if pux and qtd_pux and pux_sobreposto:
+                L_perf = L_perf - qtd_pux * pux.abatimento_mm
+            metro_linear_perfil = (L_perf * 2 + Decimal(cd["altura_mm"]) * 2) / Decimal(1000)
+            if pux and qtd_pux and pux_tam:
+                metro_linear_perfil += Decimal(qtd_pux * pux_tam) / Decimal(1000)
+            if divisor and qtd_div:
+                metro_linear_perfil += Decimal(qtd_div * cd["largura_mm"]) / Decimal(1000)
+            m2_vidro_base = Decimal(cd["largura_mm"]) * Decimal(cd["altura_mm"]) / Decimal(1_000_000)
+            metro_linear_vidro = (Decimal(cd["largura_mm"]) * 2 + Decimal(cd["altura_mm"]) * 2) / Decimal(1000)
+
+            ids_servicos_porta = request.POST.getlist("servico_porta")
+            servicos_porta_objs = []
+            for sv in ServicoPorta.objects.filter(pk__in=ids_servicos_porta, ativo=True):
+                if sv.tipo_calculo == "metro_linear_perfil":
+                    base = metro_linear_perfil
+                elif sv.tipo_calculo == "m2_vidro":
+                    base = m2_vidro_base
+                else:
+                    base = metro_linear_vidro
+                val = sv.calcular(base)
+                valor_base += val
+                servicos_porta_objs.append((sv, val))
+
             valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
 
-            PedidoItem.objects.create(
+            item = PedidoItem.objects.create(
                 pedido=pedido,
                 largura_mm=cd["largura_mm"],
                 altura_mm=cd["altura_mm"],
@@ -1213,6 +1354,8 @@ def pedido_item_novo(request, pedido_pk):
                 valor_unitario=valor_unit,
                 valor_total=(valor_unit * Decimal(qtd)),
             )
+            for sv, val in servicos_porta_objs:
+                PedidoItemServicoPorta.objects.create(item=item, servico=sv, valor=val)
 
             return _resp_atualiza_tabela(request, pedido)
 
@@ -1269,6 +1412,7 @@ def htmx_calcular_item(request):
         pux_id = request.GET.get("puxador")
         qtd_pux = int(request.GET.get("qtd_puxador") or 0)
         pux_tam = int(request.GET.get("puxador_tamanho_mm") or 0)
+        pux_sobreposto = request.GET.get("puxador_sobreposto") in ("on", "true", "True", "1")
         div_id = request.GET.get("divisor")
         qtd_div = int(request.GET.get("qtd_divisor") or 0)
         vidro_id = request.GET.get("vidro")
@@ -1298,14 +1442,96 @@ def htmx_calcular_item(request):
             preco_vidro_m2=(vidro.preco if vidro else None),
             custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
         )
+
+        # Calcular bases para serviços de porta
+        L_perf = Decimal(largura)
+        if pp and qtd_pp:
+            L_perf = L_perf - qtd_pp * pp.abatimento_mm + qtd_pp * perfil.abatimento_mm
+        if pux and qtd_pux and pux_sobreposto:
+            L_perf = L_perf - qtd_pux * pux.abatimento_mm
+
+        metro_linear_perfil = (L_perf * 2 + Decimal(altura) * 2) / Decimal(1000)
+        if pux and qtd_pux and pux_tam:
+            metro_linear_perfil += Decimal(qtd_pux * pux_tam) / Decimal(1000)
+        if divisor and qtd_div:
+            metro_linear_perfil += Decimal(qtd_div * largura) / Decimal(1000)
+
+        m2_vidro_base = Decimal(largura) * Decimal(altura) / Decimal(1_000_000)
+        metro_linear_vidro = (Decimal(largura) * 2 + Decimal(altura) * 2) / Decimal(1000)
+
+        ids_servicos_porta = request.GET.getlist("servico_porta")
+        servicos_calc = []
+        total_servicos = Decimal("0")
+        for sv in ServicoPorta.objects.filter(pk__in=ids_servicos_porta, ativo=True):
+            if sv.tipo_calculo == "metro_linear_perfil":
+                base = metro_linear_perfil
+            elif sv.tipo_calculo == "m2_vidro":
+                base = m2_vidro_base
+            else:
+                base = metro_linear_vidro
+            val = sv.calcular(base)
+            servicos_calc.append((sv.nome, val))
+            total_servicos += val
+
+        valor_base += total_servicos
         desconto_valor = valor_base * desconto_pct / Decimal(100)
 
         return render(request, _tmpl, {
             "valor_base": valor_base,
+            "servicos": servicos_calc if servicos_calc else None,
             "desconto_pct": desconto_pct if desconto_pct else None,
             "desconto_valor": desconto_valor if desconto_pct else None,
             "adicional": adicional if adicional else None,
             "valor_total": (valor_base - desconto_valor + adicional) * Decimal(qtd),
+        })
+
+    except (ValueError, TypeError):
+        return render(request, _tmpl, {"erro": "Dados inválidos para cálculo."})
+
+
+@login_required
+def htmx_calcular_item_vidro(request):
+    _tmpl = "portas/pedido/_resumo_calculo_vidro.html"
+    try:
+        largura = int(request.GET.get("largura_mm") or 0)
+        altura  = int(request.GET.get("altura_mm") or 0)
+        qtd     = int(request.GET.get("quantidade") or 1)
+        vidro_id = request.GET.get("vidro")
+        desconto_pct = Decimal(request.GET.get("desconto") or 0)
+        adicional = sum(
+            Decimal(request.GET.get(k) or 0)
+            for k in ("adicional_valor", "adicional2_valor", "adicional3_valor", "adicional4_valor")
+        )
+
+        if not vidro_id or not largura or not altura:
+            return render(request, _tmpl, {"erro": "Preencha largura, altura e selecione o modelo."})
+
+        vidro = VidroBase.objects.filter(pk=vidro_id).first()
+        if not vidro:
+            return render(request, _tmpl, {"erro": "Modelo de vidro não encontrado."})
+
+        area_m2 = Decimal(largura) * Decimal(altura) / Decimal(1_000_000)
+        valor_vidro = area_m2 * vidro.preco
+
+        ids_servicos = request.GET.getlist("servico_vidro")
+        servicos_calc = []
+        total_servicos = Decimal("0")
+        for sv in ServicoVidro.objects.filter(pk__in=ids_servicos, ativo=True):
+            val = sv.calcular(area_m2)
+            servicos_calc.append((sv.nome, val))
+            total_servicos += val
+
+        valor_base = valor_vidro + total_servicos
+        desconto_valor = valor_base * desconto_pct / Decimal(100)
+        valor_unit = valor_base - desconto_valor + adicional
+
+        return render(request, _tmpl, {
+            "valor_vidro":  valor_vidro,
+            "servicos":     servicos_calc,
+            "desconto_pct": desconto_pct if desconto_pct else None,
+            "desconto_valor": desconto_valor if desconto_pct else None,
+            "adicional":    adicional if adicional else None,
+            "valor_total":  valor_unit * Decimal(qtd),
         })
 
     except (ValueError, TypeError):
@@ -1359,9 +1585,13 @@ def pedido_controle(request):
     if not _get_perms(request.user)["producao"]["ver"]:
         return _sem_permissao("Você não tem permissão para acessar o controle de produção.")
     valid_statuses = [s[0] for s in Pedido.STATUS_CHOICES]
+    valid_tipos    = [v for v, _ in Pedido.TIPO_CHOICES]
     status_filtro = request.GET.get("status", "aberto")
+    tipo_filtro   = request.GET.get("tipo", "")
     if status_filtro not in valid_statuses:
         status_filtro = "aberto"
+    if tipo_filtro not in valid_tipos:
+        tipo_filtro = ""
 
     if request.method == "POST":
         action = request.POST.get("action", "")
@@ -1385,7 +1615,17 @@ def pedido_controle(request):
 
                 config = BimerConfig.get()
                 erros_bimer = []
-                for pedido in Pedido.objects.filter(pk__in=ids, status="montagem").select_related("cliente"):
+                pedidos_bloqueados = []
+                for pedido in Pedido.objects.filter(pk__in=ids, status="producao").select_related("cliente"):
+                    if pedido.tipo == "porta":
+                        tem_pendencia = (
+                            PedidoItem.objects.filter(pedido=pedido, montagem_feita=False).exists()
+                        )
+                    else:
+                        tem_pendencia = PedidoItemVidro.objects.filter(pedido=pedido, vidro_cortado=False).exists()
+                    if tem_pendencia:
+                        pedidos_bloqueados.append(f"#{pedido.numero}")
+                        continue
                     # Se já houve tentativa anterior com erro, verifica no Bimer
                     # antes de reenviar para evitar duplicata.
                     if pedido.bimer_erro:
@@ -1414,20 +1654,17 @@ def pedido_controle(request):
                         pedido.save(update_fields=["bimer_erro"])
                         erros_bimer.append(f"#{pedido.numero}")
 
-                if erros_bimer:
-                    return redirect(f"{reverse('pedido_controle')}?status=montagem")
+                if erros_bimer or pedidos_bloqueados:
+                    return redirect(f"{reverse('pedido_controle')}?status=producao")
                 return redirect(f"{reverse('pedido_controle')}?status=wise")
 
             qs_bulk = Pedido.objects.filter(pk__in=ids)
             # Reabrir e cancelar não se aplicam a pedidos wise/concluido
             if action in ("aberto", "cancelado"):
                 qs_bulk = qs_bulk.exclude(status__in=("wise", "concluido"))
-            # corte só se aplica a pedidos abertos
-            if action == "corte":
+            # producao só se aplica a pedidos abertos
+            if action == "producao":
                 qs_bulk = qs_bulk.filter(status="aberto")
-            # montagem só se aplica a pedidos em corte
-            if action == "montagem":
-                qs_bulk = qs_bulk.filter(status="corte")
             qs_bulk.update(status=action)
             # Registra log para cada pedido alterado em bulk
             for pedido in qs_bulk.only("id", "status"):
@@ -1444,16 +1681,38 @@ def pedido_controle(request):
         Pedido.objects
         .filter(status=status_filtro)
         .select_related("cliente", "usuario")
-        .annotate(nr_itens=Count("itens"))
+        .annotate(
+            nr_itens=Count("itens"),
+            tem_perfil_pendente=Exists(
+                PedidoItem.objects.filter(pedido=OuterRef("pk"), perfil_cortado=False)
+            ),
+            tem_itens_com_vidro=Exists(
+                PedidoItem.objects.filter(pedido=OuterRef("pk"), vidro__isnull=False)
+            ),
+            tem_vidro_pendente=Exists(
+                PedidoItem.objects.filter(pedido=OuterRef("pk"), vidro_cortado=False, vidro__isnull=False)
+            ),
+            tem_vidro_avulso_pendente=Exists(
+                PedidoItemVidro.objects.filter(pedido=OuterRef("pk"), vidro_cortado=False)
+            ),
+            tem_montagem_pendente=Exists(
+                PedidoItem.objects.filter(pedido=OuterRef("pk"), montagem_feita=False)
+            ),
+        )
         .order_by("-id")
     )
+    if tipo_filtro:
+        qs = qs.filter(tipo=tipo_filtro)
+
     pedidos_com_erro = (
-        status_filtro == "montagem"
+        status_filtro == "producao"
         and qs.filter(bimer_erro__gt="").exists()
     )
     return render(request, "portas/pedido/pedido_controle.html", {
         "pedidos": qs,
         "status_filtro": status_filtro,
+        "tipo_filtro": tipo_filtro,
+        "tipo_choices": Pedido.TIPO_CHOICES,
         "status_choices": Pedido.STATUS_CHOICES,
         "pedidos_com_erro": pedidos_com_erro,
     })

@@ -17,6 +17,8 @@ from ..models import (
     Perfil,
     VidroBase,
     EspessuraVidro,
+    ServicoVidro,
+    ServicoPorta,
 )
 
 
@@ -263,4 +265,54 @@ class VidroBaseForm(forms.ModelForm):
             "espessura": forms.Select(attrs={"class": "form-select"}),
             "chapa_largura_mm": forms.NumberInput(attrs={"class": "form-control"}),
             "chapa_altura_mm": forms.NumberInput(attrs={"class": "form-control"}),
+        }
+
+
+class ServicoVidroForm(forms.ModelForm):
+    class Meta:
+        model = ServicoVidro
+        fields = ["nome", "preco_m2", "valor_fixo", "corte_especial", "ativo", "ordem"]
+        widgets = {
+            "nome":           forms.TextInput(attrs={"class": "form-control"}),
+            "preco_m2":       forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "valor_fixo":     forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0"}),
+            "corte_especial": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "ativo":          forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "ordem":          forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+        }
+        labels = {
+            "nome":       "Nome do serviço",
+            "preco_m2":   "Preço por m² (R$)",
+            "valor_fixo": "Valor fixo adicional (R$)",
+            "ativo":      "Ativo",
+            "ordem":      "Ordem de exibição",
+        }
+        help_texts = {
+            "preco_m2":   "Use valor negativo para aplicar desconto no m². Ex: −10,00 para abater R$ 10 por m².",
+            "valor_fixo": "Somado ao resultado de m² × preço. Use para cobranças fixas como no Jateado.",
+            "ordem":      "Menor número aparece primeiro no formulário.",
+        }
+
+
+class ServicoPortaForm(forms.ModelForm):
+    class Meta:
+        model = ServicoPorta
+        fields = ["nome", "tipo_calculo", "preco", "ativo", "ordem"]
+        widgets = {
+            "nome":         forms.TextInput(attrs={"class": "form-control"}),
+            "tipo_calculo": forms.Select(attrs={"class": "form-select"}),
+            "preco":        forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "ativo":        forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "ordem":        forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+        }
+        labels = {
+            "nome":         "Nome do serviço",
+            "tipo_calculo": "Base de cálculo",
+            "preco":        "Preço por unidade (R$)",
+            "ativo":        "Ativo",
+            "ordem":        "Ordem de exibição",
+        }
+        help_texts = {
+            "preco": "Por metro linear ou por m², conforme a base de cálculo selecionada.",
+            "ordem": "Menor número aparece primeiro no formulário.",
         }

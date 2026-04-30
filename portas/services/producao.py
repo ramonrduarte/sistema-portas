@@ -7,17 +7,35 @@ from decimal import Decimal
 from ..models import PedidoItem, PedidoItemVidro
 
 
+# ── Dimensões reais do perfil ─────────────────────────────────────────────────
+
+def _calcular_largura_perfil(item) -> int:
+    """
+    Largura de corte das peças horizontais do perfil estrutural.
+    Com PP, o encaixe desconta ab_pp e soma ab_perf por lado de PP.
+    Puxador avulso sobreposto: desconta abatimento_mm do puxador (1 lado).
+    """
+    L = item.largura_mm
+    pp = item.perfil_puxador
+    qtd_pp = item.qtd_perfil_puxador or 0
+    result = L
+    if pp and qtd_pp >= 1:
+        ab_perf = item.perfil.abatimento_mm
+        result = L - qtd_pp * pp.abatimento_mm + qtd_pp * ab_perf
+    if item.puxador_id and item.puxador_sobreposto and item.qtd_puxador:
+        result = result - item.qtd_puxador * item.puxador.abatimento_mm
+    return int(round(float(result)))
+
+
 # ── Dimensões reais do vidro ──────────────────────────────────────────────────
 
 def _calcular_dimensoes_vidro(item) -> list:
     """
     Retorna lista de (largura_mm, altura_mm) de cada peca de vidro.
 
-    - Sem divisor aparente ou sem alturas: 1 peca, dimensoes normais com abatimentos.
-    - Divisor aparente + alturas: N+1 pecas onde N = qtd_divisor.
-    - vidro_polido no perfil: +2mm em cada dimensao do vidro (por peca).
-    - Lado que encosta no divisor: +1mm na altura da peca.
-    - Abatimento do divisor: descontado em cada lado que encosta no divisor.
+    Polimento: vidro_polido=True adiciona 2mm por cada lado onde o vidro encosta,
+    independente do tipo (perfil, PP ou divisor). Com 2 lados por dimensao,
+    o resultado e sempre +4mm em largura e +4mm em altura.
     """
     L, A = item.largura_mm, item.altura_mm
     perfil = item.perfil
@@ -27,21 +45,21 @@ def _calcular_dimensoes_vidro(item) -> list:
     qtd_pp = item.qtd_perfil_puxador or 0
     qtd_pux = item.qtd_puxador or 0
     ab_perf = perfil.abatimento_mm
-    polimento = 2 if perfil.vidro_polido else 0
+    pol = 4 if perfil.vidro_polido else 0  # 2mm por lado x 2 lados = 4mm por dimensao
 
-    # Largura do vidro (nao muda com divisores horizontais)
     pux_sobreposto = getattr(item, 'puxador_sobreposto', True)
+
+    # Largura: abatimento varia por configuracao de PP; polimento sempre +4mm
     if pp and qtd_pp == 1:
-        glass_w = L - ab_perf - pp.abatimento_mm
+        glass_w = L - ab_perf - pp.abatimento_mm + pol
     elif pp and qtd_pp == 2:
-        glass_w = L - 2 * pp.abatimento_mm
+        glass_w = L - 2 * pp.abatimento_mm + pol
     elif pux and qtd_pux == 1:
-        glass_w = L - 2 * ab_perf - (pux.abatimento_mm if pux_sobreposto else 0)
+        glass_w = L - 2 * ab_perf - (pux.abatimento_mm if pux_sobreposto else 0) + pol
     elif pux and qtd_pux >= 2:
-        glass_w = L - 2 * ab_perf - (2 * pux.abatimento_mm if pux_sobreposto else 0)
+        glass_w = L - 2 * ab_perf - (2 * pux.abatimento_mm if pux_sobreposto else 0) + pol
     else:
-        glass_w = L - 2 * ab_perf
-    glass_w += polimento
+        glass_w = L - 2 * ab_perf + pol
 
     # Divisor aparente com alturas -> multiplas pecas de vidro
     h1 = getattr(item, 'divisor_altura_1', None)
@@ -55,12 +73,11 @@ def _calcular_dimensoes_vidro(item) -> list:
 
     if tem_divisor_aparente:
         ab_div = divisor.abatimento_mm
-        # pol_lado: polimento por lado de perfil (1mm se vidro_polido, senao 0)
-        pol_lado = Decimal(1) if perfil.vidro_polido else Decimal(0)
-        # peca perf+div: 1 lado perfil + 1 lado divisor
-        h_peca_perf_div = lambda span: int(span) - ab_perf + pol_lado - ab_div + 1
-        # peca div+div: 2 lados divisor (so aparece com qtd_div=2)
-        h_peca_div_div  = lambda span: int(span) - 2 * ab_div + 2
+        pol_lado = Decimal(pol // 2)  # 2mm por lado (perfil ou divisor)
+        # peca 1 lado perfil + 1 lado divisor: cada lado recebe polimento
+        h_peca_perf_div = lambda span: int(span) - ab_perf + pol_lado - ab_div + pol_lado
+        # peca 2 lados divisor: cada lado recebe polimento
+        h_peca_div_div  = lambda span: int(span) - 2 * ab_div + 2 * pol_lado
 
         if qtd_div == 2 and h2:
             return [
@@ -74,8 +91,12 @@ def _calcular_dimensoes_vidro(item) -> list:
                 (glass_w, h_peca_perf_div(A - int(h1))),
             ]
 
-    # Peca unica
-    glass_h = A - 2 * ab_perf + polimento
+    # Peca unica: altura com 2 lados → +pol
+    glass_h = A - 2 * ab_perf + pol
+    # Divisor aparente: cada divisor desconta abatimento e acrescenta 4mm de polimento
+    # (o lado do vidro que toca o divisor aparente é sempre polido)
+    if divisor and getattr(divisor, 'encaixe', None) == 'aparente' and qtd_div:
+        glass_h += qtd_div * (4 - divisor.abatimento_mm)
     return [(glass_w, glass_h)]
 
 
@@ -258,7 +279,7 @@ def _shelf_2d(pecas: list, chapa_l: int, chapa_a: int) -> list:
 _BARRA_MM = 5850
 
 
-def calcular_plano_corte(pedido_ids: list) -> dict:
+def calcular_plano_corte(pedido_ids: list, *, item_ids=None, item_vidro_ids=None) -> dict:
     """
     Calcula o plano de corte para perfis e vidros dos pedidos informados.
 
@@ -279,9 +300,11 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
           ]
         }
     """
+    itens_qs = PedidoItem.objects.filter(pedido_id__in=pedido_ids)
+    if item_ids is not None:
+        itens_qs = itens_qs.filter(pk__in=item_ids)
     itens = list(
-        PedidoItem.objects
-        .filter(pedido_id__in=pedido_ids)
+        itens_qs
         .select_related(
             "pedido",
             "perfil__acabamento",
@@ -322,12 +345,13 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
         lbl = item_labels[item.id]
 
         # Peças de perfil estrutural por porta
+        L_perf = _calcular_largura_perfil(item)
         if qtd_pp == 1:
-            peca_perfil = [(L, lbl), (L, lbl), (A, lbl)] * qtd
+            peca_perfil = [(L_perf, lbl), (L_perf, lbl), (A, lbl)] * qtd
         elif qtd_pp == 2:
-            peca_perfil = [(L, lbl), (L, lbl)] * qtd
+            peca_perfil = [(L_perf, lbl), (L_perf, lbl)] * qtd
         else:
-            peca_perfil = [(L, lbl), (L, lbl), (A, lbl), (A, lbl)] * qtd
+            peca_perfil = [(L_perf, lbl), (L_perf, lbl), (A, lbl), (A, lbl)] * qtd
 
         pecas_perfil[item.perfil_id].extend(peca_perfil)
         obj_perfis[item.perfil_id] = item.perfil
@@ -364,9 +388,11 @@ def calcular_plano_corte(pedido_ids: list) -> dict:
             obj_vidros_plano[item.vidro_id] = item.vidro
 
     # PedidoItemVidro: dimensões especificadas diretamente, sem abatimentos
+    itens_vidro_qs = PedidoItemVidro.objects.filter(pedido_id__in=pedido_ids)
+    if item_vidro_ids is not None:
+        itens_vidro_qs = itens_vidro_qs.filter(pk__in=item_vidro_ids)
     itens_vidro_direct = list(
-        PedidoItemVidro.objects
-        .filter(pedido_id__in=pedido_ids)
+        itens_vidro_qs
         .select_related("pedido", "vidro__espessura")
         .order_by("pedido_id", "id")
     )

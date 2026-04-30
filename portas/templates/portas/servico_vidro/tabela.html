@@ -1,0 +1,49 @@
+<table class="table table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>Ordem</th>
+      <th>Nome</th>
+      <th>Preço / m²</th>
+      <th>Valor fixo</th>
+      <th>Ativo</th>
+      <th style="width:160px;">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in servicos %}
+    <tr {% if not s.ativo %}class="text-muted"{% endif %}>
+      <td>{{ s.ordem }}</td>
+      <td>{{ s.nome }}</td>
+      <td>R$ {{ s.preco_m2|floatformat:2 }}</td>
+      <td>{% if s.valor_fixo %}R$ {{ s.valor_fixo|floatformat:2 }}{% else %}—{% endif %}</td>
+      <td>
+        {% if s.ativo %}
+          <span class="badge bg-success">Sim</span>
+        {% else %}
+          <span class="badge bg-secondary">Não</span>
+        {% endif %}
+      </td>
+      <td class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-primary"
+                hx-get="{% url 'editar_servico_vidro' s.pk %}"
+                hx-target="#modalConteudo"
+                data-bs-toggle="modal"
+                data-bs-target="#modalCadastro">
+          Editar
+        </button>
+        <button class="btn btn-sm btn-outline-danger"
+                hx-get="{% url 'excluir_servico_vidro' s.pk %}"
+                hx-target="#modalConteudo"
+                data-bs-toggle="modal"
+                data-bs-target="#modalCadastro">
+          Excluir
+        </button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6" class="text-center text-muted py-4">Nenhum serviço cadastrado.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

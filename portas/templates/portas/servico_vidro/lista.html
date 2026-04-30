@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Serviços de Vidro{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Serviços de Vidro</h3>
+  <button class="btn btn-primary"
+          hx-get="{% url 'cadastrar_servico_vidro' %}"
+          hx-target="#modalConteudo"
+          data-bs-toggle="modal"
+          data-bs-target="#modalCadastro">
+    + Cadastrar Serviço
+  </button>
+</div>
+
+<div class="text-muted small mb-3">
+  Serviços extras aplicáveis a itens de vidro (jateado, pintura, etc.).
+  O valor calculado é <strong>m² × preço/m²</strong> mais o valor fixo (se houver).
+</div>
+
+<div id="conteudoTabela">
+  {% include "portas/servico_vidro/tabela.html" %}
+</div>
+
+{% endblock %}

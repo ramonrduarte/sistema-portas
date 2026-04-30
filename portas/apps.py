@@ -46,6 +46,9 @@ class PortasConfig(AppConfig):
             sched_module.set(scheduler)
             logger.info("APScheduler iniciado — sync Bimer às %s (dias: %s)", horarios, dias)
 
+            # Carrega jobs de backup agendados
+            sched_module.recarregar_backup()
+
             # Se a integração está ativa e a última sync foi há mais de 6 horas,
             # roda imediatamente para não depender do horário exato de inicialização
             self._sync_se_defasado(config, scheduler, sincronizar_precos)

@@ -12,15 +12,6 @@
 
   {{ form.non_field_errors }}
 
-  <!-- ── Vidro ──────────────────────────────────────────────────────── -->
-  <div class="mb-3">
-    <label class="form-label fw-semibold mb-1">
-      <span class="text-danger">*</span> Modelo de vidro
-    </label>
-    {{ form.vidro }}
-    <div class="text-danger small">{{ form.vidro.errors }}</div>
-  </div>
-
   <!-- ── Medidas + Qtd ─────────────────────────────────────────────── -->
   <div class="row g-2 mb-3">
     <div class="col-4">
@@ -45,6 +36,42 @@
       <div class="text-danger small">{{ form.quantidade.errors }}</div>
     </div>
   </div>
+
+  <!-- ── Vidro ──────────────────────────────────────────────────────── -->
+  <div class="mb-3">
+    <label class="form-label fw-semibold mb-1">
+      <span class="text-danger">*</span> Modelo de vidro
+    </label>
+    {{ form.vidro }}
+    <div class="text-danger small">{{ form.vidro.errors }}</div>
+  </div>
+
+  <!-- ── Serviços ─────────────────────────────────────────────────── -->
+  {% if servicos_vidro %}
+  <div class="border rounded-3 p-3 mb-3">
+    <p class="fw-semibold text-secondary mb-2" style="font-size:.78rem;letter-spacing:.5px;text-transform:uppercase;">
+      Serviços
+    </p>
+    <div class="row g-2">
+      {% for sv in servicos_vidro %}
+      <div class="col-12 col-md-6">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox"
+                 name="servico_vidro" value="{{ sv.pk }}"
+                 id="sv_{{ sv.pk }}"
+                 {% if sv.pk|stringformat:"s" in servicos_selecionados %}checked{% endif %}>
+          <label class="form-check-label" for="sv_{{ sv.pk }}">
+            {{ sv.nome }}
+            <span class="text-muted small">
+              — R$ {{ sv.preco_m2|floatformat:2 }}/m²{% if sv.valor_fixo %} + R$ {{ sv.valor_fixo|floatformat:2 }}{% endif %}
+            </span>
+          </label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
   <!-- ── Desconto ──────────────────────────────────────────────────── -->
   <div class="row g-2 mb-3">
@@ -80,6 +107,23 @@
         </div>
       </div>
       {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Valor calculado em tempo real ────────────────────────────── -->
+  <div class="card bg-body-secondary border-0 mb-3">
+    <div class="card-body py-2 px-3">
+      <div class="small text-muted fw-semibold mb-1" style="letter-spacing:.5px;text-transform:uppercase;font-size:.75rem;">
+        Valor calculado
+      </div>
+      <div id="resumoCalculoVidro"
+           hx-get="{% url 'htmx_calcular_item_vidro' %}"
+           hx-trigger="load, change delay:400ms from:closest form"
+           hx-target="#resumoCalculoVidro"
+           hx-swap="innerHTML"
+           hx-include="closest form">
+        {% include "portas/pedido/_resumo_calculo_vidro.html" with erro="Preencha largura, altura e selecione o modelo." %}
+      </div>
     </div>
   </div>
 

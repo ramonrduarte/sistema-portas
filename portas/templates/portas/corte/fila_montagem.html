@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Fila de Montagem{% endblock %}
+
+{% block extra_head %}
+<style>
+  @media print { .d-print-none { display: none !important; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-tools me-2"></i>Fila de Montagem</h4>
+</div>
+
+{% include "portas/corte/_nav_filas.html" %}
+
+<div class="alert alert-info d-flex align-items-center gap-2 mb-3 small">
+  <i class="bi bi-info-circle-fill"></i>
+  <span>Aparecem aqui apenas os itens de <strong>porta</strong> com todos os cortes concluídos e montagem pendente.</span>
+</div>
+
+{% if not pedidos_grupos %}
+<div class="alert alert-success">
+  <i class="bi bi-check-circle-fill me-2"></i>Nenhum item aguardando montagem.
+</div>
+{% else %}
+
+{% for grupo in pedidos_grupos %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">
+      #{{ grupo.pedido.numero }} — {{ grupo.pedido.cliente.nome }}
+      {% if grupo.pedido.cliente.cidade %}
+        <span class="text-muted fw-normal ms-2">| {{ grupo.pedido.cliente.cidade }}</span>
+      {% endif %}
+      {% if grupo.pedido.data_previsao %}
+        <span class="text-muted fw-normal small ms-2">| Previsão: {{ grupo.pedido.data_previsao|date:"d/m/Y" }}</span>
+      {% endif %}
+    </span>
+    {% if perms_usuario.producao.alterar_status %}
+    <form method="post" action="{% url 'marcar_montagem_feita_pedido' grupo.pedido.id %}" class="d-print-none">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-success"
+              onclick="return confirm('Marcar toda a montagem deste pedido como feita?')">
+        <i class="bi bi-check-all me-1"></i>Marcar pedido como montado
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if grupo.pedido.observacoes %}
+  <div class="px-3 py-2 bg-warning-subtle border-bottom small">
+    <i class="bi bi-sticky-fill me-1 text-warning"></i>
+    <strong>Obs:</strong> {{ grupo.pedido.observacoes }}
+  </div>
+  {% endif %}
+
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width:2.5rem">#</th>
+          <th>Descrição</th>
+          <th class="text-center" style="width:5rem">Qtd</th>
+          {% if perms_usuario.producao.alterar_status %}<th class="d-print-none" style="width:8rem"></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in grupo.itens %}
+        <tr>
+          <td class="text-muted small">{{ forloop.counter }}</td>
+          <td>{{ item.descricao }}</td>
+          <td class="text-center fw-semibold">{{ item.quantidade }}</td>
+          {% if perms_usuario.producao.alterar_status %}
+          <td class="d-print-none">
+            <form method="post" action="{% url 'marcar_montagem_feita' item.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-check-lg me-1"></i>Montado
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

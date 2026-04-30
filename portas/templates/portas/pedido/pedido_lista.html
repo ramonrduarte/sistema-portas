@@ -28,7 +28,7 @@
                  hx-trigger="keyup changed delay:400ms"
                  hx-target="#conteudoTabela"
                  hx-swap="innerHTML"
-                 hx-include="[name='data_de'],[name='data_ate'],[name='status'],[name='per_page']"
+                 hx-include="[name='data_de'],[name='data_ate'],[name='tipo'],[name='status'],[name='per_page']"
                  autocomplete="off">
         </div>
       </div>
@@ -47,6 +47,16 @@
           <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
           <input type="date" name="data_ate" class="form-control" value="{{ data_ate }}" title="Data final">
         </div>
+      </div>
+
+      <!-- Tipo -->
+      <div class="col-12 col-sm-auto">
+        <select name="tipo" class="form-select" style="min-width:110px;">
+          <option value="">Todos os tipos</option>
+          {% for val, label in tipo_choices %}
+            <option value="{{ val }}" {% if val == tipo %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <!-- Status -->
@@ -82,7 +92,7 @@
        hx-trigger="atualizarTabela from:body"
        hx-get="{% url 'pedidos_lista' %}"
        hx-swap="innerHTML"
-       hx-include="#buscaPedidos,[name='data_de'],[name='data_ate'],[name='status'],[name='per_page']">
+       hx-include="#buscaPedidos,[name='data_de'],[name='data_ate'],[name='tipo'],[name='status'],[name='per_page']">
     {% include "portas/pedido/_pedido_tabela.html" %}
   </div>
 

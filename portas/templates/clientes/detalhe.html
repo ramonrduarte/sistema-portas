@@ -47,23 +47,12 @@
     </div>
     {% endif %}
 
-    {% if resumo.corte %}
+    {% if resumo.producao %}
     <div class="col-6 col-md-3">
       <div class="card text-center h-100 border-warning">
         <div class="card-body py-3">
-          <div class="fs-3 fw-bold text-warning">{{ resumo.corte }}</div>
-          <div class="text-muted small">Ag. Corte</div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if resumo.montagem %}
-    <div class="col-6 col-md-3">
-      <div class="card text-center h-100 border-primary">
-        <div class="card-body py-3">
-          <div class="fs-3 fw-bold text-primary">{{ resumo.montagem }}</div>
-          <div class="text-muted small">Ag. Montagem</div>
+          <div class="fs-3 fw-bold text-warning">{{ resumo.producao }}</div>
+          <div class="text-muted small">Em Produção</div>
         </div>
       </div>
     </div>
@@ -138,10 +127,8 @@
           <td>
             {% if pedido.status == "aberto" %}
               <span class="badge bg-success">Aberto</span>
-            {% elif pedido.status == "corte" %}
-              <span class="badge bg-warning text-dark">Ag. Corte</span>
-            {% elif pedido.status == "montagem" %}
-              <span class="badge bg-primary">Ag. Montagem</span>
+            {% elif pedido.status == "producao" %}
+              <span class="badge bg-warning text-dark">Em Produção</span>
             {% elif pedido.status == "wise" %}
               <span class="badge bg-info text-dark">Wise</span>
             {% elif pedido.status == "concluido" %}
@@ -168,8 +155,7 @@
               {% for log in logs %}
                 <span class="badge
                   {% if log.status == 'aberto' %}bg-success
-                  {% elif log.status == 'corte' %}bg-warning text-dark
-                  {% elif log.status == 'montagem' %}bg-primary
+                  {% elif log.status == 'producao' %}bg-warning text-dark
                   {% elif log.status == 'wise' %}bg-info text-dark
                   {% elif log.status == 'concluido' %}bg-dark
                   {% elif log.status == 'cancelado' %}bg-secondary

@@ -58,6 +58,38 @@
     {% include "portas/pedido/_col_opcoes.html" %}
   </div>
 
+  <!-- ── Serviços de porta ──────────────────────────────────────── -->
+  {% if servicos_porta %}
+  <div class="border rounded-3 p-3 mb-3">
+    <p class="fw-semibold text-secondary mb-2" style="font-size:.78rem;letter-spacing:.5px;text-transform:uppercase;">
+      Serviços
+    </p>
+    <div class="row g-2">
+      {% for sv in servicos_porta %}
+      <div class="col-12 col-md-6">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox"
+                 name="servico_porta" value="{{ sv.pk }}"
+                 id="sp_{{ sv.pk }}"
+                 {% if sv.pk|stringformat:"s" in servicos_selecionados %}checked{% endif %}>
+          <label class="form-check-label" for="sp_{{ sv.pk }}">
+            {{ sv.nome }}
+            <span class="text-muted small">
+              — R$ {{ sv.preco|floatformat:2 }}/{% if "m2" in sv.tipo_calculo %}m²{% else %}m{% endif %}
+              <span class="badge text-bg-secondary fw-normal" style="font-size:.65rem;">
+                {% if sv.tipo_calculo == "metro_linear_perfil" %}ml perfil
+                {% elif sv.tipo_calculo == "m2_vidro" %}m² vidro
+                {% else %}ml vidro{% endif %}
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── Adicionais ──────────────────────────────────────────────── -->
   <div class="border rounded-3 p-3 mb-3">
     <div class="d-flex justify-content-between align-items-center mb-2">

@@ -1,0 +1,69 @@
+<span id="modalTitulo" hx-swap-oob="true">
+  {% if servico %}Editar Serviço de Vidro{% else %}Cadastrar Serviço de Vidro{% endif %}
+</span>
+
+<form method="post"
+      hx-post="{% if servico %}{% url 'editar_servico_vidro' servico.pk %}{% else %}{% url 'cadastrar_servico_vidro' %}{% endif %}"
+      hx-target="#conteudoTabela"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label fw-semibold">{{ form.nome.label }}</label>
+      {{ form.nome }}
+      <div class="text-danger small">{{ form.nome.errors }}</div>
+    </div>
+
+    <div class="col-6">
+      <label class="form-label fw-semibold">{{ form.preco_m2.label }}</label>
+      <div class="input-group">
+        <span class="input-group-text">R$</span>
+        {{ form.preco_m2 }}
+      </div>
+      <div class="form-text">{{ form.preco_m2.help_text }}</div>
+      <div class="text-danger small">{{ form.preco_m2.errors }}</div>
+    </div>
+
+    <div class="col-6">
+      <label class="form-label fw-semibold">{{ form.valor_fixo.label }}</label>
+      <div class="input-group">
+        <span class="input-group-text">R$</span>
+        {{ form.valor_fixo }}
+      </div>
+      <div class="form-text">{{ form.valor_fixo.help_text }}</div>
+      <div class="text-danger small">{{ form.valor_fixo.errors }}</div>
+    </div>
+
+    <div class="col-6">
+      <label class="form-label fw-semibold">{{ form.ordem.label }}</label>
+      {{ form.ordem }}
+      <div class="form-text">{{ form.ordem.help_text }}</div>
+      <div class="text-danger small">{{ form.ordem.errors }}</div>
+    </div>
+
+    <div class="col-6 d-flex align-items-end pb-1">
+      <div class="form-check">
+        {{ form.ativo }}
+        <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
+          {{ form.ativo.label }}
+        </label>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="form-check">
+        {{ form.corte_especial }}
+        <label class="form-check-label fw-semibold" for="{{ form.corte_especial.id_for_label }}">
+          {{ form.corte_especial.label }}
+        </label>
+        <div class="form-text">{{ form.corte_especial.help_text }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <button class="btn btn-primary" type="submit">Salvar</button>
+    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+  </div>
+</form>

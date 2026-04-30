@@ -4,6 +4,7 @@
     <tr>
       <th>Data</th>
       <th>Número</th>
+      <th>Tipo</th>
       <th>Cliente</th>
       <th>Usuário</th>
       <th>Status</th>
@@ -15,12 +16,18 @@
       <tr>
         <td>{{ p.data|date:"d/m/Y" }}</td>
         <td>{{ p.numero }}</td>
+        <td>
+          {% if p.tipo == 'vidro' %}
+            <span class="badge bg-info text-dark">Vidro</span>
+          {% else %}
+            <span class="badge bg-secondary">Porta</span>
+          {% endif %}
+        </td>
         <td>{{ p.cliente.codigo }} – {{ p.cliente.nome|upper }}</td>
         <td class="text-muted small">{% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}</td>
         <td>
           {% if p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
-          {% elif p.status == 'corte' %}<span class="badge bg-warning text-dark">Ag. Corte</span>
-          {% elif p.status == 'montagem' %}<span class="badge bg-primary">Ag. Montagem</span>
+          {% elif p.status == 'producao' %}<span class="badge bg-warning text-dark">Em Produção</span>
           {% elif p.status == 'wise' %}<span class="badge bg-info text-dark">Wise</span>
           {% elif p.status == 'concluido' %}<span class="badge bg-dark">Concluído</span>
           {% elif p.status == 'cancelado' %}<span class="badge bg-secondary">Cancelado</span>
@@ -94,7 +101,7 @@
       </tr>
     {% empty %}
       <tr>
-        <td colspan="6" class="text-center text-muted py-4">
+        <td colspan="7" class="text-center text-muted py-4">
           Nenhum pedido encontrado.
         </td>
       </tr>

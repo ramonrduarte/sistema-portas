@@ -91,6 +91,14 @@
             {% if form.identificador_caracteristica_clientes.errors %}<div class="text-danger small mt-1">{{ form.identificador_caracteristica_clientes.errors }}</div>{% endif %}
           </div>
 
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.bimer_id_produto_porta.id_for_label }}">
+              {{ form.bimer_id_produto_porta.label }}
+            </label>
+            {{ form.bimer_id_produto_porta }}
+            <div class="form-text">{{ form.bimer_id_produto_porta.field.help_text }}</div>
+          </div>
+
           <div class="mb-3 form-check">
             {{ form.ativo }}
             <label class="form-check-label" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>
