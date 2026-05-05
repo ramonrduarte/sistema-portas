@@ -236,6 +236,36 @@
     </table>
   </div>
 
+  {# Paginação #}
+  {% if page_obj.has_other_pages %}
+  <nav class="mb-3 d-flex align-items-center gap-3" aria-label="Paginação">
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+        <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.previous_page_number }}">‹</a>
+      </li>
+      {% if pagination.show_first %}
+        <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page=1">1</a></li>
+        {% if pagination.ellipsis_start %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+      {% endif %}
+      {% for num in page_window %}
+        <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ num }}">{{ num }}</a>
+        </li>
+      {% endfor %}
+      {% if pagination.show_last %}
+        {% if pagination.ellipsis_end %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+        <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a></li>
+      {% endif %}
+      <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+        <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.next_page_number }}">›</a>
+      </li>
+    </ul>
+    <span class="text-muted small">
+      {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }} pedidos
+    </span>
+  </nav>
+  {% endif %}
+
   {# Botões de ação em massa #}
   <div class="d-flex gap-2 flex-wrap align-items-center">
     <span class="text-muted small me-1">Com selecionados:</span>

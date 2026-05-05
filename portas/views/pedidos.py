@@ -1714,8 +1714,26 @@ def pedido_controle(request):
         status_filtro == "producao"
         and qs.filter(bimer_erro__gt="").exists()
     )
+
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    current = page_obj.number
+    total = paginator.num_pages
+    win_start = max(1, current - 2)
+    win_end = min(total, current + 2)
+    page_window = list(range(win_start, win_end + 1))
+    pagination = {
+        "show_first": win_start > 1,
+        "ellipsis_start": win_start > 2,
+        "ellipsis_end": win_end < total - 1,
+        "show_last": win_end < total,
+    }
+
     return render(request, "portas/pedido/pedido_controle.html", {
-        "pedidos": qs,
+        "pedidos": page_obj,
+        "page_obj": page_obj,
+        "page_window": page_window,
+        "pagination": pagination,
         "status_filtro": status_filtro,
         "tipo_filtro": tipo_filtro,
         "tipo_choices": Pedido.TIPO_CHOICES,
