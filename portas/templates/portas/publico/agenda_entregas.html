@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="120">
+  <title>Agenda de Entregas{% if config.nome_empresa %} — {{ config.nome_empresa }}{% endif %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', sans-serif; }
+    .agenda-header { background: #161b22; border-bottom: 1px solid #30363d; padding: 1rem 1.5rem; }
+    .agenda-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .logo-img { max-height: 40px; max-width: 150px; object-fit: contain; }
+    .semana-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: #8b949e; letter-spacing: .06em; padding: .25rem .5rem; text-align: center; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .dia-col { border: 1px solid #30363d; border-radius: 8px; background: #161b22; min-height: 110px; padding: .5rem; }
+    .dia-col.hoje { border-color: #388bfd; box-shadow: 0 0 0 2px #388bfd33; }
+    .dia-col.passado { background: #0d1117; border-color: #21262d; }
+    .dia-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .35rem; }
+    .dia-nome { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: #6e7681; }
+    .dia-num { font-size: 1.1rem; font-weight: 800; color: #e6edf3; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+    .dia-num.hoje-circle { background: #388bfd; color: #fff; }
+    .pedido-chip { display: block; font-size: .72rem; font-weight: 600; border-radius: 4px; padding: .15rem .4rem; margin-bottom: .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chip-orcamento { background: #1c3461; color: #79b8ff; }
+    .chip-aberto { background: #0d4429; color: #56d364; }
+    .chip-producao { background: #3d2700; color: #d29922; }
+    .chip-wise { background: #0c2d3a; color: #58d1f7; }
+    .chip-outro { background: #21262d; color: #8b949e; }
+    .sem-pedidos { font-size: .72rem; color: #484f58; }
+    .legenda { font-size: .75rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; color: #8b949e; }
+    .leg-dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+    .relogio { font-size: .85rem; color: #8b949e; }
+  </style>
+</head>
+<body>
+
+<header class="agenda-header d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex align-items-center gap-3">
+    {% if config.logo %}
+      <img src="{{ config.logo.url }}" alt="Logo" class="logo-img">
+    {% endif %}
+    <h1><i class="bi bi-calendar3 me-2"></i>Agenda de Entregas</h1>
+  </div>
+  <div class="relogio">
+    <i class="bi bi-arrow-clockwise me-1"></i>Atualiza a cada 2 min
+    &nbsp;|&nbsp;
+    <span id="relogio"></span>
+  </div>
+</header>
+
+<div class="container-fluid px-3 pb-4">
+
+  {# Legenda #}
+  <div class="legenda mb-3">
+    <span><span class="leg-dot chip-orcamento"></span> Orçamento</span>
+    <span><span class="leg-dot chip-aberto"></span> Aberto</span>
+    <span><span class="leg-dot chip-producao"></span> Em Produção</span>
+    <span><span class="leg-dot chip-wise"></span> Wise</span>
+  </div>
+
+  {# Cabeçalho dias da semana #}
+  <div class="cal-grid mb-1">
+    {% for dia_nome in dias_semana %}
+      <div class="semana-label">{{ dia_nome }}</div>
+    {% endfor %}
+  </div>
+
+  {# Semanas #}
+  {% for semana in semanas %}
+    <div class="cal-grid mb-2">
+      {% for dia in semana %}
+        <div class="dia-col {% if dia.hoje %}hoje{% elif dia.passado %}passado{% endif %}">
+          <div class="dia-header">
+            <span class="dia-nome">{{ dia.data|date:"d/m" }}</span>
+            <span class="dia-num {% if dia.hoje %}hoje-circle{% endif %}">{{ dia.data|date:"j" }}</span>
+          </div>
+
+          {% if dia.pedidos %}
+            {% for p in dia.pedidos %}
+              <span class="pedido-chip
+                {% if p.status == 'orcamento' %}chip-orcamento
+                {% elif p.status == 'aberto' %}chip-aberto
+                {% elif p.status == 'producao' %}chip-producao
+                {% elif p.status == 'wise' %}chip-wise
+                {% else %}chip-outro{% endif %}"
+                title="#{{ p.numero }} — {{ p.cliente.nome }}">
+                #{{ p.numero }} {{ p.cliente.nome|truncatechars:18 }}
+              </span>
+            {% endfor %}
+          {% else %}
+            {% if not dia.passado %}<span class="sem-pedidos">—</span>{% endif %}
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+</div>
+
+<script>
+  function atualizarRelogio() {
+    const now = new Date();
+    document.getElementById('relogio').textContent =
+      now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  atualizarRelogio();
+  setInterval(atualizarRelogio, 1000);
+</script>
+</body>
+</html>

@@ -117,6 +117,9 @@ urlpatterns = [
     path("pedidos/<int:pk>/wise-manual/", views.pedido_marcar_wise_manual, name="pedido_marcar_wise_manual"),
     path("pedidos/<int:pk>/reenviar-bimer/", views.pedido_reenviar_bimer, name="pedido_reenviar_bimer"),
     path("pedidos/<int:pk>/duplicar/", views.pedido_duplicar, name="pedido_duplicar"),
+    path("pedidos/<int:pk>/confirmar/", views.pedido_confirmar_orcamento, name="pedido_confirmar_orcamento"),
+    path("pedidos/<int:pk>/voltar-orcamento/", views.pedido_voltar_orcamento, name="pedido_voltar_orcamento"),
+    path("orcamentos/limpar/", views.orcamentos_limpar, name="orcamentos_limpar"),
 
     # Filas de corte e montagem
     path("corte/perfis/", views.fila_corte_perfis, name="fila_corte_perfis"),
@@ -136,6 +139,10 @@ urlpatterns = [
     path("integracoes/bimer/testar/",               views.bimer_testar_conexao,        name="bimer_testar_conexao"),
     path("integracoes/bimer/sincronizar/",          views.bimer_sincronizar,           name="bimer_sincronizar"),
     path("integracoes/bimer/sincronizar-clientes/", views.bimer_sincronizar_clientes,  name="bimer_sincronizar_clientes"),
+
+    # Páginas públicas (sem login, protegidas por token UUID)
+    path("monitor/<uuid:token>/", views.monitor_producao, name="monitor_producao"),
+    path("agenda/<uuid:token>/", views.agenda_entregas, name="agenda_entregas"),
 
     # Configurações
     path("configuracoes/", views.configuracoes_empresa, name="configuracoes_empresa"),

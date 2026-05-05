@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="30">
+  <title>Monitor de Produção{% if config.nome_empresa %} — {{ config.nome_empresa }}{% endif %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', sans-serif; }
+    .monitor-header { background: #161b22; border-bottom: 1px solid #30363d; padding: 1rem 1.5rem; }
+    .monitor-header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: 0.03em; margin: 0; }
+    .logo-img { max-height: 44px; max-width: 160px; object-fit: contain; }
+    .pedido-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem 1.5rem; transition: border-color .2s; }
+    .pedido-card.tudo-ok { border-color: #238636; }
+    .pedido-numero { font-size: 1.5rem; font-weight: 800; color: #58a6ff; letter-spacing: 0.05em; }
+    .pedido-cliente { font-size: 1.1rem; color: #c9d1d9; }
+    .pedido-data { font-size: 0.85rem; color: #8b949e; }
+    .etapa { display: flex; align-items: center; gap: .4rem; font-size: 1rem; padding: .3rem .75rem; border-radius: 6px; font-weight: 600; }
+    .etapa-ok { background: #0d4429; color: #3fb950; }
+    .etapa-pend { background: #3d2700; color: #d29922; }
+    .etapa-na { background: #21262d; color: #6e7681; }
+    .tipo-badge { font-size: .75rem; font-weight: 600; padding: .2rem .5rem; border-radius: 4px; }
+    .relogio { font-size: .85rem; color: #8b949e; }
+    .vazio-msg { color: #8b949e; font-size: 1.2rem; }
+    .grid-pedidos { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; }
+  </style>
+</head>
+<body>
+
+<header class="monitor-header d-flex justify-content-between align-items-center">
+  <div class="d-flex align-items-center gap-3">
+    {% if config.logo %}
+      <img src="{{ config.logo.url }}" alt="Logo" class="logo-img">
+    {% endif %}
+    <h1><i class="bi bi-display me-2"></i>Monitor de Produção</h1>
+  </div>
+  <div class="relogio">
+    <i class="bi bi-arrow-clockwise me-1"></i>Atualiza a cada 30s
+    &nbsp;|&nbsp;
+    <span id="relogio"></span>
+  </div>
+</header>
+
+<main class="p-4">
+  {% if pedidos %}
+    <div class="grid-pedidos">
+      {% for p in pedidos %}
+        {% with tudo_ok=True %}
+        {% comment %}determina se tudo está concluído{% endcomment %}
+        <div class="pedido-card {% if p.tipo == 'porta' %}{% if not p.tem_perfil_pendente and not p.tem_vidro_pendente and not p.tem_montagem_pendente %}tudo-ok{% endif %}{% else %}{% if not p.tem_vidro_avulso_pendente %}tudo-ok{% endif %}{% endif %}">
+
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <div class="pedido-numero">#{{ p.numero }}</div>
+              <div class="pedido-cliente">{{ p.cliente.nome }}</div>
+              <div class="pedido-data">
+                Emitido {{ p.data|date:"d/m/Y" }}
+                {% if p.data_previsao %}
+                  &bull; Entrega <strong class="text-warning">{{ p.data_previsao|date:"d/m/Y" }}</strong>
+                {% endif %}
+              </div>
+            </div>
+            <span class="tipo-badge {% if p.tipo == 'vidro' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+              {% if p.tipo == 'vidro' %}Vidro{% else %}Porta{% endif %}
+            </span>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 mt-3">
+            {% if p.tipo == 'porta' %}
+              <span class="etapa {% if p.tem_perfil_pendente %}etapa-pend{% else %}etapa-ok{% endif %}">
+                <i class="bi bi-rulers"></i>
+                {% if p.tem_perfil_pendente %}Perfil pendente{% else %}Perfil ✓{% endif %}
+              </span>
+              {% if p.tem_itens_com_vidro %}
+                <span class="etapa {% if p.tem_vidro_pendente %}etapa-pend{% else %}etapa-ok{% endif %}">
+                  <i class="bi bi-grid"></i>
+                  {% if p.tem_vidro_pendente %}Vidro pendente{% else %}Vidro ✓{% endif %}
+                </span>
+              {% endif %}
+              <span class="etapa {% if p.tem_montagem_pendente %}etapa-pend{% else %}etapa-ok{% endif %}">
+                <i class="bi bi-tools"></i>
+                {% if p.tem_montagem_pendente %}Montagem pendente{% else %}Montagem ✓{% endif %}
+              </span>
+            {% else %}
+              <span class="etapa {% if p.tem_vidro_avulso_pendente %}etapa-pend{% else %}etapa-ok{% endif %}">
+                <i class="bi bi-grid"></i>
+                {% if p.tem_vidro_avulso_pendente %}Vidro pendente{% else %}Vidro ✓{% endif %}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="d-flex justify-content-center align-items-center" style="min-height:60vh">
+      <div class="text-center vazio-msg">
+        <i class="bi bi-check2-circle" style="font-size:4rem;color:#238636;display:block;margin-bottom:.75rem"></i>
+        Nenhum pedido em produção no momento.
+      </div>
+    </div>
+  {% endif %}
+</main>
+
+<script>
+  function atualizarRelogio() {
+    const now = new Date();
+    document.getElementById('relogio').textContent =
+      now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  atualizarRelogio();
+  setInterval(atualizarRelogio, 1000);
+</script>
+</body>
+</html>

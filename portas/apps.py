@@ -49,6 +49,14 @@ class PortasConfig(AppConfig):
             # Carrega jobs de backup agendados
             sched_module.recarregar_backup()
 
+            # Carrega job de limpeza de orçamentos
+            from portas.models import ConfiguracaoEmpresa
+            cfg_empresa = ConfiguracaoEmpresa.get()
+            sched_module.reagendar_limpeza_orcamento(
+                cfg_empresa.horario_limpeza_orcamento,
+                cfg_empresa.dias_expiracao_orcamento,
+            )
+
             # Se a integração está ativa e a última sync foi há mais de 6 horas,
             # roda imediatamente para não depender do horário exato de inicialização
             self._sync_se_defasado(config, scheduler, sincronizar_precos)

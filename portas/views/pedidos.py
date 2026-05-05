@@ -13,6 +13,8 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.html import format_html
 
+from django.utils import timezone
+
 from ..forms import PedidoForm, PedidoItemForm, PedidoNovoOrcamentoForm, PedidoItemVidroForm
 from ..models import (
     Cliente,
@@ -330,7 +332,7 @@ def pedido_novo(request):
                     )
 
         request.session.pop(_SESSION_KEY, None)
-        PedidoStatusLog.objects.create(pedido=pedido, status="aberto", usuario=request.user)
+        PedidoStatusLog.objects.create(pedido=pedido, status="orcamento", usuario=request.user)
         return redirect("pedido_detalhe", pk=pedido.pk)
 
     # GET sem tipo → seletor; GET com tipo=porta → inicia rascunho de porta
@@ -601,7 +603,7 @@ def pedido_novo_vidro(request):
                         pass
 
         request.session.pop(_SESSION_KEY_VIDRO, None)
-        PedidoStatusLog.objects.create(pedido=pedido, status="aberto", usuario=request.user)
+        PedidoStatusLog.objects.create(pedido=pedido, status="orcamento", usuario=request.user)
         return redirect("pedido_detalhe", pk=pedido.pk)
 
     request.session[_SESSION_KEY_VIDRO] = []
@@ -719,8 +721,8 @@ def pedido_item_vidro_novo(request, pedido_pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
         return _sem_permissao("Você não tem permissão para editar pedidos.")
     pedido = get_object_or_404(Pedido, pk=pedido_pk, tipo="vidro")
-    if pedido.status != "aberto":
-        return HttpResponseForbidden("Itens só podem ser adicionados a pedidos em aberto.")
+    if pedido.status not in ("aberto", "orcamento"):
+        return HttpResponseForbidden("Itens só podem ser adicionados a pedidos em aberto ou em orçamento.")
 
     servicos_vidro = ServicoVidro.objects.filter(ativo=True)
 
@@ -810,7 +812,7 @@ def pedido_item_vidro_remover(request, pedido_pk, item_pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
         return _sem_permissao()
     pedido = get_object_or_404(Pedido, pk=pedido_pk, tipo="vidro")
-    if pedido.status != "aberto":
+    if pedido.status not in ("aberto", "orcamento"):
         return HttpResponseForbidden()
     PedidoItemVidro.objects.filter(pk=item_pk, pedido=pedido).delete()
     itens = pedido.itens_vidro.all()
@@ -872,7 +874,7 @@ def pedido_duplicar(request, pk):
         cliente=original.cliente,
         usuario=request.user,
         observacoes=original.observacoes,
-        status="aberto",
+        status="orcamento",
         data_previsao=Date.today() + timedelta(days=7),
     )
     for item in original.itens.all():
@@ -924,7 +926,7 @@ def pedido_previsao(request, pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
         return _sem_permissao()
     pedido = get_object_or_404(Pedido, pk=pk)
-    if request.method == "POST" and pedido.status == "aberto":
+    if request.method == "POST" and pedido.status in ("aberto", "orcamento"):
         raw = request.POST.get("data_previsao", "").strip()
         try:
             pedido.data_previsao = datetime.strptime(raw, "%Y-%m-%d").date() if raw else None
@@ -1151,9 +1153,9 @@ def pedido_reabrir(request, pk):
                 '<div class="alert alert-danger m-3">Pedidos Wise ou Concluídos não podem ser reabertos.</div>',
                 status=403,
             )
-        if pedido.status == "aberto":
+        if pedido.status in ("aberto", "orcamento"):
             return HttpResponse(
-                '<div class="alert alert-warning m-3">Pedido já está aberto.</div>',
+                '<div class="alert alert-warning m-3">Pedido já está aberto ou em orçamento.</div>',
                 status=400,
             )
         pedido.status = "aberto"
@@ -1173,9 +1175,9 @@ def pedido_excluir(request, pk):
     pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
 
     if request.method == "POST":
-        if pedido.status != "aberto":
+        if pedido.status not in ("aberto", "orcamento"):
             return HttpResponse(
-                '<div class="alert alert-danger m-3">Só é permitido excluir pedidos com status <strong>Aberto</strong>.</div>',
+                '<div class="alert alert-danger m-3">Só é permitido excluir pedidos com status <strong>Orçamento</strong> ou <strong>Aberto</strong>.</div>',
                 status=400,
             )
         pedido.delete()
@@ -1209,6 +1211,7 @@ def pedido_cancelar(request, pk):
                 '<div class="alert alert-warning m-3">Pedido já está cancelado.</div>',
                 status=400,
             )
+        # orcamento e aberto podem ser cancelados diretamente
         pedido.status = "cancelado"
         pedido.save(update_fields=["status"])
         _log_status(pedido, request)
@@ -1257,8 +1260,8 @@ def pedido_item_novo(request, pedido_pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
         return _sem_permissao("Você não tem permissão para editar pedidos.")
     pedido = get_object_or_404(Pedido, pk=pedido_pk)
-    if pedido.status != "aberto":
-        return HttpResponseForbidden("Itens só podem ser adicionados a pedidos em aberto.")
+    if pedido.status not in ("aberto", "orcamento"):
+        return HttpResponseForbidden("Itens só podem ser adicionados a pedidos em aberto ou em orçamento.")
 
     if request.method == "POST":
         form = PedidoItemForm(request.POST)
@@ -1372,8 +1375,8 @@ def htmx_remove_item(request, pedido_pk, item_pk):
     if not _get_perms(request.user)["pedidos"]["editar"]:
         return _sem_permissao("Você não tem permissão para editar pedidos.")
     pedido = get_object_or_404(Pedido, pk=pedido_pk)
-    if pedido.status != "aberto":
-        return HttpResponseForbidden("Itens só podem ser removidos de pedidos em aberto.")
+    if pedido.status not in ("aberto", "orcamento"):
+        return HttpResponseForbidden("Itens só podem ser removidos de pedidos em aberto ou em orçamento.")
     PedidoItem.objects.filter(pk=item_pk, pedido=pedido).delete()
     # Retorna tabela como conteúdo primário (target=#tabelaItens) + resumo OOB
     itens, total = _itens_e_total(pedido)
@@ -1665,6 +1668,9 @@ def pedido_controle(request):
             # producao só se aplica a pedidos abertos
             if action == "producao":
                 qs_bulk = qs_bulk.filter(status="aberto")
+            # voltar para orçamento só se aplica a pedidos abertos
+            if action == "orcamento":
+                qs_bulk = qs_bulk.filter(status="aberto")
             qs_bulk.update(status=action)
             # Registra log para cada pedido alterado em bulk
             for pedido in qs_bulk.only("id", "status"):
@@ -1859,3 +1865,78 @@ def htmx_cliente_selecionar(request, pk):
         c.codigo, c.nome,
         request.build_absolute_uri(reverse("htmx_clientes_sugestoes")),
     ))
+
+
+# ── Voltar pedido para orçamento (aberto → orcamento) ────────────────────────
+
+@login_required
+def pedido_voltar_orcamento(request, pk):
+    if not _get_perms(request.user)["pedidos"]["editar"]:
+        return _sem_permissao("Você não tem permissão para editar pedidos.")
+    pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
+
+    if request.method == "POST":
+        if pedido.status != "aberto":
+            return HttpResponse(
+                '<div class="alert alert-warning m-3">Só pedidos <strong>Abertos</strong> podem voltar para Orçamento.</div>',
+                status=400,
+            )
+        pedido.status = "orcamento"
+        pedido.save(update_fields=["status"])
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
+
+    if not request.headers.get("HX-Request"):
+        return redirect("pedido_detalhe", pk=pk)
+    return render(request, "portas/pedido/_confirm_voltar_orcamento.html", {"pedido": pedido})
+
+
+# ── Confirmar orçamento (orcamento → aberto) ──────────────────────────────────
+
+@login_required
+def pedido_confirmar_orcamento(request, pk):
+    if not _get_perms(request.user)["pedidos"]["editar"]:
+        return _sem_permissao("Você não tem permissão para confirmar orçamentos.")
+    pedido = get_object_or_404(Pedido.objects.select_related("cliente"), pk=pk)
+
+    if request.method == "POST":
+        if pedido.status != "orcamento":
+            return HttpResponse(
+                '<div class="alert alert-warning m-3">Só orçamentos podem ser confirmados.</div>',
+                status=400,
+            )
+        pedido.status = "aberto"
+        pedido.save(update_fields=["status"])
+        _log_status(pedido, request)
+        return _resp_atualizar_lista()
+
+    if not request.headers.get("HX-Request"):
+        return redirect("pedido_detalhe", pk=pk)
+    return render(request, "portas/pedido/_confirm_confirmar_orcamento.html", {"pedido": pedido})
+
+
+# ── Limpeza de orçamentos expirados ──────────────────────────────────────────
+
+@login_required
+def orcamentos_limpar(request):
+    if not request.user.is_staff:
+        return _sem_permissao("Apenas administradores podem executar esta ação.")
+
+    config = ConfiguracaoEmpresa.get()
+    dias = config.dias_expiracao_orcamento
+
+    if request.method == "POST":
+        if not dias:
+            from django.contrib import messages
+            messages.warning(request, "Expiração de orçamentos está desativada (0 dias).")
+            return redirect("configuracoes_empresa")
+
+        limite = timezone.now().date() - timedelta(days=dias)
+        excluidos = Pedido.objects.filter(status="orcamento", data__lt=limite).delete()
+        qtd = excluidos[0] if excluidos else 0
+
+        from django.contrib import messages
+        messages.success(request, f"{qtd} orçamento(s) com mais de {dias} dias excluído(s).")
+        return redirect("configuracoes_empresa")
+
+    return redirect("configuracoes_empresa")

@@ -1,0 +1,21 @@
+<div class="modal-header">
+  <h5 class="modal-title">Confirmar Orçamento</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+  <p>Confirmar o orçamento <strong>#{{ pedido.numero }}</strong> de
+     <strong>{{ pedido.cliente.nome }}</strong>?</p>
+  <p class="text-muted small mb-0">O status passará de <strong>Orçamento</strong> para <strong>Aberto</strong>,
+     liberando o pedido para produção.</p>
+</div>
+<div class="modal-footer">
+  {% csrf_token %}
+  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+  <button type="button" class="btn btn-success"
+          hx-post="{% url 'pedido_confirmar_orcamento' pedido.id %}"
+          hx-target="#modalConteudo"
+          hx-swap="innerHTML"
+          hx-include="[name=csrfmiddlewaretoken]">
+    <i class="bi bi-check-circle"></i> Confirmar Pedido
+  </button>
+</div>

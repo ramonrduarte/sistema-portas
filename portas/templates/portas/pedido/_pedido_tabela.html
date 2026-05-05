@@ -26,7 +26,8 @@
         <td>{{ p.cliente.codigo }} – {{ p.cliente.nome|upper }}</td>
         <td class="text-muted small">{% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}</td>
         <td>
-          {% if p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
+          {% if p.status == 'orcamento' %}<span class="badge bg-primary">Orçamento</span>
+          {% elif p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
           {% elif p.status == 'producao' %}<span class="badge bg-warning text-dark">Em Produção</span>
           {% elif p.status == 'wise' %}<span class="badge bg-info text-dark">Wise</span>
           {% elif p.status == 'concluido' %}<span class="badge bg-dark">Concluído</span>
@@ -68,9 +69,35 @@
               <i class="bi bi-copy"></i>
             </a>
 
+            {# ── Confirmar orçamento ── #}
+            {% if perms_usuario.pedidos.editar and p.status == 'orcamento' %}
+            <button class="btn btn-sm btn-success"
+                    hx-get="{% url 'pedido_confirmar_orcamento' p.id %}"
+                    hx-target="#modalConteudo"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro"
+                    title="Confirmar orçamento">
+              <i class="bi bi-check-circle"></i>
+            </button>
+            {% endif %}
+
+            {# ── Voltar para orçamento ── #}
+            {% if perms_usuario.pedidos.editar and p.status == 'aberto' %}
+            <button class="btn btn-sm btn-outline-primary"
+                    hx-get="{% url 'pedido_voltar_orcamento' p.id %}"
+                    hx-target="#modalConteudo"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro"
+                    title="Voltar para Orçamento">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            {% endif %}
+
             {# ── Excluir / Cancelar ── #}
             {% if perms_usuario.pedidos.excluir %}
-              {% if p.status == 'aberto' %}
+              {% if p.status == 'aberto' or p.status == 'orcamento' %}
               <button class="btn btn-sm btn-outline-danger"
                       hx-get="{% url 'pedido_excluir' p.id %}"
                       hx-target="#modalConteudo"
@@ -84,7 +111,7 @@
                 </svg>
               </button>
               {% endif %}
-              {% if p.status == 'aberto' %}
+              {% if p.status == 'aberto' or p.status == 'orcamento' %}
               <button class="btn btn-sm btn-outline-warning"
                       hx-get="{% url 'pedido_cancelar' p.id %}"
                       hx-target="#modalConteudo"

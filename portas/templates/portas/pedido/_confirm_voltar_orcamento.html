@@ -1,0 +1,20 @@
+<div class="modal-header">
+  <h5 class="modal-title">Voltar para Orçamento</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+  <p>Deseja retornar o pedido <strong>#{{ pedido.numero }}</strong> de
+     <strong>{{ pedido.cliente.nome }}</strong> para o status <strong>Orçamento</strong>?</p>
+  <p class="text-muted small mb-0">O pedido deixará de estar disponível para produção até ser confirmado novamente.</p>
+</div>
+<div class="modal-footer">
+  {% csrf_token %}
+  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+  <button type="button" class="btn btn-warning"
+          hx-post="{% url 'pedido_voltar_orcamento' pedido.id %}"
+          hx-target="#modalConteudo"
+          hx-swap="innerHTML"
+          hx-include="[name=csrfmiddlewaretoken]">
+    <i class="bi bi-arrow-counterclockwise"></i> Voltar para Orçamento
+  </button>
+</div>

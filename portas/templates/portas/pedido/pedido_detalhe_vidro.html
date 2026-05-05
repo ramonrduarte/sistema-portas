@@ -14,7 +14,29 @@
     </div>
     <div class="d-flex gap-2">
       <a href="{% url 'pedidos_lista' %}" class="btn btn-outline-secondary btn-sm">← Voltar</a>
+      {% if perms_usuario.pedidos.editar and pedido.status == 'orcamento' %}
+      <button class="btn btn-success btn-sm"
+              hx-get="{% url 'pedido_confirmar_orcamento' pedido.id %}"
+              hx-target="#modalConteudo"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#modalCadastro">
+        <i class="bi bi-check-circle"></i> Confirmar Pedido
+      </button>
+      {% endif %}
       {% if perms_usuario.pedidos.editar and pedido.status == 'aberto' %}
+      <button class="btn btn-outline-secondary btn-sm"
+              hx-get="{% url 'pedido_voltar_orcamento' pedido.id %}"
+              hx-target="#modalConteudo"
+              hx-swap="innerHTML"
+              data-bs-toggle="modal"
+              data-bs-target="#modalCadastro"
+              title="Voltar para Orçamento">
+        <i class="bi bi-arrow-counterclockwise"></i> Orçamento
+      </button>
+      {% endif %}
+      {% if perms_usuario.pedidos.editar %}
+      {% if pedido.status == 'aberto' or pedido.status == 'orcamento' %}
       <button class="btn btn-primary btn-sm"
               hx-get="{% url 'pedido_item_vidro_novo' pedido.id %}"
               hx-target="#modalConteudo"
@@ -23,6 +45,7 @@
               data-bs-target="#modalCadastro">
         + Adicionar item
       </button>
+      {% endif %}
       {% endif %}
     </div>
   </div>
@@ -61,6 +84,13 @@
         <div class="card-header fw-semibold">Previsão de entrega</div>
         <div class="card-body">
           {% if perms_usuario.pedidos.editar and pedido.status == 'aberto' %}
+          <form method="post" action="{% url 'pedido_previsao' pedido.id %}" class="d-flex gap-2">
+            {% csrf_token %}
+            <input type="date" name="data_previsao" class="form-control form-control-sm"
+                   value="{{ pedido.data_previsao|date:'Y-m-d'|default:'' }}">
+            <button type="submit" class="btn btn-sm btn-secondary">Salvar</button>
+          </form>
+          {% elif perms_usuario.pedidos.editar and pedido.status == 'orcamento' %}
           <form method="post" action="{% url 'pedido_previsao' pedido.id %}" class="d-flex gap-2">
             {% csrf_token %}
             <input type="date" name="data_previsao" class="form-control form-control-sm"

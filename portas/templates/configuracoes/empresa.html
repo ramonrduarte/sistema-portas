@@ -82,11 +82,98 @@
           {% endif %}
         </div>
 
+        <hr class="my-4">
+        <h6 class="fw-semibold mb-3">Limpeza automática de orçamentos</h6>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ form.dias_expiracao_orcamento.label }}</label>
+          <div class="input-group" style="max-width:280px;">
+            {{ form.dias_expiracao_orcamento }}
+            <span class="input-group-text">dias</span>
+          </div>
+          <div class="form-text">Orçamentos com data de emissão anterior a este número de dias serão excluídos. Use 0 para desativar.</div>
+          {% if form.dias_expiracao_orcamento.errors %}
+            <div class="text-danger small mt-1">{{ form.dias_expiracao_orcamento.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ form.horario_limpeza_orcamento.label }}</label>
+          <div style="max-width:180px;">
+            {{ form.horario_limpeza_orcamento }}
+          </div>
+          <div class="form-text">A limpeza automática será executada todos os dias neste horário. Deixe em branco para desativar a rotina automática.</div>
+          {% if form.horario_limpeza_orcamento.errors %}
+            <div class="text-danger small mt-1">{{ form.horario_limpeza_orcamento.errors.0 }}</div>
+          {% endif %}
+        </div>
+
         <div class="d-flex justify-content-end gap-2 mt-4">
           <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
       </form>
     </div>
   </div>
+
+  <div class="card mt-4">
+    <div class="card-header fw-semibold">Páginas Públicas (sem login)</div>
+    <div class="card-body">
+      <p class="mb-2 text-muted small">
+        Estas páginas são acessíveis sem login. O token na URL é a proteção de acesso — não compartilhe com pessoas externas.
+      </p>
+      <div class="mb-3">
+        <label class="form-label fw-semibold small">Monitor de Produção</label>
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control font-monospace"
+                 value="{{ request.scheme }}://{{ request.get_host }}{% url 'monitor_producao' config.token_monitor %}"
+                 id="urlMonitor" readonly>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="navigator.clipboard.writeText(document.getElementById('urlMonitor').value)"
+                  title="Copiar">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <a href="{% url 'monitor_producao' config.token_monitor %}" target="_blank" class="btn btn-outline-primary" title="Abrir">
+            <i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+        <div class="form-text">Mostra pedidos Em Produção em tempo real (atualiza a cada 30s). Ideal para TV na produção.</div>
+      </div>
+      <div class="mb-2">
+        <label class="form-label fw-semibold small">Agenda de Entregas</label>
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control font-monospace"
+                 value="{{ request.scheme }}://{{ request.get_host }}{% url 'agenda_entregas' config.token_monitor %}"
+                 id="urlAgenda" readonly>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="navigator.clipboard.writeText(document.getElementById('urlAgenda').value)"
+                  title="Copiar">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <a href="{% url 'agenda_entregas' config.token_monitor %}" target="_blank" class="btn btn-outline-primary" title="Abrir">
+            <i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+        <div class="form-text">Calendário semanal com datas de entrega previstas (atualiza a cada 2 min).</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header fw-semibold">Limpeza de Orçamentos</div>
+    <div class="card-body">
+      <p class="mb-2 text-muted small">
+        Exclui permanentemente todos os orçamentos com status <strong>Orçamento</strong>
+        cuja data de emissão seja anterior ao número de dias configurado acima.
+      </p>
+      <form method="post" action="{% url 'orcamentos_limpar' %}"
+            onsubmit="return confirm('Confirma a exclusão dos orçamentos expirados? Esta ação não pode ser desfeita.')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-sm">
+          <i class="bi bi-trash"></i> Excluir orçamentos expirados
+        </button>
+      </form>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

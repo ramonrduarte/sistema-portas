@@ -20,7 +20,7 @@
 {# Links rápidos para as filas quando em produção #}
 {% if status_filtro == 'producao' %}
 <div class="d-flex gap-2 mb-3 d-print-none flex-wrap">
-  <a href="{% url 'fila_corte_perfis' %}" class="btn btn-sm btn-outline-dark">
+  <a href="{% url 'fila_corte_perfis' %}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-rulers me-1"></i>Fila Perfis
   </a>
   <a href="{% url 'fila_corte_vidros_retangulares' %}" class="btn btn-sm btn-outline-primary">
@@ -106,7 +106,8 @@
             {% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}
           </td>
           <td>
-            {% if p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
+            {% if p.status == 'orcamento' %}<span class="badge bg-primary">Orçamento</span>
+            {% elif p.status == 'aberto' %}<span class="badge bg-success">Aberto</span>
             {% elif p.status == 'producao' %}<span class="badge bg-warning text-dark">Em Produção</span>
             {% elif p.status == 'wise' %}<span class="badge bg-info text-dark">Wise</span>
             {% elif p.status == 'concluido' %}<span class="badge bg-dark">Concluído</span>
@@ -183,9 +184,30 @@
             <a href="{% url 'pedido_imprimir' p.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Imprimir">
               <i class="bi bi-printer"></i>
             </a>
+            {% if p.status == 'orcamento' %}
+            <button type="button" class="btn btn-sm btn-success"
+                    hx-get="{% url 'pedido_confirmar_orcamento' p.id %}"
+                    hx-target="#modalConteudo"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro"
+                    title="Confirmar orçamento">
+              <i class="bi bi-check-circle"></i>
+            </button>
+            {% elif p.status == 'aberto' %}
+            <button type="button" class="btn btn-sm btn-outline-primary"
+                    hx-get="{% url 'pedido_voltar_orcamento' p.id %}"
+                    hx-target="#modalConteudo"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalCadastro"
+                    title="Voltar para Orçamento">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            {% endif %}
             {% if perms_usuario.producao.alterar_status %}
               {% if p.bimer_erro and p.status == 'producao' %}
-              <button class="btn btn-sm btn-danger"
+              <button type="button" class="btn btn-sm btn-danger"
                       hx-get="{% url 'pedido_enviar_wise' p.id %}"
                       hx-target="#modalConteudo"
                       hx-swap="innerHTML"
@@ -196,7 +218,7 @@
               </button>
               {% endif %}
               {% if p.status == 'wise' %}
-              <button class="btn btn-sm btn-outline-danger"
+              <button type="button" class="btn btn-sm btn-outline-danger"
                       hx-get="{% url 'pedido_reenviar_bimer' p.id %}"
                       hx-target="#modalConteudo"
                       hx-swap="innerHTML"
@@ -218,9 +240,21 @@
   <div class="d-flex gap-2 flex-wrap align-items-center">
     <span class="text-muted small me-1">Com selecionados:</span>
 
+    {% if status_filtro == 'orcamento' %}
+    <button type="submit" name="action" value="aberto" class="btn btn-success btn-sm">
+      <i class="bi bi-check-circle me-1"></i>Confirmar selecionados
+    </button>
+    <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
+      Cancelar
+    </button>
+    {% endif %}
+
     {% if status_filtro == 'aberto' %}
     <button type="submit" name="action" value="producao" class="btn btn-primary btn-sm">
       <i class="bi bi-play-fill me-1"></i>Enviar para Produção
+    </button>
+    <button type="submit" name="action" value="orcamento" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Voltar para Orçamento
     </button>
     <button type="submit" name="action" value="cancelado" class="btn btn-outline-warning btn-sm">
       Cancelar
@@ -279,6 +313,10 @@
       document.querySelectorAll('.chk-pedido').forEach(c => c.checked = this.checked);
     });
   }
+
+  document.body.addEventListener('atualizarTabela', function () {
+    window.location.reload();
+  });
 
   document.getElementById('formControle')?.addEventListener('submit', function (e) {
     const action = e.submitter?.value;

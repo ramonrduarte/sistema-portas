@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from decimal import Decimal
 from django.conf import settings
@@ -294,6 +295,7 @@ class UsuarioPerfil(AtivoModel):
 
 class Pedido(models.Model):
     STATUS_CHOICES = [
+        ("orcamento", "Orçamento"),
         ("aberto", "Aberto"),
         ("cancelado", "Cancelado"),
         ("producao", "Em Produção"),
@@ -328,7 +330,7 @@ class Pedido(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default="aberto"
+        default="orcamento"
     )
     observacoes = models.TextField(blank=True, null=True)
     data_previsao = models.DateField(null=True, blank=True, verbose_name="Previsão de entrega")
@@ -803,6 +805,22 @@ class ConfiguracaoEmpresa(models.Model):
         verbose_name="Custo mão de obra (por porta)",
         help_text="Valor fixo adicionado em cada porta calculada",
     )
+    dias_expiracao_orcamento = models.PositiveIntegerField(
+        default=30,
+        verbose_name="Expiração de orçamentos (dias)",
+        help_text="Orçamentos mais antigos que este número de dias serão excluídos automaticamente. Use 0 para desativar.",
+    )
+    horario_limpeza_orcamento = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Horário da limpeza automática",
+        help_text="Horário diário para exclusão automática de orçamentos expirados. Deixe em branco para desativar.",
+    )
+    token_monitor = models.UUIDField(
+        default=uuid.uuid4,
+        verbose_name="Token monitor/agenda público",
+        help_text="UUID gerado automaticamente. Use na URL das páginas públicas de monitor e agenda.",
+    )
 
     class Meta:
         verbose_name = "Configuração da Empresa"
@@ -810,6 +828,8 @@ class ConfiguracaoEmpresa(models.Model):
     def save(self, *args, **kwargs):
         self.pk = 1
         super().save(*args, **kwargs)
+        from portas import scheduler as _sched
+        _sched.reagendar_limpeza_orcamento(self.horario_limpeza_orcamento, self.dias_expiracao_orcamento)
 
     @classmethod
     def get(cls):

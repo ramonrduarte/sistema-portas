@@ -38,6 +38,41 @@ def reagendar(horarios: str, dias: str):
         pass
 
 
+def reagendar_limpeza_orcamento(horario, dias_expiracao):
+    """
+    Agenda ou remove o job diário de limpeza de orçamentos expirados.
+    Chamado automaticamente ao salvar ConfiguracaoEmpresa.
+    - horario: datetime.time ou None
+    - dias_expiracao: int (0 = desativado)
+    """
+    try:
+        from apscheduler.triggers.cron import CronTrigger
+
+        s = get()
+        if not (s and s.running):
+            return
+
+        job_id = "limpeza_orcamentos"
+
+        if not horario or not dias_expiracao:
+            try:
+                s.remove_job(job_id)
+            except Exception:
+                pass
+            return
+
+        from portas.services.orcamentos import limpar_orcamentos_expirados
+
+        s.add_job(
+            limpar_orcamentos_expirados,
+            CronTrigger(hour=horario.hour, minute=horario.minute),
+            id=job_id,
+            replace_existing=True,
+        )
+    except Exception:
+        pass
+
+
 def recarregar_backup():
     """
     Remove todos os jobs de backup existentes e recria a partir dos
