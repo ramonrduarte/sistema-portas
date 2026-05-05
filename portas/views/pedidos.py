@@ -1715,7 +1715,7 @@ def pedido_controle(request):
         and qs.filter(bimer_erro__gt="").exists()
     )
 
-    paginator = Paginator(qs, 25)
+    paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get("page", 1))
     current = page_obj.number
     total = paginator.num_pages

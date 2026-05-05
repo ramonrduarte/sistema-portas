@@ -241,7 +241,11 @@
   <nav class="mb-3 d-flex align-items-center gap-3" aria-label="Paginação">
     <ul class="pagination pagination-sm mb-0">
       <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
-        <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.previous_page_number }}">‹</a>
+        {% if page_obj.has_previous %}
+          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.previous_page_number }}">‹</a>
+        {% else %}
+          <span class="page-link">‹</span>
+        {% endif %}
       </li>
       {% if pagination.show_first %}
         <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page=1">1</a></li>
@@ -257,7 +261,11 @@
         <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a></li>
       {% endif %}
       <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
-        <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.next_page_number }}">›</a>
+        {% if page_obj.has_next %}
+          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.next_page_number }}">›</a>
+        {% else %}
+          <span class="page-link">›</span>
+        {% endif %}
       </li>
     </ul>
     <span class="text-muted small">
