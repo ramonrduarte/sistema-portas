@@ -24,6 +24,7 @@ services:
       SECURE_HSTS_INCLUDE_SUBDOMAINS: ${SECURE_HSTS_INCLUDE_SUBDOMAINS:-True}
     volumes:
       - media_data:/app/media
+      - /mnt/backup:/backup
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=network_public"
