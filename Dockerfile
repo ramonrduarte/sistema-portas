@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Dependências do sistema (necessárias para psycopg2 e Pillow)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc \
+    libpq-dev gcc postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala dependências Python

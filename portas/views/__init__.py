@@ -28,6 +28,8 @@ from .produtos import (
     lista_servicos_porta,
     cadastrar_servico_porta,
     excluir_servico_porta,
+    limpar_bimer_perfil,
+    limpar_bimer_vidro,
 )
 from .clientes import (
     ClienteListView,
@@ -35,6 +37,7 @@ from .clientes import (
     ClienteUpdateView,
     ClienteDeleteView,
     cliente_detalhe,
+    limpar_bimer_cliente,
 )
 from .usuarios import (
     UsuarioListView,

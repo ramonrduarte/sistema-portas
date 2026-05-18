@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
+from django.views.decorators.http import require_POST
 from django.db.models import ProtectedError, Q
 from django.template.loader import render_to_string
 
@@ -570,3 +571,23 @@ def perfil_compativeis_por_acabamento(request):
     instance = Perfil.objects.filter(pk=perfil_id).first() if perfil_id else None
     form = PerfilForm(data=request.GET, instance=instance)
     return render(request, "portas/perfil/_compativeis_por_acabamento_cols.html", {"form": form})
+
+
+# ── Limpeza de ID Bimer ───────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def limpar_bimer_perfil(request, pk):
+    perfil = get_object_or_404(Perfil, pk=pk)
+    perfil.bimer_id = ""
+    perfil.save(update_fields=["bimer_id"])
+    return HttpResponse("")
+
+
+@login_required
+@require_POST
+def limpar_bimer_vidro(request, pk):
+    vidro = get_object_or_404(VidroBase, pk=pk)
+    vidro.bimer_id = ""
+    vidro.save(update_fields=["bimer_id"])
+    return HttpResponse("")

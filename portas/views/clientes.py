@@ -3,6 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.http import HttpResponse
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView
 from django.views import View
 from django.shortcuts import render, get_object_or_404, redirect
@@ -190,3 +191,13 @@ def cliente_detalhe(request, pk):
         "total_valor": total_valor,
         "status_labels": dict(Pedido.STATUS_CHOICES),
     })
+
+
+@login_required
+@require_POST
+def limpar_bimer_cliente(request, pk):
+    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente.bimer_id = ""
+    cliente.save(update_fields=["bimer_id"])
+    return HttpResponse("")
+

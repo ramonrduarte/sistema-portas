@@ -23,4 +23,20 @@
       Salvar
     </button>
   </div>
+
+  {% if object and object.bimer_id %}
+  <div id="bimer-id-cliente" class="mt-3 p-2 border rounded bg-light d-flex align-items-center gap-2 flex-wrap">
+    <small class="text-muted">
+      <i class="bi bi-link-45deg"></i> ID Bimer vinculado: <code>{{ object.bimer_id }}</code>
+    </small>
+    <button type="button" class="btn btn-outline-danger btn-sm ms-auto"
+            hx-post="{% url 'limpar_bimer_cliente' object.pk %}"
+            hx-target="#bimer-id-cliente"
+            hx-swap="outerHTML"
+            hx-confirm="Limpar o ID Bimer deste cliente? Ele será buscado novamente na próxima sincronização."
+            hx-include="[name=csrfmiddlewaretoken]">
+      <i class="bi bi-x-circle me-1"></i>Limpar ID Bimer
+    </button>
+  </div>
+  {% endif %}
 </form>

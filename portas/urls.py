@@ -10,6 +10,7 @@ urlpatterns = [
     path("perfis/novo/", views.cadastrar_perfil, name="cadastrar_perfil"),
     path("perfis/<int:pk>/editar/", views.cadastrar_perfil, name="editar_perfil"),
     path("perfis/<int:pk>/excluir/", views.excluir_perfil, name="excluir_perfil"),
+    path("perfis/<int:pk>/limpar-bimer/", views.limpar_bimer_perfil, name="limpar_bimer_perfil"),
 
     # Acabamentos
     path("acabamentos/", views.lista_acabamentos, name="lista_acabamentos"),
@@ -57,6 +58,7 @@ urlpatterns = [
     path("vidros/novo/", views.cadastrar_vidro, name="cadastrar_vidro"),
     path("vidros/<int:pk>/editar/", views.cadastrar_vidro, name="editar_vidro"),
     path("vidros/<int:pk>/excluir/", views.excluir_vidro, name="excluir_vidro"),
+    path("vidros/<int:pk>/limpar-bimer/", views.limpar_bimer_vidro, name="limpar_bimer_vidro"),
 
     # Divisores
     path("divisores/", views.lista_divisores, name="lista_divisores"),
@@ -70,6 +72,7 @@ urlpatterns = [
     path("clientes/<int:pk>/", views.cliente_detalhe, name="cliente_detalhe"),
     path("clientes/<int:pk>/editar/", ClienteUpdateView.as_view(), name="clientes_editar"),
     path("clientes/<int:pk>/excluir/", ClienteDeleteView.as_view(), name="clientes_excluir"),
+    path("clientes/<int:pk>/limpar-bimer/", views.limpar_bimer_cliente, name="limpar_bimer_cliente"),
 
     # Usuarios
     path("usuarios/", UsuarioListView.as_view(), name="usuarios_lista"),
