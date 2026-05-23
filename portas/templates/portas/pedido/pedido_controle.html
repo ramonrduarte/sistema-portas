@@ -100,7 +100,7 @@
               <span class="badge bg-secondary">Porta</span>
             {% endif %}
           </td>
-          <td>{{ p.cliente.nome }}</td>
+          <td class="text-uppercase">{{ p.cliente.nome }}</td>
           <td>{{ p.data|date:"d/m/Y" }}</td>
           <td>
             {% if p.usuario %}{{ p.usuario.get_full_name|default:p.usuario.username }}{% else %}—{% endif %}

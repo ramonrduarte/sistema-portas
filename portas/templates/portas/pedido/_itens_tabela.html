@@ -31,7 +31,7 @@
       <td class="text-end">R$&nbsp;{{ item.valor_unitario|floatformat:2 }}</td>
       <td class="text-end fw-semibold">R$&nbsp;{{ item.valor_total|floatformat:2 }}</td>
       <td class="text-end pe-3">
-        {% if pedido.status == 'aberto' %}
+        {% if pedido.status == 'aberto' or pedido.status == 'orcamento' %}
         <button class="btn btn-sm btn-outline-danger"
                 hx-post="{% url 'htmx_remove_item' pedido.id item.id %}"
                 hx-target="#tabelaItens"

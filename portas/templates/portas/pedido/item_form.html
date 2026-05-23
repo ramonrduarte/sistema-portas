@@ -147,6 +147,8 @@
       row.querySelectorAll('input').forEach(function(i){ i.value = ''; });
       row.style.display = 'none';
       updateBtn();
+      var anyInput = row.querySelector('input');
+      if (anyInput) anyInput.dispatchEvent(new Event('change', {bubbles: true}));
     });
 
     updateBtn();
