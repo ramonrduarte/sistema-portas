@@ -290,16 +290,19 @@
     <span class="text-muted small">
       {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }} pedidos
     </span>
-    <form method="get" class="d-flex align-items-center gap-2 ms-auto">
-      <input type="hidden" name="status" value="{{ status_filtro }}">
-      <input type="hidden" name="tipo" value="{{ tipo_filtro }}">
+    <div class="d-flex align-items-center gap-2 ms-auto">
       <label class="text-muted small mb-0 text-nowrap">Por página:</label>
-      <select name="per_page" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+      <select class="form-select form-select-sm" style="width:auto" onchange="
+        var url = new URL(window.location.href);
+        url.searchParams.set('per_page', this.value);
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+      ">
         {% for opt in per_page_options %}
         <option value="{{ opt }}" {% if opt == per_page %}selected{% endif %}>{{ opt }}</option>
         {% endfor %}
       </select>
-    </form>
+    </div>
   </nav>
 
   {# Botões de ação em massa #}
