@@ -1596,9 +1596,22 @@ def pedido_controle(request):
     if tipo_filtro not in valid_tipos:
         tipo_filtro = ""
 
+    per_page_options = [10, 20, 50, 100]
+    try:
+        per_page = int(request.GET.get("per_page", 20))
+        if per_page not in per_page_options:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+
     if request.method == "POST":
         action = request.POST.get("action", "")
         ids = request.POST.getlist("pedido_ids")
+        if request.POST.get("select_all") == "1":
+            qs_all = Pedido.objects.filter(status=status_filtro)
+            if tipo_filtro:
+                qs_all = qs_all.filter(tipo=tipo_filtro)
+            ids = [str(pk) for pk in qs_all.values_list("pk", flat=True)]
 
         if ids and action == "ver_insumos":
             ids_str = ",".join(ids)
@@ -1715,7 +1728,7 @@ def pedido_controle(request):
         and qs.filter(bimer_erro__gt="").exists()
     )
 
-    paginator = Paginator(qs, 20)
+    paginator = Paginator(qs, per_page)
     page_obj = paginator.get_page(request.GET.get("page", 1))
     current = page_obj.number
     total = paginator.num_pages
@@ -1739,6 +1752,9 @@ def pedido_controle(request):
         "tipo_choices": Pedido.TIPO_CHOICES,
         "status_choices": Pedido.STATUS_CHOICES,
         "pedidos_com_erro": pedidos_com_erro,
+        "per_page": per_page,
+        "per_page_options": per_page_options,
+        "total_no_filtro": paginator.count,
     })
 
 

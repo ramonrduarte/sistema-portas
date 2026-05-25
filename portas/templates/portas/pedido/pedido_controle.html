@@ -41,7 +41,7 @@
   {# Status #}
   <div class="btn-group flex-wrap" role="group">
     {% for s_key, s_label in status_choices %}
-    <a href="?status={{ s_key }}&tipo={{ tipo_filtro }}"
+    <a href="?status={{ s_key }}&tipo={{ tipo_filtro }}&per_page={{ per_page }}"
        class="btn btn-sm {% if status_filtro == s_key %}btn-dark{% else %}btn-outline-secondary{% endif %}">
       {{ s_label }}
     </a>
@@ -50,12 +50,12 @@
 
   {# Tipo #}
   <div class="btn-group" role="group">
-    <a href="?status={{ status_filtro }}&tipo="
+    <a href="?status={{ status_filtro }}&tipo=&per_page={{ per_page }}"
        class="btn btn-sm {% if not tipo_filtro %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
       Todos
     </a>
     {% for t_key, t_label in tipo_choices %}
-    <a href="?status={{ status_filtro }}&tipo={{ t_key }}"
+    <a href="?status={{ status_filtro }}&tipo={{ t_key }}&per_page={{ per_page }}"
        class="btn btn-sm {% if tipo_filtro == t_key %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
       {{ t_label }}
     </a>
@@ -66,8 +66,26 @@
 
 <form method="post" id="formControle">
   {% csrf_token %}
+  <input type="hidden" name="select_all" id="selectAllInput" value="0">
 
   {% if pedidos %}
+
+  {# Banner de seleção global #}
+  <div id="bannerSelecaoGlobal" class="alert alert-info py-2 small mb-2 d-none d-flex align-items-center gap-2 flex-wrap">
+    <span id="msgSelPagina">
+      Todos os <strong id="qtdPaginaSpan">0</strong> pedidos desta página selecionados.
+    </span>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <a href="#" id="btnSelecionarTodosStatus" class="fw-semibold">
+      Selecionar todos os {{ total_no_filtro }} pedidos com este status
+    </a>
+    {% endif %}
+    <span id="msgSelTodos" class="d-none">
+      Todos os <strong>{{ total_no_filtro }}</strong> pedidos com este status selecionados.
+      <a href="#" id="btnCancelarSelTodos" class="fw-semibold ms-1">Cancelar seleção</a>
+    </span>
+  </div>
+
   <div class="table-responsive mb-3">
     <table class="table table-hover align-middle">
       <thead class="table-light">
@@ -237,42 +255,52 @@
   </div>
 
   {# Paginação #}
-  {% if page_obj.has_other_pages %}
-  <nav class="mb-3 d-flex align-items-center gap-3" aria-label="Paginação">
+  <nav class="mb-3 d-flex align-items-center gap-3 flex-wrap" aria-label="Paginação">
+    {% if page_obj.has_other_pages %}
     <ul class="pagination pagination-sm mb-0">
       <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
         {% if page_obj.has_previous %}
-          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.previous_page_number }}">‹</a>
+          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}">‹</a>
         {% else %}
           <span class="page-link">‹</span>
         {% endif %}
       </li>
       {% if pagination.show_first %}
-        <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page=1">1</a></li>
+        <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&per_page={{ per_page }}&page=1">1</a></li>
         {% if pagination.ellipsis_start %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
       {% endif %}
       {% for num in page_window %}
         <li class="page-item {% if num == page_obj.number %}active{% endif %}">
-          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ num }}">{{ num }}</a>
+          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&per_page={{ per_page }}&page={{ num }}">{{ num }}</a>
         </li>
       {% endfor %}
       {% if pagination.show_last %}
         {% if pagination.ellipsis_end %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
-        <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a></li>
+        <li class="page-item"><a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&per_page={{ per_page }}&page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a></li>
       {% endif %}
       <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
         {% if page_obj.has_next %}
-          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&page={{ page_obj.next_page_number }}">›</a>
+          <a class="page-link" href="?status={{ status_filtro }}&tipo={{ tipo_filtro }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}">›</a>
         {% else %}
           <span class="page-link">›</span>
         {% endif %}
       </li>
     </ul>
+    {% endif %}
     <span class="text-muted small">
       {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }} pedidos
     </span>
+    <form method="get" class="d-flex align-items-center gap-2 ms-auto">
+      <input type="hidden" name="status" value="{{ status_filtro }}">
+      <input type="hidden" name="tipo" value="{{ tipo_filtro }}">
+      <label class="text-muted small mb-0 text-nowrap">Por página:</label>
+      <select name="per_page" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        {% for opt in per_page_options %}
+        <option value="{{ opt }}" {% if opt == per_page %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </form>
   </nav>
-  {% endif %}
 
   {# Botões de ação em massa #}
   <div class="d-flex gap-2 flex-wrap align-items-center">
@@ -345,12 +373,76 @@
     new bootstrap.Tooltip(el);
   });
 
-  const selecionarTodos = document.getElementById('selecionarTodos');
-  if (selecionarTodos) {
-    selecionarTodos.addEventListener('change', function () {
-      document.querySelectorAll('.chk-pedido').forEach(c => c.checked = this.checked);
+  const selecionarTodosChk = document.getElementById('selecionarTodos');
+  const selectAllInput = document.getElementById('selectAllInput');
+  const bannerSelecao = document.getElementById('bannerSelecaoGlobal');
+  const msgSelPagina = document.getElementById('msgSelPagina');
+  const qtdPaginaSpan = document.getElementById('qtdPaginaSpan');
+  const btnSelTodosStatus = document.getElementById('btnSelecionarTodosStatus');
+  const msgSelTodos = document.getElementById('msgSelTodos');
+  const btnCancelarSelTodos = document.getElementById('btnCancelarSelTodos');
+  const totalNoFiltro = {{ total_no_filtro }};
+
+  function getChkPedidos() { return document.querySelectorAll('.chk-pedido'); }
+
+  function resetSelecaoGlobal() {
+    selectAllInput.value = '0';
+    if (msgSelPagina) msgSelPagina.classList.remove('d-none');
+    if (msgSelTodos) msgSelTodos.classList.add('d-none');
+    if (bannerSelecao) bannerSelecao.classList.add('d-none');
+  }
+
+  function updateBanner() {
+    if (!bannerSelecao) return;
+    if (selectAllInput.value === '1') {
+      bannerSelecao.classList.remove('d-none');
+      return;
+    }
+    const chks = getChkPedidos();
+    const checkedCount = [...chks].filter(c => c.checked).length;
+    if (checkedCount > 0 && checkedCount === chks.length) {
+      if (qtdPaginaSpan) qtdPaginaSpan.textContent = checkedCount;
+      bannerSelecao.classList.remove('d-none');
+    } else {
+      bannerSelecao.classList.add('d-none');
+    }
+  }
+
+  function updateHeaderChk() {
+    if (!selecionarTodosChk) return;
+    const chks = getChkPedidos();
+    const checkedCount = [...chks].filter(c => c.checked).length;
+    selecionarTodosChk.checked = chks.length > 0 && checkedCount === chks.length;
+    selecionarTodosChk.indeterminate = checkedCount > 0 && checkedCount < chks.length;
+  }
+
+  if (selecionarTodosChk) {
+    selecionarTodosChk.addEventListener('change', function () {
+      getChkPedidos().forEach(c => c.checked = this.checked);
+      if (!this.checked) resetSelecaoGlobal();
+      updateBanner();
     });
   }
+
+  getChkPedidos().forEach(c => c.addEventListener('change', function () {
+    if (!this.checked) resetSelecaoGlobal();
+    updateHeaderChk();
+    updateBanner();
+  }));
+
+  btnSelTodosStatus?.addEventListener('click', function (e) {
+    e.preventDefault();
+    selectAllInput.value = '1';
+    if (msgSelPagina) msgSelPagina.classList.add('d-none');
+    if (msgSelTodos) msgSelTodos.classList.remove('d-none');
+  });
+
+  btnCancelarSelTodos?.addEventListener('click', function (e) {
+    e.preventDefault();
+    getChkPedidos().forEach(c => c.checked = false);
+    if (selecionarTodosChk) { selecionarTodosChk.checked = false; selecionarTodosChk.indeterminate = false; }
+    resetSelecaoGlobal();
+  });
 
   document.body.addEventListener('atualizarTabela', function () {
     window.location.reload();
@@ -358,20 +450,17 @@
 
   document.getElementById('formControle')?.addEventListener('submit', function (e) {
     const action = e.submitter?.value;
+    const isSelectAll = selectAllInput?.value === '1';
     const checked = document.querySelectorAll('.chk-pedido:checked').length;
+    const total = isSelectAll ? totalNoFiltro : checked;
 
-    if (checked === 0 && action !== 'ver_insumos' && action !== 'ver_plano_corte') {
-      e.preventDefault();
-      alert('Selecione ao menos um pedido.');
-      return;
-    }
-    if ((action === 'ver_insumos' || action === 'ver_plano_corte') && checked === 0) {
+    if (!isSelectAll && checked === 0) {
       e.preventDefault();
       alert('Selecione ao menos um pedido.');
       return;
     }
     if (action === 'cancelado') {
-      if (!confirm(`Cancelar ${checked} pedido(s) selecionado(s)? Esta ação pode ser revertida reabrindo o pedido.`)) {
+      if (!confirm(`Cancelar ${total} pedido(s) selecionado(s)? Esta ação pode ser revertida reabrindo o pedido.`)) {
         e.preventDefault();
       }
     }
