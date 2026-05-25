@@ -292,12 +292,7 @@
     </span>
     <div class="d-flex align-items-center gap-2 ms-auto">
       <label class="text-muted small mb-0 text-nowrap">Por página:</label>
-      <select class="form-select form-select-sm" style="width:auto" onchange="
-        var url = new URL(window.location.href);
-        url.searchParams.set('per_page', this.value);
-        url.searchParams.set('page', '1');
-        window.location.href = url.toString();
-      ">
+      <select id="perPageSelect" class="form-select form-select-sm" style="width:auto">
         {% for opt in per_page_options %}
         <option value="{{ opt }}" {% if opt == per_page %}selected{% endif %}>{{ opt }}</option>
         {% endfor %}
@@ -374,6 +369,10 @@
 <script>
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
     new bootstrap.Tooltip(el);
+  });
+
+  document.getElementById('perPageSelect')?.addEventListener('change', function () {
+    window.location.href = '?status={{ status_filtro }}&tipo={{ tipo_filtro }}&per_page=' + this.value + '&page=1';
   });
 
   const selecionarTodosChk = document.getElementById('selecionarTodos');
