@@ -7,6 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
+if DEBUG:
+    ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ["*"]
 
 # HTTPS / cookies seguros — desabilitar em dev, habilitar em produção via .env
 SECURE_SSL_REDIRECT          = config("SECURE_SSL_REDIRECT",          default=False, cast=bool)
