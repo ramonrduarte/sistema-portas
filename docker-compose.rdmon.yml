@@ -4,7 +4,8 @@ services:
     build: .
     restart: unless-stopped
     networks:
-      - rede_cloudflare
+      - network_public
+      - internal
     environment:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
@@ -14,19 +15,26 @@ services:
       DATABASE_NAME: ${DATABASE_NAME:-portas_rdmon}
       DATABASE_USER: ${DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_HOST: ${DATABASE_HOST:-postgres}
-      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-False}
       CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-False}
       GPT_API_TOKEN: ${GPT_API_TOKEN}
     volumes:
       - media_data:/app/media
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=network_public"
+      - "traefik.http.routers.portas-rdmon.rule=Host(`portas.rdmon.com`)"
+      - "traefik.http.routers.portas-rdmon.entrypoints=websecure"
+      - "traefik.http.routers.portas-rdmon.tls.certresolver=letsencryptresolver"
+      - "traefik.http.services.portas-rdmon.loadbalancer.server.port=8000"
 
   postgres:
     image: postgres:16
     restart: unless-stopped
     networks:
-      - rede_cloudflare
+      - internal
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-portas_rdmon}
       POSTGRES_USER: ${DATABASE_USER:-postgres}
@@ -39,5 +47,7 @@ volumes:
   postgres_data:
 
 networks:
-  rede_cloudflare:
+  network_public:
     external: true
+  internal:
+    driver: bridge
