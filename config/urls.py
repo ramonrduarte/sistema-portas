@@ -13,5 +13,6 @@ urlpatterns = [
     path("", login_required(lambda _: redirect("pedidos_lista")), name="home"),
     path("", include("portas.urls")),
     path("api/v1/", include("portas.api.urls")),
+    path("api/assistente/", include("portas.api_assistente.urls")),
     re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
 ]

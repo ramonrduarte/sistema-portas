@@ -163,6 +163,18 @@ LOGGING = {
     },
 }
 
+# ── Cache (usado pelo throttling da API do assistente) ────────────────────────
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
+
+# ── Assistente GPT ────────────────────────────────────────────────────────────
+# Token Bearer enviado pelo GPT nas chamadas à API do assistente.
+# Configure GPT_API_TOKEN no .env com um UUID aleatório.
+GPT_API_TOKEN = config("GPT_API_TOKEN", default="")
+
 # ── Django REST Framework ──────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -171,4 +183,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'assistente': '120/minute',
+    },
 }
