@@ -3,12 +3,8 @@ services:
   portas:
     build: .
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - network_public
-      - internal
     environment:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
@@ -33,29 +29,9 @@ services:
       - "traefik.http.routers.portas-rdmon.tls.certresolver=letsencryptresolver"
       - "traefik.http.services.portas-rdmon.loadbalancer.server.port=8000"
 
-  postgres:
-    image: postgres:16
-    restart: unless-stopped
-    networks:
-      - internal
-    environment:
-      POSTGRES_DB: ${DATABASE_NAME:-portas_rdmon}
-      POSTGRES_USER: ${DATABASE_USER:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-portas_rdmon} -c 'SELECT 1' > /dev/null 2>&1"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
 volumes:
   media_data:
-  postgres_data:
 
 networks:
   network_public:
     external: true
-  internal:
-    driver: bridge
