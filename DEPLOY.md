@@ -25,8 +25,13 @@ Na seção **Environment variables** do Portainer, adicione:
 ```
 SECRET_KEY=<chave-longa-e-aleatória>
 DATABASE_PASSWORD=<senha-forte>
-GPT_API_TOKEN=<chave-openai>
+GPT_API_TOKEN=<token-que-voce-gera>
 ```
+
+> **`GPT_API_TOKEN` não é uma chave da OpenAI.** É um token que você mesmo gera
+> (ex: `python -c "import secrets; print(secrets.token_urlsafe(32))"`) para proteger
+> seus endpoints. O mesmo valor é configurado na autenticação do Custom GPT Action
+> no painel da OpenAI, para que o GPT possa chamar sua API.
 
 As demais variáveis já têm valores padrão no `docker-compose.rdmon.yml`:
 
