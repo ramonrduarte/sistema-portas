@@ -3,6 +3,9 @@ services:
   portas:
     build: .
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - network_public
       - internal
@@ -41,6 +44,11 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-portas_rdmon}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   media_data:
