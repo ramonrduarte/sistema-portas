@@ -1626,13 +1626,18 @@ def pedido_controle(request):
                 return _sem_permissao("Você não tem permissão para alterar o status de produção.")
 
             if action == "wise":
+                from django.contrib import messages
+
                 from ..models import BimerConfig
                 from ..services import bimer as svc_bimer
 
                 config = BimerConfig.get()
                 erros_bimer = []
                 pedidos_bloqueados = []
-                for pedido in Pedido.objects.filter(pk__in=ids, status="producao").select_related("cliente"):
+                enviados = []
+                pedidos_selecionados = Pedido.objects.filter(pk__in=ids, status="producao").select_related("cliente")
+                qtd_fora_producao = len(ids) - pedidos_selecionados.count()
+                for pedido in pedidos_selecionados:
                     if pedido.tipo == "porta":
                         tem_pendencia = (
                             PedidoItem.objects.filter(pedido=pedido, montagem_feita=False).exists()
@@ -1656,6 +1661,7 @@ def pedido_controle(request):
                             pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
                             pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
                             _log_status(pedido, request)
+                            enviados.append(f"#{pedido.numero}")
                             continue
 
                     ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
@@ -1665,10 +1671,34 @@ def pedido_controle(request):
                         pedido.bimer_pedido_id = bimer_id or f"PED-{pedido.numero}"
                         pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
                         _log_status(pedido, request)
+                        enviados.append(f"#{pedido.numero}")
                     else:
                         pedido.bimer_erro = msg
                         pedido.save(update_fields=["bimer_erro"])
                         erros_bimer.append(f"#{pedido.numero}")
+
+                if qtd_fora_producao:
+                    messages.warning(
+                        request,
+                        f"{qtd_fora_producao} pedido(s) selecionado(s) não estavam em produção e foram ignorados."
+                    )
+                if pedidos_bloqueados:
+                    messages.warning(
+                        request,
+                        "Pedido(s) " + ", ".join(pedidos_bloqueados) +
+                        " não foram enviados: ainda têm pendência de montagem/corte."
+                    )
+                if erros_bimer:
+                    messages.error(
+                        request,
+                        "Falha ao enviar para o Bimer o(s) pedido(s) " + ", ".join(erros_bimer) +
+                        ". Veja o ícone de erro na lista para o detalhe e use \"Reenviar para Bimer\" para tentar novamente."
+                    )
+                if enviados:
+                    messages.success(
+                        request,
+                        "Pedido(s) " + ", ".join(enviados) + " enviado(s) ao Bimer e marcado(s) como Wise."
+                    )
 
                 if erros_bimer or pedidos_bloqueados:
                     return redirect(f"{reverse('pedido_controle')}?status=producao")

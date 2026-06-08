@@ -8,6 +8,15 @@
   <a href="{% url 'pedidos_lista' %}" class="btn btn-sm btn-outline-secondary">← Pedidos</a>
 </div>
 
+{% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show py-2 small">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endif %}
+
 {% if status_filtro == 'producao' and pedidos_com_erro %}
 <div class="alert alert-danger py-2 small mb-3">
   <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Falha ao enviar para o Bimer:</strong>
