@@ -7,11 +7,19 @@ do assistente (portas/api_assistente/) — o mesmo backend já usado pelo
 Custom GPT, autenticado com o GPT_API_TOKEN. Isso garante que o cálculo
 seja sempre feito pela mesma lógica validada, sem duplicação.
 """
+import time
+
 import requests
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 MAX_RODADAS_FUNCAO = 5
+
+# O modelo às vezes responde 503 ("overloaded"/"high demand") por instabilidade
+# transitória do free tier do Google — vale a pena tentar de novo automaticamente
+# antes de mostrar o erro para o usuário.
+RETRIES_503 = 2
+ESPERA_RETRY_SEGUNDOS = 3
 
 INSTRUCAO_SISTEMA = (
     "Você é um assistente de orçamentos do Sistema de Portas. Ajude o usuário "
@@ -96,6 +104,17 @@ class GeminiError(Exception):
     pass
 
 
+def _post_com_retry(url, api_key, body):
+    """POST ao Gemini com novas tentativas em caso de 503 (sobrecarga transitória)."""
+    tentativa = 0
+    while True:
+        resp = requests.post(url, params={"key": api_key}, json=body, timeout=60)
+        if resp.status_code != 503 or tentativa >= RETRIES_503:
+            return resp
+        tentativa += 1
+        time.sleep(ESPERA_RETRY_SEGUNDOS)
+
+
 def _executar_funcao(nome, args, *, base_url_api, token_api):
     """Executa a função chamada pelo Gemini delegando para a API do assistente."""
     headers = {"Authorization": f"Bearer {token_api}"}
@@ -173,12 +192,18 @@ def enviar_mensagem(config, pergunta, historico, *, base_url_api, token_api):
             "contents": contents,
             "tools": [{"functionDeclarations": FUNCOES}],
         }
-        resp = requests.post(url, params={"key": api_key}, json=body, timeout=60)
+        resp = _post_com_retry(url, api_key, body)
         if resp.status_code != 200:
             try:
                 detalhe = resp.json().get("error", {}).get("message", resp.text)
             except ValueError:
                 detalhe = resp.text
+            if resp.status_code == 503:
+                raise GeminiError(
+                    "O Gemini está temporariamente sobrecarregado (alta demanda no "
+                    "modelo gratuito). Aguarde alguns segundos e tente enviar a "
+                    "mensagem novamente."
+                )
             raise GeminiError(f"Erro {resp.status_code} ao consultar o Gemini: {detalhe}")
 
         dados = resp.json()

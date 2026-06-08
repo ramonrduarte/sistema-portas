@@ -162,7 +162,9 @@ def assistente_chat_mensagem(request, token):
     request.session[sessao_key] = novo_contents
     request.session.modified = True
 
-    novas_mensagens = _historico_para_exibicao(novo_contents)[-2:]
+    # Apenas a resposta do assistente — a mensagem do usuário já foi exibida
+    # de forma otimista pelo JS no momento do envio.
+    novas_mensagens = _historico_para_exibicao(novo_contents)[-1:]
     return render(request, "portas/publico/_assistente_chat_mensagens.html", {
         "mensagens": novas_mensagens,
         "erro": erro,

@@ -23,6 +23,7 @@
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator { display: inline-block; }
     .htmx-request .btn-enviar-texto { display: none; }
+    .digitando .bubble { display: flex; align-items: center; gap: .5rem; color: #8b949e; font-style: italic; }
   </style>
 </head>
 <body>
@@ -53,8 +54,7 @@
         hx-post="{% url 'assistente_chat_mensagem' token %}"
         hx-target="#mensagens"
         hx-swap="beforeend"
-        hx-indicator="#spinner-msg"
-        hx-on::after-request="if(event.detail.successful){this.reset(); var v=document.querySelector('.vazio'); if(v){v.remove();} document.getElementById('chat-body').scrollTop = 999999;}">
+        hx-indicator="#spinner-msg">
     {% csrf_token %}
     <input type="text" name="pergunta" class="form-control" placeholder="Digite sua mensagem..." autocomplete="off" required>
     <button type="submit" class="btn btn-primary">
@@ -66,7 +66,60 @@
 
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <script>
-  document.getElementById('chat-body').scrollTop = 999999;
+  var chatBody = document.getElementById('chat-body');
+  var mensagens = document.getElementById('mensagens');
+  var form = document.querySelector('.chat-form');
+  var input = form.querySelector('input[name="pergunta"]');
+
+  function rolarParaFim() {
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+  rolarParaFim();
+
+  function criarBolha(role, texto, extraClass) {
+    var div = document.createElement('div');
+    div.className = 'msg msg-' + role + (extraClass ? ' ' + extraClass : '');
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if (texto) bubble.textContent = texto;
+    div.appendChild(bubble);
+    return div;
+  }
+
+  // Exibe a mensagem do usuário e um indicador de "digitando" assim que o
+  // formulário é enviado — não espera a resposta do Gemini para dar feedback.
+  form.addEventListener('submit', function () {
+    var texto = input.value.trim();
+    if (!texto) return;
+
+    var vazio = document.querySelector('.vazio');
+    if (vazio) vazio.remove();
+
+    mensagens.appendChild(criarBolha('user', texto));
+
+    var digitando = criarBolha('model', null, 'digitando');
+    digitando.id = 'indicador-digitando';
+    digitando.querySelector('.bubble').innerHTML =
+      '<span class="spinner-border spinner-border-sm"></span> digitando...';
+    mensagens.appendChild(digitando);
+
+    rolarParaFim();
+  });
+
+  document.body.addEventListener('htmx:beforeSwap', function () {
+    var digitando = document.getElementById('indicador-digitando');
+    if (digitando) digitando.remove();
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function (event) {
+    if (event.detail.elt !== form) return;
+    var digitando = document.getElementById('indicador-digitando');
+    if (digitando) digitando.remove();
+    if (event.detail.successful) {
+      form.reset();
+    }
+    rolarParaFim();
+  });
 </script>
 </body>
 </html>
