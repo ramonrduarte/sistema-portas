@@ -204,6 +204,14 @@ def enviar_mensagem(config, pergunta, historico, *, base_url_api, token_api):
                     "modelo gratuito). Aguarde alguns segundos e tente enviar a "
                     "mensagem novamente."
                 )
+            if resp.status_code == 429:
+                raise GeminiError(
+                    "O limite diário gratuito do Gemini para este modelo foi atingido "
+                    "(a conta gratuita permite poucas mensagens por dia). Não adianta "
+                    "tentar de novo agora — espere a cota renovar (geralmente no dia "
+                    "seguinte) ou ative o faturamento no Google AI Studio para aumentar "
+                    "o limite."
+                )
             raise GeminiError(f"Erro {resp.status_code} ao consultar o Gemini: {detalhe}")
 
         dados = resp.json()
