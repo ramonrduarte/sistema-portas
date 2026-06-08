@@ -11,6 +11,9 @@ if DEBUG:
     ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ["*"]
 
 # HTTPS / cookies seguros — desabilitar em dev, habilitar em produção via .env
+# Traefik termina o TLS e repassa em HTTP puro; sem isso o Django acha que a
+# requisição não é segura e gera URLs com http:// (ex: no schema do assistente GPT)
+SECURE_PROXY_SSL_HEADER      = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT          = config("SECURE_SSL_REDIRECT",          default=False, cast=bool)
 SESSION_COOKIE_SECURE        = config("SESSION_COOKIE_SECURE",        default=False, cast=bool)
 CSRF_COOKIE_SECURE           = config("CSRF_COOKIE_SECURE",           default=False, cast=bool)
