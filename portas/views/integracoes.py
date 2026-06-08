@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
@@ -97,11 +98,14 @@ def assistente_ia_config(request):
     chat_url = request.build_absolute_uri(
         reverse("assistente_chat", args=[config.token_chat])
     )
+    schema_url = request.build_absolute_uri(reverse("assistente_schema"))
 
     return render(request, "portas/integracoes/assistente_ia.html", {
-        "form":     form,
-        "config":   config,
-        "chat_url": chat_url,
+        "form":          form,
+        "config":        config,
+        "chat_url":      chat_url,
+        "schema_url":    schema_url,
+        "gpt_api_token": settings.GPT_API_TOKEN,
     })
 
 

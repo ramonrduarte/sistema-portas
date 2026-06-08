@@ -121,6 +121,40 @@
         </form>
       </div>
     </div>
+
+    <div class="card mt-3">
+      <div class="card-header"><strong>Configuração do Custom GPT (ChatGPT)</strong></div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Para conectar um Custom GPT a este sistema (Configure → Actions →
+          Create new action), use o schema e o token abaixo.
+        </p>
+
+        <label class="form-label small fw-bold">URL do schema (Action)</label>
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" value="{{ schema_url }}" id="link-schema" readonly>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="navigator.clipboard.writeText(document.getElementById('link-schema').value)">
+            Copiar
+          </button>
+        </div>
+
+        <label class="form-label small fw-bold">Token de autenticação (GPT_API_TOKEN)</label>
+        <div class="input-group">
+          <input type="text" class="form-control" value="{{ gpt_api_token }}" id="link-gpt-token" readonly>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="navigator.clipboard.writeText(document.getElementById('link-gpt-token').value)">
+            Copiar
+          </button>
+        </div>
+        <p class="form-text mb-0">
+          Configure como autenticação do tipo <strong>API Key / Bearer</strong> nas
+          Actions do GPT. Esse token é definido no <code>.env</code> do servidor
+          (variável <code>GPT_API_TOKEN</code>) — para trocá-lo, atualize-o lá e
+          reimplante o sistema.
+        </p>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
