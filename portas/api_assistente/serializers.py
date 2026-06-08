@@ -50,6 +50,7 @@ class PerfilOpcoesSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "descricao",
+            "modelo",
             "acabamento_id",
             "acabamento_nome",
             "puxadores_compativeis",
@@ -64,7 +65,7 @@ class PerfilPuxadorOpcoesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PerfilPuxador
-        fields = ["id", "descricao", "acabamento_id", "acabamento_nome"]
+        fields = ["id", "descricao", "modelo", "acabamento_id", "acabamento_nome"]
 
 
 class PuxadorOpcoesSerializer(serializers.ModelSerializer):
@@ -72,7 +73,7 @@ class PuxadorOpcoesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Puxador
-        fields = ["id", "descricao", "acabamento_id", "acabamento_nome"]
+        fields = ["id", "descricao", "modelo", "acabamento_id", "acabamento_nome"]
 
 
 class DivisorOpcoesSerializer(serializers.ModelSerializer):
@@ -81,7 +82,7 @@ class DivisorOpcoesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Divisor
-        fields = ["id", "descricao", "acabamento_id", "acabamento_nome", "encaixe_label"]
+        fields = ["id", "descricao", "modelo", "acabamento_id", "acabamento_nome", "encaixe_label"]
 
 
 class VidroOpcoesSerializer(serializers.ModelSerializer):

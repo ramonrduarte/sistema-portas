@@ -27,7 +27,13 @@ INSTRUCAO_SISTEMA = (
     "disponíveis (listar_opcoes e calcular_porta) para obter dados reais do "
     "catálogo e do cálculo — nunca invente IDs, preços ou valores. "
     "Sempre que precisar de IDs de perfil, vidro, puxador, divisor ou serviço, "
-    "use listar_opcoes primeiro. Responda de forma objetiva e amigável, em português."
+    "use listar_opcoes primeiro. "
+    "Cada item tem uma 'descricao' (ex: 'DES-198') e, quando existir, um 'modelo' "
+    "(ex: '3579') — são campos distintos, sem relação fixa entre si: a mesma busca "
+    "pode encontrar mais de um item com descrição ou modelo parecidos. Se a busca "
+    "retornar mais de uma opção compatível com o que o cliente pediu, NÃO escolha "
+    "sozinho — liste as opções (descrição, modelo e acabamento) e pergunte qual é a "
+    "certa antes de continuar. Responda de forma objetiva e amigável, em português."
 )
 
 FUNCOES = [
@@ -44,7 +50,10 @@ FUNCOES = [
             "properties": {
                 "busca": {
                     "type": "string",
-                    "description": "Filtra os itens cuja descrição contenha este texto (opcional)",
+                    "description": (
+                        "Filtra os itens cuja descrição OU modelo contenham este texto "
+                        "(opcional). Ex: 'des-198' ou '3579'."
+                    ),
                 },
                 "acabamento": {
                     "type": "string",

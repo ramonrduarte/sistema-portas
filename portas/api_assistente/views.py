@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -92,10 +93,11 @@ class OpcoesView(APIView):
             divisores_qs = divisores_qs.filter(acabamento__nome__icontains=acabamento_filtro)
 
         if busca:
-            perfis_qs = perfis_qs.filter(descricao__icontains=busca)
-            pps_qs = pps_qs.filter(descricao__icontains=busca)
-            puxadores_qs = puxadores_qs.filter(descricao__icontains=busca)
-            divisores_qs = divisores_qs.filter(descricao__icontains=busca)
+            produto_q = Q(descricao__icontains=busca) | Q(modelo__icontains=busca)
+            perfis_qs = perfis_qs.filter(produto_q)
+            pps_qs = pps_qs.filter(produto_q)
+            puxadores_qs = puxadores_qs.filter(produto_q)
+            divisores_qs = divisores_qs.filter(produto_q)
             vidros_qs = vidros_qs.filter(descricao__icontains=busca)
 
         return Response({
@@ -502,7 +504,15 @@ class SchemaView(APIView):
                                 "in": "query",
                                 "required": False,
                                 "schema": {"type": "string"},
-                                "description": "Filtra todos os grupos pelo nome/descrição. Ex: 'des-198', 'espelho prata'",
+                                "description": (
+                                    "Filtra todos os grupos pela descrição OU pelo modelo (campo 'modelo', "
+                                    "quando presente). Ex: 'des-198', '3579', 'espelho prata'. Atenção: "
+                                    "descrição e modelo são campos distintos e não têm relação fixa entre si "
+                                    "— a busca pode retornar mais de um item com a mesma descrição ou o "
+                                    "mesmo modelo. Se houver mais de um resultado compatível com o que o "
+                                    "cliente pediu, NÃO escolha sozinho — pergunte ao cliente qual deles é, "
+                                    "mostrando descrição, modelo e acabamento de cada opção."
+                                ),
                             },
                             {
                                 "name": "acabamento",
