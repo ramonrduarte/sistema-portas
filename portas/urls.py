@@ -142,10 +142,15 @@ urlpatterns = [
     path("integracoes/bimer/testar/",               views.bimer_testar_conexao,        name="bimer_testar_conexao"),
     path("integracoes/bimer/sincronizar/",          views.bimer_sincronizar,           name="bimer_sincronizar"),
     path("integracoes/bimer/sincronizar-clientes/", views.bimer_sincronizar_clientes,  name="bimer_sincronizar_clientes"),
+    path("integracoes/assistente-ia/",          views.assistente_ia_config,         name="assistente_ia_config"),
+    path("integracoes/assistente-ia/testar/",   views.assistente_ia_testar_conexao, name="assistente_ia_testar_conexao"),
+    path("integracoes/assistente-ia/novo-link/", views.assistente_ia_gerar_novo_link, name="assistente_ia_gerar_novo_link"),
 
     # Páginas públicas (sem login, protegidas por token UUID)
     path("monitor/<uuid:token>/", views.monitor_producao, name="monitor_producao"),
     path("agenda/<uuid:token>/", views.agenda_entregas, name="agenda_entregas"),
+    path("orcamento-ia/<uuid:token>/", views.assistente_chat, name="assistente_chat"),
+    path("orcamento-ia/<uuid:token>/mensagem/", views.assistente_chat_mensagem, name="assistente_chat_mensagem"),
 
     # Configurações
     path("configuracoes/", views.configuracoes_empresa, name="configuracoes_empresa"),

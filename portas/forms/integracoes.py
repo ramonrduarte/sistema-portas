@@ -1,6 +1,6 @@
 from django import forms
 
-from ..models import BimerConfig
+from ..models import AssistenteIAConfig, BimerConfig
 
 _DIAS_CHOICES = [
     ("mon", "Seg"),
@@ -109,6 +109,50 @@ class BimerConfigForm(forms.ModelForm):
         horas = self.cleaned_data.get("sync_horas", [])
         obj.sync_dias_semana = ",".join(dias) if dias else "mon,tue,wed,thu,fri,sat,sun"
         obj.sync_horarios    = ",".join(sorted(horas, key=int)) if horas else "7,14"
+
+        if commit:
+            obj.save()
+        return obj
+
+
+class AssistenteIAConfigForm(forms.ModelForm):
+    """
+    Formulário de configuração do assistente de orçamento via IA (Gemini).
+    A chave de API é write-only — nunca pré-preenchida no template.
+    """
+    api_key = forms.CharField(
+        required=False,
+        label="Chave de API do Gemini",
+        widget=forms.PasswordInput(attrs={
+            "class": "form-control",
+            "autocomplete": "new-password",
+            "placeholder": "••••••• (deixe em branco para manter a chave atual)",
+        }),
+    )
+
+    class Meta:
+        model = AssistenteIAConfig
+        fields = ["api_key", "modelo", "ativo"]
+        widgets = {
+            "modelo": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "gemini-2.0-flash",
+            }),
+            "ativo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "modelo": "Modelo",
+            "ativo": "Assistente ativo",
+        }
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+
+        nova_chave = self.cleaned_data.get("api_key")
+        if nova_chave:
+            obj.api_key = nova_chave
+        else:
+            obj._api_key = AssistenteIAConfig.get()._api_key
 
         if commit:
             obj.save()

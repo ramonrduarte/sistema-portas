@@ -113,13 +113,17 @@ __all__ = [
     "pedido_confirmar_orcamento", "pedido_voltar_orcamento", "orcamentos_limpar",
     # integrações
     "bimer_config", "bimer_testar_conexao", "bimer_sincronizar", "bimer_sincronizar_clientes",
+    "assistente_ia_config", "assistente_ia_testar_conexao", "assistente_ia_gerar_novo_link",
     # configurações
     "configuracoes_empresa",
     # backup
     "backup_config", "backup_testar_diretorio",
 ]
 
-from .integracoes import bimer_config, bimer_testar_conexao, bimer_sincronizar, bimer_sincronizar_clientes
+from .integracoes import (
+    bimer_config, bimer_testar_conexao, bimer_sincronizar, bimer_sincronizar_clientes,
+    assistente_ia_config, assistente_ia_testar_conexao, assistente_ia_gerar_novo_link,
+)
 from .configuracoes import configuracoes_empresa
 from .backup import backup_config, backup_testar_diretorio
 from .corte import (
@@ -135,4 +139,4 @@ from .corte import (
     marcar_montagem_feita,
     marcar_montagem_feita_pedido,
 )
-from .publico import monitor_producao, agenda_entregas
+from .publico import monitor_producao, agenda_entregas, assistente_chat, assistente_chat_mensagem

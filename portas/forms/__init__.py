@@ -12,7 +12,7 @@ from .produtos import (
 from .clientes import ClienteForm
 from .usuarios import UsuarioPerfilForm
 from .pedidos import PedidoItemForm, PedidoForm, PedidoNovoOrcamentoForm, PedidoItemVidroForm
-from .integracoes import BimerConfigForm
+from .integracoes import BimerConfigForm, AssistenteIAConfigForm
 from .configuracoes import ConfiguracaoEmpresaForm
 
 __all__ = [
@@ -30,6 +30,7 @@ __all__ = [
     "PedidoNovoOrcamentoForm",
     "PedidoItemVidroForm",
     "BimerConfigForm",
+    "AssistenteIAConfigForm",
     "ConfiguracaoEmpresaForm",
     "ServicoVidroForm",
     "ServicoPortaForm",

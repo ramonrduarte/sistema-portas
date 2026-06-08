@@ -2,10 +2,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
-from ..forms import BimerConfigForm
-from ..models import BimerConfig
+from ..forms import AssistenteIAConfigForm, BimerConfigForm
+from ..models import AssistenteIAConfig, BimerConfig
 from ..services import bimer as svc_bimer
+from ..services import gemini_assistente as svc_gemini
 
 
 def _apenas_staff(request):
@@ -73,4 +75,61 @@ def bimer_sincronizar_clientes(request):
     return render(request, "portas/integracoes/_resultado_sync_clientes.html", {
         "resultado": resultado,
         "config":    config,
+    })
+
+
+@login_required
+def assistente_ia_config(request):
+    if not _apenas_staff(request):
+        return redirect("pedidos_lista")
+
+    config = AssistenteIAConfig.get()
+
+    if request.method == "POST":
+        form = AssistenteIAConfigForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Configuração salva com sucesso.")
+            return redirect("assistente_ia_config")
+    else:
+        form = AssistenteIAConfigForm(instance=config)
+
+    chat_url = request.build_absolute_uri(
+        reverse("assistente_chat", args=[config.token_chat])
+    )
+
+    return render(request, "portas/integracoes/assistente_ia.html", {
+        "form":     form,
+        "config":   config,
+        "chat_url": chat_url,
+    })
+
+
+@login_required
+def assistente_ia_gerar_novo_link(request):
+    """POST — gera um novo token para o chat público, revogando o link anterior."""
+    if not _apenas_staff(request):
+        return redirect("pedidos_lista")
+    if request.method != "POST":
+        return redirect("assistente_ia_config")
+
+    import uuid
+    config = AssistenteIAConfig.get()
+    config.token_chat = uuid.uuid4()
+    config.save(update_fields=["token_chat"])
+    messages.success(request, "Novo link gerado. O link anterior deixou de funcionar.")
+    return redirect("assistente_ia_config")
+
+
+@login_required
+def assistente_ia_testar_conexao(request):
+    """HTMX POST — testa a chave do Gemini e retorna badge de status inline."""
+    if not _apenas_staff(request):
+        return HttpResponseForbidden()
+
+    config = AssistenteIAConfig.get()
+    ok, msg = svc_gemini.testar_api_key(config.api_key, config.modelo)
+    return render(request, "portas/integracoes/_status_conexao.html", {
+        "ok":  ok,
+        "msg": msg,
     })

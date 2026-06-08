@@ -840,6 +840,66 @@ class ConfiguracaoEmpresa(models.Model):
         return self.nome_empresa
 
 
+# ── Assistente de orçamento via IA (Gemini) ──────────────────────────────────
+
+class AssistenteIAConfig(models.Model):
+    """
+    Configuração singleton da integração com o Gemini para o chat público de
+    orçamento. Apenas um registro (pk=1) é permitido.
+    A chave de API nunca é exibida no template — fica criptografada no banco.
+    """
+    _api_key = models.CharField(max_length=255, blank=True, db_column="gemini_api_key",
+                                verbose_name="Chave de API do Gemini")
+    modelo = models.CharField(
+        max_length=100, blank=True, default="gemini-2.0-flash",
+        verbose_name="Modelo",
+        help_text="Nome do modelo Gemini a ser usado (ex: gemini-2.0-flash)",
+    )
+    ativo = models.BooleanField(default=False, verbose_name="Assistente ativo")
+    token_chat = models.UUIDField(
+        default=uuid.uuid4,
+        verbose_name="Token do chat público",
+        help_text="UUID gerado automaticamente. Use na URL do chat compartilhado com terceiros.",
+    )
+    total_chamadas = models.PositiveIntegerField(default=0, verbose_name="Total de chamadas à IA")
+    ultima_chamada = models.DateTimeField(null=True, blank=True, verbose_name="Última chamada")
+
+    class Meta:
+        verbose_name = "Configuração do Assistente IA"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # garante singleton
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def api_key(self):
+        from .crypto import decrypt
+        return decrypt(self._api_key)
+
+    @api_key.setter
+    def api_key(self, value):
+        from .crypto import encrypt
+        self._api_key = encrypt(value) if value else value
+
+    def chave_configurada(self):
+        return bool(self._api_key)
+
+    def registrar_chamada(self):
+        from django.utils import timezone
+        self.total_chamadas = models.F("total_chamadas") + 1
+        self.ultima_chamada = timezone.now()
+        self.save(update_fields=["total_chamadas", "ultima_chamada"])
+        self.refresh_from_db()
+
+    def __str__(self):
+        return "Configuração do Assistente IA"
+
+
 # ── Backup ────────────────────────────────────────────────────────────────────
 
 class ConfiguracaoBackup(models.Model):

@@ -1,11 +1,13 @@
 from datetime import date, timedelta
 from collections import defaultdict
 
+from django.conf import settings
 from django.db.models import Count, Exists, OuterRef
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import render
 
-from ..models import ConfiguracaoEmpresa, Pedido, PedidoItem, PedidoItemVidro
+from ..models import AssistenteIAConfig, ConfiguracaoEmpresa, Pedido, PedidoItem, PedidoItemVidro
+from ..services import gemini_assistente as svc_gemini
 
 
 def _verificar_token(token):
@@ -88,4 +90,80 @@ def agenda_entregas(request, token):
         "config": config,
         "token": token,
         "hoje": hoje,
+    })
+
+
+# ── Chat público de orçamento via IA (Gemini) ────────────────────────────────
+
+def _sessao_chat_key(token):
+    return f"assistente_chat_{token}"
+
+
+def _verificar_token_assistente(token):
+    config = AssistenteIAConfig.get()
+    if str(config.token_chat) != str(token):
+        raise Http404
+    if not (config.ativo and config.chave_configurada()):
+        raise Http404
+    return config
+
+
+def _historico_para_exibicao(contents):
+    mensagens = []
+    for item in contents:
+        role = item.get("role")
+        if role not in ("user", "model"):
+            continue
+        texto = "".join(part.get("text", "") for part in item.get("parts", []))
+        if texto.strip():
+            mensagens.append({"role": role, "texto": texto.strip()})
+    return mensagens
+
+
+def assistente_chat(request, token):
+    config = _verificar_token_assistente(token)
+    contents = request.session.get(_sessao_chat_key(token), [])
+    return render(request, "portas/publico/assistente_chat.html", {
+        "config": config,
+        "token": token,
+        "mensagens": _historico_para_exibicao(contents),
+    })
+
+
+def assistente_chat_mensagem(request, token):
+    """HTMX POST — envia uma pergunta ao assistente e retorna as novas mensagens."""
+    config = _verificar_token_assistente(token)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    pergunta = (request.POST.get("pergunta") or "").strip()
+    if not pergunta:
+        return HttpResponseBadRequest()
+
+    sessao_key = _sessao_chat_key(token)
+    contents = request.session.get(sessao_key, [])
+
+    base_url_api = request.build_absolute_uri("/api/assistente")
+    erro = None
+    try:
+        _, novo_contents = svc_gemini.enviar_mensagem(
+            config, pergunta, contents,
+            base_url_api=base_url_api, token_api=settings.GPT_API_TOKEN,
+        )
+    except svc_gemini.GeminiError as e:
+        novo_contents = contents + [
+            {"role": "user", "parts": [{"text": pergunta}]},
+            {"role": "model", "parts": [{"text": f"⚠️ {e}"}]},
+        ]
+        erro = str(e)
+    else:
+        config.registrar_chamada()
+
+    request.session[sessao_key] = novo_contents
+    request.session.modified = True
+
+    novas_mensagens = _historico_para_exibicao(novo_contents)[-2:]
+    return render(request, "portas/publico/_assistente_chat_mensagens.html", {
+        "mensagens": novas_mensagens,
+        "erro": erro,
     })

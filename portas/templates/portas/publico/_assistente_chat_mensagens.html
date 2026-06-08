@@ -1,0 +1,5 @@
+{% for m in mensagens %}
+<div class="msg msg-{{ m.role }}">
+  <div class="bubble">{{ m.texto }}</div>
+</div>
+{% endfor %}

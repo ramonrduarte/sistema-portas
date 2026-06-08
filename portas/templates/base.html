@@ -275,6 +275,12 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'assistente_ia_config' %}active{% endif %}"
+             href="{% url 'assistente_ia_config' %}">
+            <i class="bi bi-robot me-2"></i>Assistente IA
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.url_name == 'configuracoes_empresa' %}active{% endif %}"
              href="{% url 'configuracoes_empresa' %}">
             <i class="bi bi-gear me-2"></i>Configurações
