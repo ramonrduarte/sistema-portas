@@ -103,6 +103,10 @@
       '<span class="spinner-border spinner-border-sm"></span> digitando...';
     mensagens.appendChild(digitando);
 
+    // Limpa o campo logo em seguida (não imediatamente, para o htmx ainda
+    // capturar o valor digitado ao serializar o formulário no envio).
+    setTimeout(function () { input.value = ''; }, 0);
+
     rolarParaFim();
   });
 
@@ -115,9 +119,6 @@
     if (event.detail.elt !== form) return;
     var digitando = document.getElementById('indicador-digitando');
     if (digitando) digitando.remove();
-    if (event.detail.successful) {
-      form.reset();
-    }
     rolarParaFim();
   });
 
