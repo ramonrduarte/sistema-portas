@@ -151,6 +151,7 @@ urlpatterns = [
     path("agenda/<uuid:token>/", views.agenda_entregas, name="agenda_entregas"),
     path("orcamento-ia/<uuid:token>/", views.assistente_chat, name="assistente_chat"),
     path("orcamento-ia/<uuid:token>/mensagem/", views.assistente_chat_mensagem, name="assistente_chat_mensagem"),
+    path("orcamento-ia/<uuid:token>/limpar/", views.assistente_chat_limpar, name="assistente_chat_limpar"),
 
     # Configurações
     path("configuracoes/", views.configuracoes_empresa, name="configuracoes_empresa"),

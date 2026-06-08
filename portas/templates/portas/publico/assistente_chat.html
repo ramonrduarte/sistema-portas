@@ -120,6 +120,15 @@
     }
     rolarParaFim();
   });
+
+  // Limpa a conversa ao sair da página, para que o próximo acesso comece do zero.
+  var csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+  var urlLimpar = "{% url 'assistente_chat_limpar' token %}";
+  window.addEventListener('pagehide', function () {
+    var dados = new FormData();
+    dados.append('csrfmiddlewaretoken', csrfToken);
+    navigator.sendBeacon(urlLimpar, dados);
+  });
 </script>
 </body>
 </html>

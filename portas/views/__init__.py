@@ -139,4 +139,4 @@ from .corte import (
     marcar_montagem_feita,
     marcar_montagem_feita_pedido,
 )
-from .publico import monitor_producao, agenda_entregas, assistente_chat, assistente_chat_mensagem
+from .publico import monitor_producao, agenda_entregas, assistente_chat, assistente_chat_mensagem, assistente_chat_limpar

@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from django.conf import settings
 from django.db.models import Count, Exists, OuterRef
-from django.http import Http404, HttpResponseBadRequest
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
 
 from ..models import AssistenteIAConfig, ConfiguracaoEmpresa, Pedido, PedidoItem, PedidoItemVidro
@@ -169,3 +169,14 @@ def assistente_chat_mensagem(request, token):
         "mensagens": novas_mensagens,
         "erro": erro,
     })
+
+
+def assistente_chat_limpar(request, token):
+    """Limpa o histórico da conversa (chamado ao sair da página do chat)."""
+    _verificar_token_assistente(token)
+    if request.method != "POST":
+        return HttpResponseBadRequest()
+
+    request.session.pop(_sessao_chat_key(token), None)
+    request.session.modified = True
+    return HttpResponse(status=204)
