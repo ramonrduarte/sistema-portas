@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from rest_framework import status
@@ -12,9 +12,15 @@ from portas.models import (
     Perfil,
     PerfilPuxador,
     Puxador,
+    ServicoPorta,
     VidroBase,
 )
-from portas.services.orcamento import calc_total
+from portas.services.orcamento import (
+    calc_total,
+    calc_bases_servicos_porta,
+    base_servico_porta,
+    aplicar_desconto_e_adicional,
+)
 
 from .permissions import AssistenteThrottle, IsGPTAssistant
 from .serializers import (
@@ -23,6 +29,7 @@ from .serializers import (
     PerfilOpcoesSerializer,
     PerfilPuxadorOpcoesSerializer,
     PuxadorOpcoesSerializer,
+    ServicoPortaOpcoesSerializer,
     VidroOpcoesSerializer,
 )
 
@@ -76,6 +83,7 @@ class OpcoesView(APIView):
             .select_related("espessura")
             .order_by("descricao")
         )
+        servicos_porta_qs = ServicoPorta.objects.filter(ativo=True).order_by("ordem", "nome")
 
         if acabamento_filtro:
             perfis_qs = perfis_qs.filter(acabamento__nome__icontains=acabamento_filtro)
@@ -99,6 +107,7 @@ class OpcoesView(APIView):
             "puxadores": PuxadorOpcoesSerializer(puxadores_qs, many=True).data,
             "divisores": DivisorOpcoesSerializer(divisores_qs, many=True).data,
             "vidros": VidroOpcoesSerializer(vidros_qs, many=True).data,
+            "servicos_porta": ServicoPortaOpcoesSerializer(servicos_porta_qs, many=True).data,
         })
 
 
@@ -122,7 +131,13 @@ class CalcularPortaView(APIView):
         "puxador_tamanho_mm": null,    // obrigatório se puxador_id
         "vidro_id": 8,                 // opcional
         "divisor_id": null,            // opcional
-        "qtd_divisor": null            // obrigatório se divisor_id
+        "qtd_divisor": null,           // obrigatório se divisor_id
+        "puxador_sobreposto": true,    // opcional, padrão true (afeta cálculo de serviços)
+        "servicos_porta_ids": [2],     // opcional, IDs de ServicoPorta (obtidos em /opcoes/)
+        "desconto": 10,                // opcional, percentual (0-100) sobre o valor base + serviços
+        "adicionais": [                // opcional, até 4 — somados após o desconto
+            {"valor": 50, "descricao": "Frete"}
+        ]
     }
     """
     authentication_classes = []
@@ -190,6 +205,7 @@ class CalcularPortaView(APIView):
         pux = None
         qtd_pux = int(data.get("qtd_puxador") or 0)
         pux_tam = int(data.get("puxador_tamanho_mm") or 0)
+        pux_sobreposto = bool(data.get("puxador_sobreposto", True))
         pux_id = data.get("puxador_id")
         if pux_id:
             if pp:
@@ -239,6 +255,51 @@ class CalcularPortaView(APIView):
             except VidroBase.DoesNotExist:
                 erros.append(f"Vidro ID {vidro_id} não encontrado ou inativo.")
 
+        # ── Serviços de porta (opcional) ──────────────────────────────────────
+        servicos_selecionados = []
+        servicos_ids = data.get("servicos_porta_ids") or []
+        if not isinstance(servicos_ids, list):
+            erros.append("servicos_porta_ids deve ser uma lista de IDs.")
+        else:
+            try:
+                ids_int = [int(sid) for sid in servicos_ids]
+            except (TypeError, ValueError):
+                erros.append("servicos_porta_ids deve conter apenas números inteiros.")
+            else:
+                if ids_int:
+                    servicos_selecionados = list(ServicoPorta.objects.filter(pk__in=ids_int, ativo=True))
+                    encontrados = {sv.pk for sv in servicos_selecionados}
+                    for sid in ids_int:
+                        if sid not in encontrados:
+                            erros.append(f"Serviço de porta ID {sid} não encontrado ou inativo.")
+
+        # ── Desconto (opcional, percentual sobre valor base + serviços) ───────
+        desconto_pct = None
+        if data.get("desconto") is not None:
+            try:
+                desconto_pct = Decimal(str(data["desconto"]))
+            except (InvalidOperation, ValueError, TypeError):
+                erros.append("desconto deve ser um número (percentual entre 0 e 100).")
+            else:
+                if desconto_pct < 0 or desconto_pct > 100:
+                    erros.append("desconto deve estar entre 0 e 100.")
+
+        # ── Adicionais (opcional, até 4: valor + descrição) ───────────────────
+        adicionais = []
+        adicionais_input = data.get("adicionais") or []
+        if not isinstance(adicionais_input, list):
+            erros.append("adicionais deve ser uma lista de objetos no formato {valor, descricao}.")
+        elif len(adicionais_input) > 4:
+            erros.append("no máximo 4 adicionais são permitidos por porta.")
+        else:
+            for i, ad in enumerate(adicionais_input, start=1):
+                try:
+                    valor_ad = Decimal(str(ad["valor"]))
+                except (KeyError, TypeError, ValueError, InvalidOperation):
+                    erros.append(f"adicional {i}: 'valor' é obrigatório e deve ser numérico.")
+                    continue
+                adicionais.append((valor_ad, str(ad.get("descricao") or "").strip()))
+
         if erros:
             return Response({"valido": False, "erros": erros})
 
@@ -258,7 +319,31 @@ class CalcularPortaView(APIView):
             preco_vidro_m2=(vidro.preco if vidro else None),
             custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
         )
-        valor_total = valor_base * Decimal(quantidade)
+
+        # ── Serviços de porta ─────────────────────────────────────────────────
+        metro_linear_perfil, m2_vidro_base, metro_linear_vidro = calc_bases_servicos_porta(
+            largura_mm=largura_mm,
+            altura_mm=altura_mm,
+            perfil_abatimento_mm=perfil.abatimento_mm,
+            pp_abatimento_mm=(pp.abatimento_mm if pp else None),
+            qtd_pp=qtd_pp,
+            pux_abatimento_mm=(pux.abatimento_mm if pux else None),
+            qtd_pux=qtd_pux,
+            pux_tamanho_mm=pux_tam,
+            pux_sobreposto=pux_sobreposto,
+            qtd_divisor=qtd_div,
+        )
+        servicos_aplicados = []
+        for sv in servicos_selecionados:
+            base = base_servico_porta(sv.tipo_calculo, metro_linear_perfil, m2_vidro_base, metro_linear_vidro)
+            valor_servico = sv.calcular(base)
+            valor_base += valor_servico
+            servicos_aplicados.append({"id": sv.pk, "nome": sv.nome, "valor": f"{valor_servico:.2f}"})
+
+        # ── Desconto + adicionais ─────────────────────────────────────────────
+        soma_adicionais = sum((valor for valor, _ in adicionais), Decimal("0"))
+        valor_unitario = aplicar_desconto_e_adicional(valor_base, desconto_pct, soma_adicionais)
+        valor_total = valor_unitario * Decimal(quantidade)
 
         # ── Descrição ─────────────────────────────────────────────────────────
         modelos = [m for m in [
@@ -278,7 +363,11 @@ class CalcularPortaView(APIView):
         return Response({
             "valido": True,
             "descricao": descricao,
-            "valor_unitario": f"{valor_base:.2f}",
+            "valor_base_unitario": f"{valor_base:.2f}",
+            "servicos_aplicados": servicos_aplicados,
+            "desconto_pct": (f"{desconto_pct:.2f}" if desconto_pct else None),
+            "adicionais": [{"valor": f"{v:.2f}", "descricao": d} for v, d in adicionais],
+            "valor_unitario": f"{valor_unitario:.2f}",
             "valor_total": f"{valor_total:.2f}",
             "quantidade": quantidade,
             "erros": [],
@@ -333,6 +422,30 @@ class SchemaView(APIView):
                             "vidro_id": {"type": "integer", "nullable": True, "description": "ID do vidro"},
                             "divisor_id": {"type": "integer", "nullable": True, "description": "ID do divisor"},
                             "qtd_divisor": {"type": "integer", "nullable": True, "description": "Quantidade de divisores (obrigatório se divisor_id)"},
+                            "puxador_sobreposto": {"type": "boolean", "default": True, "description": "Se o puxador simples é sobreposto ao perfil (afeta o cálculo de serviços por metro linear)"},
+                            "servicos_porta_ids": {
+                                "type": "array",
+                                "items": {"type": "integer"},
+                                "description": "IDs de serviços de porta (obtidos em /opcoes/ → servicos_porta) a aplicar, ex: pintura, película",
+                            },
+                            "desconto": {
+                                "type": "number",
+                                "nullable": True,
+                                "description": "Percentual de desconto (0 a 100) sobre o valor base + serviços",
+                            },
+                            "adicionais": {
+                                "type": "array",
+                                "maxItems": 4,
+                                "description": "Itens avulsos somados após o desconto, no máximo 4",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["valor"],
+                                    "properties": {
+                                        "valor": {"type": "number", "description": "Valor em R$ do item avulso"},
+                                        "descricao": {"type": "string", "description": "Descrição do item avulso, ex: 'Frete', 'Instalação'"},
+                                    },
+                                },
+                            },
                         },
                     },
                     "ResultadoCalculo": {
@@ -340,7 +453,31 @@ class SchemaView(APIView):
                         "properties": {
                             "valido": {"type": "boolean"},
                             "descricao": {"type": "string", "description": "Descrição completa da porta calculada"},
-                            "valor_unitario": {"type": "string", "description": "Valor por unidade em R$"},
+                            "valor_base_unitario": {"type": "string", "description": "Valor base por unidade (perfil + acessórios + vidro + serviços) em R$, antes de desconto/adicionais"},
+                            "servicos_aplicados": {
+                                "type": "array",
+                                "description": "Serviços de porta aplicados e seus valores calculados",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {"type": "integer"},
+                                        "nome": {"type": "string"},
+                                        "valor": {"type": "string"},
+                                    },
+                                },
+                            },
+                            "desconto_pct": {"type": "string", "nullable": True, "description": "Percentual de desconto aplicado"},
+                            "adicionais": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "valor": {"type": "string"},
+                                        "descricao": {"type": "string"},
+                                    },
+                                },
+                            },
+                            "valor_unitario": {"type": "string", "description": "Valor final por unidade, já com serviços, desconto e adicionais, em R$"},
                             "valor_total": {"type": "string", "description": "Valor total (unitário × quantidade) em R$"},
                             "quantidade": {"type": "integer"},
                             "erros": {"type": "array", "items": {"type": "string"}},
@@ -354,7 +491,8 @@ class SchemaView(APIView):
                         "operationId": "listar_opcoes",
                         "summary": "Lista os produtos disponíveis agrupados por categoria",
                         "description": (
-                            "Retorna acabamentos, perfis, perfis puxador, puxadores simples, divisores e vidros ativos. "
+                            "Retorna acabamentos, perfis, perfis puxador, puxadores simples, divisores, vidros e "
+                            "serviços de porta ativos (ex: pintura, película — em 'servicos_porta'). "
                             "Use os IDs retornados para montar a chamada de cálculo. "
                             "A resposta de 'perfis' já inclui os itens compatíveis com cada perfil."
                         ),
@@ -388,6 +526,19 @@ class SchemaView(APIView):
                                                 "puxadores": {"type": "array", "items": {"type": "object"}},
                                                 "divisores": {"type": "array", "items": {"type": "object"}},
                                                 "vidros": {"type": "array", "items": {"type": "object"}},
+                                                "servicos_porta": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id": {"type": "integer"},
+                                                            "nome": {"type": "string"},
+                                                            "tipo_calculo": {"type": "string"},
+                                                            "tipo_calculo_label": {"type": "string"},
+                                                            "preco": {"type": "string"},
+                                                        },
+                                                    },
+                                                },
                                             },
                                         }
                                     }
@@ -404,6 +555,8 @@ class SchemaView(APIView):
                         "description": (
                             "Recebe os IDs dos componentes escolhidos (obtidos em /opcoes/) e as dimensões, "
                             "valida se a combinação é compatível e retorna o valor calculado. "
+                            "Suporta também serviços de porta (servicos_porta_ids), desconto percentual "
+                            "(desconto) e itens avulsos (adicionais). "
                             "Não cria nenhum pedido — apenas calcula."
                         ),
                         "requestBody": {

@@ -142,3 +142,75 @@ def calc_total(
         total += custo_mao_obra
 
     return total
+
+
+# ── Bases de cálculo para serviços de porta ──────────────────────────────────
+
+def calc_bases_servicos_porta(
+    *,
+    largura_mm: int,
+    altura_mm: int,
+    perfil_abatimento_mm: Decimal = Decimal("0"),
+    pp_abatimento_mm: Decimal | None = None,
+    qtd_pp: int = 0,
+    pux_abatimento_mm: Decimal | None = None,
+    qtd_pux: int = 0,
+    pux_tamanho_mm: int = 0,
+    pux_sobreposto: bool = True,
+    qtd_divisor: int = 0,
+) -> tuple[Decimal, Decimal, Decimal]:
+    """
+    Retorna (metro_linear_perfil, m2_vidro, metro_linear_vidro) — as três bases
+    possíveis de cálculo para ServicoPorta.tipo_calculo.
+
+    metro_linear_perfil considera abatimentos de PP/puxador sobreposto, o
+    comprimento do(s) puxador(es) e o comprimento do(s) divisor(es).
+    """
+    L_perf = Decimal(largura_mm)
+    if pp_abatimento_mm is not None and qtd_pp:
+        L_perf = L_perf - qtd_pp * pp_abatimento_mm + qtd_pp * perfil_abatimento_mm
+    if pux_abatimento_mm is not None and qtd_pux and pux_sobreposto:
+        L_perf = L_perf - qtd_pux * pux_abatimento_mm
+
+    metro_linear_perfil = (L_perf * 2 + Decimal(altura_mm) * 2) / MM_POR_METRO
+    if qtd_pux and pux_tamanho_mm:
+        metro_linear_perfil += Decimal(qtd_pux * pux_tamanho_mm) / MM_POR_METRO
+    if qtd_divisor:
+        metro_linear_perfil += Decimal(qtd_divisor * largura_mm) / MM_POR_METRO
+
+    m2_vidro = area_m2(largura_mm, altura_mm)
+    metro_linear_vidro = (Decimal(largura_mm) * 2 + Decimal(altura_mm) * 2) / MM_POR_METRO
+
+    return metro_linear_perfil, m2_vidro, metro_linear_vidro
+
+
+def base_servico_porta(
+    tipo_calculo: str,
+    metro_linear_perfil: Decimal,
+    m2_vidro: Decimal,
+    metro_linear_vidro: Decimal,
+) -> Decimal:
+    """Seleciona a base de cálculo correta conforme ServicoPorta.tipo_calculo."""
+    if tipo_calculo == "metro_linear_perfil":
+        return metro_linear_perfil
+    if tipo_calculo == "m2_vidro":
+        return m2_vidro
+    return metro_linear_vidro
+
+
+# ── Desconto e adicionais ─────────────────────────────────────────────────────
+
+def aplicar_desconto_e_adicional(
+    valor_base: Decimal,
+    desconto_pct: Decimal | None = None,
+    adicional: Decimal | None = None,
+) -> Decimal:
+    """
+    valor_unitário = valor_base × (1 - desconto% / 100) + adicional
+
+    O desconto incide sobre o valor base (perfil + acessórios + serviços);
+    o adicional é somado depois, sem sofrer desconto.
+    """
+    desconto_pct = desconto_pct or Decimal("0")
+    adicional = adicional or Decimal("0")
+    return valor_base * (1 - desconto_pct / 100) + adicional

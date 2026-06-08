@@ -33,7 +33,12 @@ from ..models import (
     ServicoPorta,
     VidroBase,
 )
-from ..services.orcamento import calc_total
+from ..services.orcamento import (
+    calc_total,
+    calc_bases_servicos_porta,
+    base_servico_porta,
+    aplicar_desconto_e_adicional,
+)
 from ..services import producao as svc_producao
 from ..views_base import _get_perms, _sem_permissao
 
@@ -387,33 +392,28 @@ def pedido_item_temp_add(request):
                 custo_mao_obra=(config.custo_mao_obra if config.custo_mao_obra else None),
             )
             # Serviços de porta
-            L_perf = Decimal(cd["largura_mm"])
-            if pp and qtd_pp:
-                L_perf = L_perf - qtd_pp * pp.abatimento_mm + qtd_pp * perfil.abatimento_mm
-            if pux and qtd_pux and pux_sobreposto:
-                L_perf = L_perf - qtd_pux * pux.abatimento_mm
-            metro_linear_perfil = (L_perf * 2 + Decimal(cd["altura_mm"]) * 2) / Decimal(1000)
-            if pux and qtd_pux and pux_tam:
-                metro_linear_perfil += Decimal(qtd_pux * pux_tam) / Decimal(1000)
-            if divisor and qtd_div:
-                metro_linear_perfil += Decimal(qtd_div * cd["largura_mm"]) / Decimal(1000)
-            m2_vidro_base = Decimal(cd["largura_mm"]) * Decimal(cd["altura_mm"]) / Decimal(1_000_000)
-            metro_linear_vidro = (Decimal(cd["largura_mm"]) * 2 + Decimal(cd["altura_mm"]) * 2) / Decimal(1000)
+            metro_linear_perfil, m2_vidro_base, metro_linear_vidro = calc_bases_servicos_porta(
+                largura_mm=cd["largura_mm"],
+                altura_mm=cd["altura_mm"],
+                perfil_abatimento_mm=perfil.abatimento_mm,
+                pp_abatimento_mm=(pp.abatimento_mm if pp else None),
+                qtd_pp=qtd_pp,
+                pux_abatimento_mm=(pux.abatimento_mm if pux else None),
+                qtd_pux=qtd_pux,
+                pux_tamanho_mm=pux_tam,
+                pux_sobreposto=pux_sobreposto,
+                qtd_divisor=qtd_div,
+            )
 
             ids_servicos_porta = request.POST.getlist("servico_porta")
             servicos_porta_data = []
             for sv in ServicoPorta.objects.filter(pk__in=ids_servicos_porta, ativo=True):
-                if sv.tipo_calculo == "metro_linear_perfil":
-                    base = metro_linear_perfil
-                elif sv.tipo_calculo == "m2_vidro":
-                    base = m2_vidro_base
-                else:
-                    base = metro_linear_vidro
+                base = base_servico_porta(sv.tipo_calculo, metro_linear_perfil, m2_vidro_base, metro_linear_vidro)
                 val = sv.calcular(base)
                 valor_base += val
                 servicos_porta_data.append({"servico_id": sv.pk, "nome": sv.nome, "valor": f"{val:.2f}"})
 
-            valor_unit = valor_base * (1 - desconto_pct / 100) + adicional
+            valor_unit = aplicar_desconto_e_adicional(valor_base, desconto_pct, adicional)
 
             # Monta a descrição: Porta modelo1/modelo2 (Xcm) Acabamento LxA Vidro
             modelos = [m for m in [

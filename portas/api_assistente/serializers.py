@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from portas.models import Acabamento, Perfil, PerfilPuxador, Puxador, Divisor, VidroBase
+from portas.models import Acabamento, Perfil, PerfilPuxador, Puxador, Divisor, ServicoPorta, VidroBase
 
 
 class AcabamentoSerializer(serializers.ModelSerializer):
@@ -92,3 +92,11 @@ class VidroOpcoesSerializer(serializers.ModelSerializer):
     class Meta:
         model = VidroBase
         fields = ["id", "descricao", "espessura_mm"]
+
+
+class ServicoPortaOpcoesSerializer(serializers.ModelSerializer):
+    tipo_calculo_label = serializers.CharField(source="get_tipo_calculo_display", read_only=True)
+
+    class Meta:
+        model = ServicoPorta
+        fields = ["id", "nome", "tipo_calculo", "tipo_calculo_label", "preco"]

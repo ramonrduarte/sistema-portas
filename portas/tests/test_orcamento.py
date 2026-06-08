@@ -14,6 +14,9 @@ from portas.services.orcamento import (
     calc_valor_puxador,
     calc_valor_divisor,
     calc_total,
+    calc_bases_servicos_porta,
+    base_servico_porta,
+    aplicar_desconto_e_adicional,
 )
 
 
@@ -205,3 +208,85 @@ class CalcTotalTest(SimpleTestCase):
         # divisor=0.9×20=18, vidro=0.9×2.1×100=189, mao=25
         # total = 39+31.5+18+189+25 = 302.5
         self.assertAlmostEqual(float(resultado), 302.5, places=4)
+
+
+class CalcBasesServicosPortaTest(SimpleTestCase):
+    """Bases de cálculo para ServicoPorta: metro_linear_perfil, m2_vidro, metro_linear_vidro."""
+
+    def test_so_perfil(self):
+        # 900×2100mm, sem PP/puxador/divisor
+        # metro_linear_perfil = (0.9×2 + 2.1×2) = 6.0
+        ml_perfil, m2_vidro, ml_vidro = calc_bases_servicos_porta(largura_mm=900, altura_mm=2100)
+        self.assertEqual(ml_perfil, Decimal("6.0"))
+        self.assertAlmostEqual(float(m2_vidro), 1.89, places=4)
+        self.assertEqual(ml_vidro, Decimal("6.0"))
+
+    def test_com_perfil_puxador_abate_largura(self):
+        # L=900, abate 10mm de PP e soma 5mm de perfil por unidade de qtd_pp=1
+        # L_perf = 900 - 1×10 + 1×5 = 895 → (0.895×2 + 2.1×2) = 5.99
+        ml_perfil, _, _ = calc_bases_servicos_porta(
+            largura_mm=900, altura_mm=2100,
+            perfil_abatimento_mm=Decimal("5"),
+            pp_abatimento_mm=Decimal("10"), qtd_pp=1,
+        )
+        self.assertEqual(ml_perfil, Decimal("5.99"))
+
+    def test_puxador_sobreposto_abate_e_soma_tamanho(self):
+        # L_perf = 900 - 1×8 = 892 → perímetro (0.892×2 + 2.1×2) = 5.984
+        # + tamanho do puxador 1×300mm = 0.3 → 6.284
+        ml_perfil, _, _ = calc_bases_servicos_porta(
+            largura_mm=900, altura_mm=2100,
+            pux_abatimento_mm=Decimal("8"), qtd_pux=1,
+            pux_tamanho_mm=300, pux_sobreposto=True,
+        )
+        self.assertEqual(ml_perfil, Decimal("6.284"))
+
+    def test_puxador_nao_sobreposto_nao_abate(self):
+        # sem abatimento, só soma o tamanho: 6.0 + 0.3 = 6.3
+        ml_perfil, _, _ = calc_bases_servicos_porta(
+            largura_mm=900, altura_mm=2100,
+            pux_abatimento_mm=Decimal("8"), qtd_pux=1,
+            pux_tamanho_mm=300, pux_sobreposto=False,
+        )
+        self.assertEqual(ml_perfil, Decimal("6.3"))
+
+    def test_divisor_soma_largura_por_quantidade(self):
+        # 6.0 + 2 × 0.9 = 7.8
+        ml_perfil, _, _ = calc_bases_servicos_porta(
+            largura_mm=900, altura_mm=2100, qtd_divisor=2,
+        )
+        self.assertEqual(ml_perfil, Decimal("7.8"))
+
+
+class BaseServicoPortaTest(SimpleTestCase):
+    def test_seleciona_pela_chave(self):
+        ml_perfil, m2_vidro, ml_vidro = Decimal("6"), Decimal("1.89"), Decimal("6")
+        self.assertEqual(base_servico_porta("metro_linear_perfil", ml_perfil, m2_vidro, ml_vidro), ml_perfil)
+        self.assertEqual(base_servico_porta("m2_vidro", ml_perfil, m2_vidro, ml_vidro), m2_vidro)
+        self.assertEqual(base_servico_porta("metro_linear_vidro", ml_perfil, m2_vidro, ml_vidro), ml_vidro)
+
+
+class AplicarDescontoEAdicionalTest(SimpleTestCase):
+    """valor_unitario = valor_base × (1 - desconto% / 100) + adicional"""
+
+    def test_sem_desconto_nem_adicional(self):
+        self.assertEqual(aplicar_desconto_e_adicional(Decimal("100")), Decimal("100"))
+
+    def test_so_desconto(self):
+        # 100 × (1 - 10/100) = 90
+        resultado = aplicar_desconto_e_adicional(Decimal("100"), desconto_pct=Decimal("10"))
+        self.assertEqual(resultado, Decimal("90"))
+
+    def test_so_adicional(self):
+        self.assertEqual(
+            aplicar_desconto_e_adicional(Decimal("100"), adicional=Decimal("25")),
+            Decimal("125"),
+        )
+
+    def test_desconto_e_adicional(self):
+        # desconto incide sobre o valor base; adicional é somado depois, sem desconto
+        # 100 × 0.9 + 25 = 115
+        resultado = aplicar_desconto_e_adicional(
+            Decimal("100"), desconto_pct=Decimal("10"), adicional=Decimal("25")
+        )
+        self.assertEqual(resultado, Decimal("115"))
