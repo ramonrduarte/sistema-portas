@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import date as Date, datetime, timedelta
 from urllib.parse import urlencode
 from decimal import Decimal
@@ -1013,11 +1014,12 @@ def pedido_enviar_wise(request, pk):
                 pedido.status = "wise"
                 pedido.bimer_erro = ""
                 pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
-                pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
+                pedido.bimer_pedido_codigo = existente.get("codigo", "")
+                pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id", "bimer_pedido_codigo"])
                 _log_status(pedido, request)
                 return _resp_atualizar_lista()
 
-        ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
+        ok, msg, bimer_id, bimer_codigo = svc_bimer.enviar_pedido_bimer(config, pedido)
 
         if not ok:
             pedido.bimer_erro = msg
@@ -1030,7 +1032,8 @@ def pedido_enviar_wise(request, pk):
         pedido.status = "wise"
         pedido.bimer_erro = ""
         pedido.bimer_pedido_id = bimer_id or f"PED-{pedido.numero}"
-        pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
+        pedido.bimer_pedido_codigo = bimer_codigo
+        pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id", "bimer_pedido_codigo"])
         _log_status(pedido, request)
         return _resp_atualizar_lista()
 
@@ -1112,13 +1115,14 @@ def pedido_reenviar_bimer(request, pk):
         if existente:
             pedido.bimer_erro = ""
             pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
-            pedido.save(update_fields=["bimer_erro", "bimer_pedido_id"])
+            pedido.bimer_pedido_codigo = existente.get("codigo", "")
+            pedido.save(update_fields=["bimer_erro", "bimer_pedido_id", "bimer_pedido_codigo"])
             return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
                 "pedido": pedido,
                 "sucesso": f"Pedido já existia no Bimer (ID: {existente['bimer_id']}). Registro local corrigido.",
             })
 
-        ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
+        ok, msg, bimer_id, bimer_codigo = svc_bimer.enviar_pedido_bimer(config, pedido)
 
         if not ok:
             pedido.bimer_erro = msg
@@ -1130,7 +1134,8 @@ def pedido_reenviar_bimer(request, pk):
 
         pedido.bimer_erro = ""
         pedido.bimer_pedido_id = bimer_id or f"PED-{pedido.numero}"
-        pedido.save(update_fields=["bimer_erro", "bimer_pedido_id"])
+        pedido.bimer_pedido_codigo = bimer_codigo
+        pedido.save(update_fields=["bimer_erro", "bimer_pedido_id", "bimer_pedido_codigo"])
         return render(request, "portas/pedido/_confirm_reenviar_bimer.html", {
             "pedido": pedido,
             "sucesso": msg,
@@ -1250,6 +1255,81 @@ def pedido_imprimir(request, pk):
         "pedido": pedido,
         "paginas": _paginar(itens),
         "total_pedido": total,
+    })
+
+
+# ── Etiquetas de impressão ───────────────────────────────────────────────────
+
+@login_required
+def etiquetas_selecao(request):
+    if not _get_perms(request.user)["pedidos"]["ver"]:
+        return _sem_permissao("Você não tem permissão para visualizar pedidos.")
+
+    if request.method == "POST":
+        raw = request.POST.get("numeros", "")
+        tokens = re.split(r"[\s,;]+", raw.strip())
+        ids = [t.lstrip("0") or "0" for t in tokens if t.strip().isdigit()]
+        if not ids:
+            return render(request, "portas/pedido/etiquetas_selecao.html", {
+                "erro": "Informe ao menos um número de pedido válido.",
+                "numeros": raw,
+            })
+        return redirect(f"{reverse('etiquetas_imprimir')}?ids={','.join(ids)}")
+
+    return render(request, "portas/pedido/etiquetas_selecao.html", {})
+
+
+@login_required
+def etiquetas_imprimir(request):
+    if not _get_perms(request.user)["pedidos"]["ver"]:
+        return _sem_permissao("Você não tem permissão para visualizar pedidos.")
+
+    raw_ids = request.GET.get("ids", "")
+    try:
+        ids = [int(i) for i in raw_ids.split(",") if i.strip().isdigit()]
+    except ValueError:
+        ids = []
+
+    if not ids:
+        return redirect("etiquetas_selecao")
+
+    pedidos = (
+        Pedido.objects
+        .filter(pk__in=ids)
+        .select_related("cliente")
+        .prefetch_related("itens__perfil", "itens__acabamento", "itens__perfil_puxador",
+                          "itens__puxador", "itens__divisor", "itens__vidro",
+                          "itens_vidro__vidro")
+        .order_by("id")
+    )
+
+    # Monta lista de etiquetas: uma por item (porta ou vidro)
+    etiquetas = []
+    for pedido in pedidos:
+        data_fmt = pedido.data.strftime("%d/%m/%Y") if pedido.data else ""
+        for item in pedido.itens.all():
+            etiquetas.append({
+                "data":      data_fmt,
+                "numero":    pedido.numero,
+                "cidade":    pedido.cliente.cidade or "",
+                "cliente":   pedido.cliente.nome,
+                "descricao": item.descricao,
+                "obs":       pedido.observacoes or "",
+                "qtd":       item.quantidade,
+            })
+        for item in pedido.itens_vidro.all():
+            etiquetas.append({
+                "data":      data_fmt,
+                "numero":    pedido.numero,
+                "cidade":    pedido.cliente.cidade or "",
+                "cliente":   pedido.cliente.nome,
+                "descricao": item.descricao,
+                "obs":       pedido.observacoes or "",
+                "qtd":       item.quantidade,
+            })
+
+    return render(request, "portas/pedido/etiquetas_imprimir.html", {
+        "etiquetas": etiquetas,
     })
 
 
@@ -1659,17 +1739,19 @@ def pedido_controle(request):
                             pedido.status = "wise"
                             pedido.bimer_erro = ""
                             pedido.bimer_pedido_id = existente["bimer_id"] or f"PED-{pedido.numero}"
-                            pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
+                            pedido.bimer_pedido_codigo = existente.get("codigo", "")
+                            pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id", "bimer_pedido_codigo"])
                             _log_status(pedido, request)
                             enviados.append(f"#{pedido.numero}")
                             continue
 
-                    ok, msg, bimer_id = svc_bimer.enviar_pedido_bimer(config, pedido)
+                    ok, msg, bimer_id, bimer_codigo = svc_bimer.enviar_pedido_bimer(config, pedido)
                     if ok:
                         pedido.status = "wise"
                         pedido.bimer_erro = ""
                         pedido.bimer_pedido_id = bimer_id or f"PED-{pedido.numero}"
-                        pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id"])
+                        pedido.bimer_pedido_codigo = bimer_codigo
+                        pedido.save(update_fields=["status", "bimer_erro", "bimer_pedido_id", "bimer_pedido_codigo"])
                         _log_status(pedido, request)
                         enviados.append(f"#{pedido.numero}")
                     else:

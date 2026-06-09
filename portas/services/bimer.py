@@ -306,16 +306,16 @@ def enviar_pedido_bimer(config, pedido):
     Retorna (True, msg, bimer_id) em caso de sucesso ou (False, msg, "") em caso de erro.
     """
     if not config.ativo:
-        return False, "Integração Bimer desativada.", ""
+        return False, "Integração Bimer desativada.", "", ""
 
     if not config.identificador_empresa:
-        return False, "Configure o Identificador da empresa no Bimer.", ""
+        return False, "Configure o Identificador da empresa no Bimer.", "", ""
 
     if not pedido.cliente.bimer_id:
         return False, (
             f"Cliente '{pedido.cliente.nome}' não possui identificador Bimer. "
             "Sincronize os clientes primeiro."
-        ), ""
+        ), "", ""
 
     hoje             = timezone.localdate()
     data_str         = hoje.strftime("%Y-%m-%d")
@@ -348,6 +348,7 @@ def enviar_pedido_bimer(config, pedido):
                 False,
                 f"Vidro '{item.vidro.descricao}' não possui ID Bimer. "
                 "Sincronize o catálogo de preços no Bimer para obter os identificadores.",
+                "",
                 "",
             )
 
@@ -441,18 +442,18 @@ def enviar_pedido_bimer(config, pedido):
         bimer_id = obj.get("Identificador") or obj.get("identificador", "")
         codigo   = obj.get("Codigo") or obj.get("codigo", "")
         logger.info("Pedido %s enviado ao Bimer. Código: %s / ID: %s", pedido.numero, codigo, bimer_id)
-        return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}", bimer_id
+        return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}", bimer_id, codigo
 
     except requests.HTTPError as e:
         url_usada = f"{config.base_url.rstrip('/')}/api/venda/pedidos"
         corpo = e.response.text[:400] if e.response is not None else ""
         logger.error("Erro HTTP %s ao enviar pedido %s ao Bimer: %s", e.response.status_code, pedido.numero, corpo)
-        return False, f"Erro HTTP {e.response.status_code} — URL: {url_usada} — {corpo}", ""
+        return False, f"Erro HTTP {e.response.status_code} — URL: {url_usada} — {corpo}", "", ""
     except requests.ConnectionError:
-        return False, "Não foi possível conectar ao Bimer. Verifique a URL base.", ""
+        return False, "Não foi possível conectar ao Bimer. Verifique a URL base.", "", ""
     except Exception as e:
         logger.error("Erro inesperado ao enviar pedido %s ao Bimer: %s", pedido.numero, e, exc_info=True)
-        return False, str(e), ""
+        return False, str(e), "", ""
 
 
 _BUSCA_NAO_ENCONTRADO = None          # pedido não existe no Bimer

@@ -160,6 +160,12 @@
             <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'etiquetas_selecao' or request.resolver_match.url_name == 'etiquetas_imprimir' %}active{% endif %}"
+             href="{% url 'etiquetas_selecao' %}">
+            <i class="bi bi-tag me-2"></i>Etiquetas
+          </a>
+        </li>
         <li><div class="nav-section mt-2">Filas de Produção</div></li>
         <li class="nav-item">
           <a class="nav-link {% if request.resolver_match.url_name == 'fila_corte_perfis' %}active{% endif %}"

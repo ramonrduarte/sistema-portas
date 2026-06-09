@@ -124,6 +124,10 @@ urlpatterns = [
     path("pedidos/<int:pk>/voltar-orcamento/", views.pedido_voltar_orcamento, name="pedido_voltar_orcamento"),
     path("orcamentos/limpar/", views.orcamentos_limpar, name="orcamentos_limpar"),
 
+    # Etiquetas
+    path("pedidos/etiquetas/", views.etiquetas_selecao, name="etiquetas_selecao"),
+    path("pedidos/etiquetas/imprimir/", views.etiquetas_imprimir, name="etiquetas_imprimir"),
+
     # Filas de corte e montagem
     path("corte/perfis/", views.fila_corte_perfis, name="fila_corte_perfis"),
     path("corte/vidros/retangulares/", views.fila_corte_vidros_retangulares, name="fila_corte_vidros_retangulares"),

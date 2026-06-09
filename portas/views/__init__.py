@@ -82,6 +82,8 @@ from .pedidos import (
     pedido_confirmar_orcamento,
     pedido_voltar_orcamento,
     orcamentos_limpar,
+    etiquetas_selecao,
+    etiquetas_imprimir,
 )
 
 __all__ = [
@@ -111,6 +113,7 @@ __all__ = [
     "pedido_novo_vidro", "pedido_item_vidro_temp_add", "pedido_item_vidro_temp_remove",
     "pedido_item_vidro_novo", "pedido_item_vidro_remover",
     "pedido_confirmar_orcamento", "pedido_voltar_orcamento", "orcamentos_limpar",
+    "etiquetas_selecao", "etiquetas_imprimir",
     # integrações
     "bimer_config", "bimer_testar_conexao", "bimer_sincronizar", "bimer_sincronizar_clientes",
     "assistente_ia_config", "assistente_ia_testar_conexao", "assistente_ia_gerar_novo_link",
