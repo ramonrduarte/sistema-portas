@@ -119,7 +119,10 @@
           <td>
             <input type="checkbox" name="pedido_ids" value="{{ p.id }}" class="form-check-input chk-pedido">
           </td>
-          <td class="fw-semibold">#{{ p.numero }}</td>
+          <td class="fw-semibold">
+            #{{ p.numero }}
+            {% include "portas/pedido/_bimer_codigo_display.html" %}
+          </td>
           <td>
             {% if p.tipo == 'vidro' %}
               <span class="badge bg-info text-dark">Vidro</span>

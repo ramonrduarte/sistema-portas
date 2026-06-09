@@ -84,6 +84,7 @@ from .pedidos import (
     orcamentos_limpar,
     etiquetas_selecao,
     etiquetas_imprimir,
+    pedido_editar_codigo_bimer,
 )
 
 __all__ = [

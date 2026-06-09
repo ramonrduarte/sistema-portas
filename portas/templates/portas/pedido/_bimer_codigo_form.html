@@ -1,0 +1,26 @@
+<div id="bimer-codigo-{{ p.id }}">
+  <form hx-post="{% url 'pedido_editar_codigo_bimer' p.id %}"
+        hx-target="#bimer-codigo-{{ p.id }}"
+        hx-swap="outerHTML"
+        class="d-flex align-items-center gap-1 mt-1">
+    {% csrf_token %}
+    <input type="text"
+           name="bimer_pedido_codigo"
+           value="{{ p.bimer_pedido_codigo }}"
+           class="form-control form-control-sm font-monospace"
+           style="width:110px; font-size:11px"
+           placeholder="Cód. Bimer"
+           autofocus>
+    <button type="submit" class="btn btn-sm btn-primary py-0 px-1" title="Salvar">
+      <i class="bi bi-check-lg"></i>
+    </button>
+    <button type="button"
+            hx-get="{% url 'pedido_editar_codigo_bimer' p.id %}?cancelar=1"
+            hx-target="#bimer-codigo-{{ p.id }}"
+            hx-swap="outerHTML"
+            class="btn btn-sm btn-outline-secondary py-0 px-1"
+            title="Cancelar">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </form>
+</div>

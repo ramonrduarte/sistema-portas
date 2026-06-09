@@ -442,16 +442,29 @@ def enviar_pedido_bimer(config, pedido):
         bimer_id = obj.get("Identificador") or obj.get("identificador", "")
         codigo   = obj.get("Codigo") or obj.get("codigo", "")
 
-        # O Bimer geralmente não devolve o Codigo no POST — busca via GET
+        # O Bimer geralmente não devolve o Codigo no POST — tenta via GET
         if not codigo:
-            try:
-                busca = buscar_pedido_bimer(config, pedido.numero)
-                if isinstance(busca, dict):
-                    codigo = busca.get("codigo", "")
-                    if not bimer_id:
-                        bimer_id = busca.get("bimer_id", "")
-            except Exception:
-                pass
+            # Tentativa 1: GET /api/venda/pedidos/{identificador}
+            if bimer_id:
+                try:
+                    r = _bimer_request(config, "get", f"/api/venda/pedidos/{bimer_id}", timeout=_TIMEOUT)
+                    obj2 = r.json()
+                    if isinstance(obj2, list) and obj2:
+                        obj2 = obj2[0]
+                    if isinstance(obj2, dict):
+                        codigo = obj2.get("Codigo") or obj2.get("codigo", "")
+                except Exception:
+                    pass
+            # Tentativa 2: GET /api/venda/pedidos?codigoPedidoDeCompraCliente=...
+            if not codigo:
+                try:
+                    busca = buscar_pedido_bimer(config, pedido.numero)
+                    if isinstance(busca, dict):
+                        codigo = busca.get("codigo", "")
+                        if not bimer_id:
+                            bimer_id = busca.get("bimer_id", "")
+                except Exception:
+                    pass
 
         logger.info("Pedido %s enviado ao Bimer. Código: %s / ID: %s", pedido.numero, codigo, bimer_id)
         return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}", bimer_id, codigo

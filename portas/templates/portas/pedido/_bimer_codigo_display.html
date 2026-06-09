@@ -1,0 +1,22 @@
+<div id="bimer-codigo-{{ p.id }}" class="mt-1">
+  {% if p.bimer_pedido_codigo %}
+    <span class="text-muted small font-monospace">{{ p.bimer_pedido_codigo }}</span>
+    <a href="#"
+       hx-get="{% url 'pedido_editar_codigo_bimer' p.id %}"
+       hx-target="#bimer-codigo-{{ p.id }}"
+       hx-swap="outerHTML"
+       class="text-muted ms-1"
+       title="Editar código Bimer">
+      <i class="bi bi-pencil-fill" style="font-size:9px"></i>
+    </a>
+  {% elif p.status == 'wise' or p.status == 'concluido' %}
+    <a href="#"
+       hx-get="{% url 'pedido_editar_codigo_bimer' p.id %}"
+       hx-target="#bimer-codigo-{{ p.id }}"
+       hx-swap="outerHTML"
+       class="text-muted small"
+       title="Informar código Bimer">
+      <i class="bi bi-pencil"></i> cód. Bimer
+    </a>
+  {% endif %}
+</div>

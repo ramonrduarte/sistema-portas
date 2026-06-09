@@ -1258,6 +1258,26 @@ def pedido_imprimir(request, pk):
     })
 
 
+# ── Edição inline do código Bimer ────────────────────────────────────────────
+
+@login_required
+def pedido_editar_codigo_bimer(request, pk):
+    if not _get_perms(request.user)["producao"]["alterar_status"]:
+        return HttpResponse("", status=403)
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if request.method == "POST":
+        codigo = request.POST.get("bimer_pedido_codigo", "").strip()
+        pedido.bimer_pedido_codigo = codigo
+        pedido.save(update_fields=["bimer_pedido_codigo"])
+        return render(request, "portas/pedido/_bimer_codigo_display.html", {"p": pedido})
+
+    if request.GET.get("cancelar"):
+        return render(request, "portas/pedido/_bimer_codigo_display.html", {"p": pedido})
+
+    return render(request, "portas/pedido/_bimer_codigo_form.html", {"p": pedido})
+
+
 # ── Etiquetas de impressão ───────────────────────────────────────────────────
 
 @login_required
