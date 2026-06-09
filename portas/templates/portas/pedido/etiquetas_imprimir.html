@@ -232,7 +232,7 @@
 <!-- Barra superior (só na tela) -->
 <div class="toolbar d-print-none">
   <h6><i class="bi bi-tag me-2"></i>Etiquetas para impressão</h6>
-  <span class="badge-count">{{ etiquetas|length }} etiqueta{{ etiquetas|length|pluralize:"","s" }}</span>
+  <span class="badge-count">{{ etiquetas|length }} etiqueta{{ etiquetas|length|pluralize }}</span>
   <button onclick="window.print()" class="btn btn-sm btn-light">
     Imprimir
   </button>
