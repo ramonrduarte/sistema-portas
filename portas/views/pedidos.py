@@ -1274,7 +1274,11 @@ def etiquetas_selecao(request):
                 "erro": "Informe ao menos um número de pedido válido.",
                 "numeros": raw,
             })
-        return redirect(f"{reverse('etiquetas_imprimir')}?ids={','.join(ids)}")
+        try:
+            copias = max(1, min(20, int(request.POST.get("copias", 1))))
+        except (ValueError, TypeError):
+            copias = 1
+        return redirect(f"{reverse('etiquetas_imprimir')}?ids={','.join(ids)}&copias={copias}")
 
     return render(request, "portas/pedido/etiquetas_selecao.html", {})
 
@@ -1293,6 +1297,11 @@ def etiquetas_imprimir(request):
     if not ids:
         return redirect("etiquetas_selecao")
 
+    try:
+        copias = max(1, min(20, int(request.GET.get("copias", 1))))
+    except (ValueError, TypeError):
+        copias = 1
+
     pedidos = (
         Pedido.objects
         .filter(pk__in=ids)
@@ -1303,14 +1312,15 @@ def etiquetas_imprimir(request):
         .order_by("id")
     )
 
-    # Monta lista de etiquetas: uma por item (porta ou vidro)
-    etiquetas = []
+    # Monta lista de etiquetas: uma por item (porta ou vidro), repetida por cópias
+    etiquetas_base = []
     for pedido in pedidos:
         data_fmt = pedido.data.strftime("%d/%m/%Y") if pedido.data else ""
+        numero_bimer = pedido.bimer_pedido_codigo or pedido.numero
         for item in pedido.itens.all():
-            etiquetas.append({
+            etiquetas_base.append({
                 "data":      data_fmt,
-                "numero":    pedido.numero,
+                "numero":    numero_bimer,
                 "cidade":    pedido.cliente.cidade or "",
                 "cliente":   pedido.cliente.nome,
                 "descricao": item.descricao,
@@ -1318,9 +1328,9 @@ def etiquetas_imprimir(request):
                 "qtd":       item.quantidade,
             })
         for item in pedido.itens_vidro.all():
-            etiquetas.append({
+            etiquetas_base.append({
                 "data":      data_fmt,
-                "numero":    pedido.numero,
+                "numero":    numero_bimer,
                 "cidade":    pedido.cliente.cidade or "",
                 "cliente":   pedido.cliente.nome,
                 "descricao": item.descricao,
@@ -1328,8 +1338,11 @@ def etiquetas_imprimir(request):
                 "qtd":       item.quantidade,
             })
 
+    etiquetas = etiquetas_base * copias
+
     return render(request, "portas/pedido/etiquetas_imprimir.html", {
         "etiquetas": etiquetas,
+        "copias":    copias,
     })
 
 

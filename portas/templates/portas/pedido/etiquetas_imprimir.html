@@ -232,7 +232,7 @@
 <!-- Barra superior (só na tela) -->
 <div class="toolbar d-print-none">
   <h6><i class="bi bi-tag me-2"></i>Etiquetas para impressão</h6>
-  <span class="badge-count">{{ etiquetas|length }} etiqueta{{ etiquetas|length|pluralize }}</span>
+  <span class="badge-count">{{ etiquetas|length }} etiqueta{{ etiquetas|length|pluralize }}{% if copias > 1 %} ({{ copias }}x){% endif %}</span>
   <button onclick="window.print()" class="btn btn-sm btn-light">
     Imprimir
   </button>
@@ -247,7 +247,7 @@
   <div class="etiqueta">
     <div class="row-topo">
       <span>{{ e.data }}</span>
-      <span class="numero">Pedido #{{ e.numero }}</span>
+      <span class="numero">{{ e.numero }}</span>
     </div>
     <div class="row-cidade">{{ e.cidade }}</div>
     <div class="row-cliente">{{ e.cliente }}</div>
@@ -269,7 +269,7 @@
   <div class="etiqueta-print">
     <div class="row-topo">
       <span>{{ e.data }}</span>
-      <span class="numero">Pedido #{{ e.numero }}</span>
+      <span class="numero">{{ e.numero }}</span>
     </div>
     <div class="row-cidade">{{ e.cidade }}</div>
     <div class="row-cliente">{{ e.cliente }}</div>
