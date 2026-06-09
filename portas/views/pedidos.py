@@ -1274,11 +1274,7 @@ def etiquetas_selecao(request):
                 "erro": "Informe ao menos um número de pedido válido.",
                 "numeros": raw,
             })
-        try:
-            copias = max(1, min(20, int(request.POST.get("copias", 1))))
-        except (ValueError, TypeError):
-            copias = 1
-        return redirect(f"{reverse('etiquetas_imprimir')}?ids={','.join(ids)}&copias={copias}")
+        return redirect(f"{reverse('etiquetas_imprimir')}?ids={','.join(ids)}")
 
     return render(request, "portas/pedido/etiquetas_selecao.html", {})
 
@@ -1296,11 +1292,6 @@ def etiquetas_imprimir(request):
 
     if not ids:
         return redirect("etiquetas_selecao")
-
-    try:
-        copias = max(1, min(20, int(request.GET.get("copias", 1))))
-    except (ValueError, TypeError):
-        copias = 1
 
     pedidos = (
         Pedido.objects
@@ -1338,11 +1329,8 @@ def etiquetas_imprimir(request):
                 "qtd":       item.quantidade,
             })
 
-    etiquetas = etiquetas_base * copias
-
     return render(request, "portas/pedido/etiquetas_imprimir.html", {
-        "etiquetas": etiquetas,
-        "copias":    copias,
+        "etiquetas": etiquetas_base,
     })
 
 
