@@ -441,6 +441,18 @@ def enviar_pedido_bimer(config, pedido):
         obj = data[0] if isinstance(data, list) and data else (data if isinstance(data, dict) else {})
         bimer_id = obj.get("Identificador") or obj.get("identificador", "")
         codigo   = obj.get("Codigo") or obj.get("codigo", "")
+
+        # O Bimer geralmente não devolve o Codigo no POST — busca via GET
+        if not codigo:
+            try:
+                busca = buscar_pedido_bimer(config, pedido.numero)
+                if isinstance(busca, dict):
+                    codigo = busca.get("codigo", "")
+                    if not bimer_id:
+                        bimer_id = busca.get("bimer_id", "")
+            except Exception:
+                pass
+
         logger.info("Pedido %s enviado ao Bimer. Código: %s / ID: %s", pedido.numero, codigo, bimer_id)
         return True, f"Pedido de venda criado no Bimer. Código: {codigo} / ID: {bimer_id}", bimer_id, codigo
 
