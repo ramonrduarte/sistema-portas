@@ -106,23 +106,45 @@
 
   /* ── Impressão ── */
   @media print {
-    /* Suprime navbar, sidebar e toda a UI */
-    .navbar, #sidebar, .etiqueta-toolbar, .preview-grid { display: none !important; }
-    body { padding-top: 0 !important; }
-    main { margin: 0 !important; padding: 0 !important; max-width: none !important; width: 100mm !important; }
+    /* Bootstrap 5 define @page{size:a3} e body{min-width:992px!important}
+       no seu próprio CSS de impressão; precisamos sobrescrever ambos. */
+    @page { size: 100mm 40mm; margin: 0; }
+
+    html, body {
+      min-width: 0 !important;
+      width: 100mm !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      background: #fff !important;
+    }
+
+    /* Suprime toda a UI da base */
+    .navbar, #sidebar,
+    .etiqueta-toolbar, .preview-grid,
+    #etiqueta-templates { display: none !important; }
+
+    /* Reseta container do Django base */
+    main, .container-fluid, .container-lg {
+      min-width: 0 !important;
+      max-width: none !important;
+      width: 100mm !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
     .print-pages { display: block !important; }
 
-    @page { size: 100mm 40mm; margin: 0; }
-    html, body { background: #fff !important; }
-
     .etiqueta-print {
-      width: 100mm; height: 40mm;
+      width: 100mm;
+      height: 40mm;
       padding: 2.5mm 3mm 2mm 3mm;
       box-sizing: border-box;
-      display: flex; flex-direction: column;
+      display: flex;
+      flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
-      page-break-after: always; break-after: page;
+      page-break-after: always;
+      break-after: page;
       font-family: Arial, Helvetica, sans-serif;
     }
     .etiqueta-print .row-topo {
