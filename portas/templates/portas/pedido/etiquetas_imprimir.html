@@ -201,11 +201,11 @@
     </div>
     <div class="copias-ctrl">
       <span class="label-copias">Cópias:</span>
-      <button type="button" class="btn btn-sm btn-outline-secondary copias-btn"
-              data-idx="{{ forloop.index0 }}" data-delta="-1">&#8722;</button>
-      <span class="qtd-display" id="qtd-{{ forloop.index0 }}">1</span>
-      <button type="button" class="btn btn-sm btn-outline-secondary copias-btn"
-              data-idx="{{ forloop.index0 }}" data-delta="1">&#43;</button>
+      <button type="button" style="pointer-events:auto"
+              onclick="etqMenos(this)">&#8722;</button>
+      <span class="qtd-display">1</span>
+      <button type="button" style="pointer-events:auto"
+              onclick="etqMais(this)">&#43;</button>
     </div>
   </div>
   {% empty %}
@@ -236,45 +236,38 @@
 <!-- Área de impressão (oculta na tela, preenchida pelo JS) -->
 <div class="print-pages" id="print-pages"></div>
 
-{% endblock %}
-
-{% block extra_js %}
 <script>
-  const copias = {};
-  const total = {{ etiquetas|length }};
-
-  function mudarCopias(idx, delta) {
-    copias[idx] = Math.max(1, (copias[idx] || 1) + delta);
-    document.getElementById('qtd-' + idx).textContent = copias[idx];
-    atualizarBadge();
+  /* Funções declaradas aqui, antes de qualquer lib externa, no escopo global */
+  function etqMenos(btn) {
+    var span = btn.nextElementSibling;
+    span.textContent = Math.max(1, parseInt(span.textContent) - 1);
+    etqBadge();
   }
-
-  function atualizarBadge() {
-    let soma = 0;
-    for (let i = 0; i < total; i++) soma += (copias[i] || 1);
-    const el = document.getElementById('badge-total');
-    if (el) el.textContent = soma + ' etiqueta' + (soma !== 1 ? 's' : '');
+  function etqMais(btn) {
+    var span = btn.previousElementSibling;
+    span.textContent = parseInt(span.textContent) + 1;
+    etqBadge();
   }
-
-  function imprimir() {
-    const templates = document.querySelectorAll('#etiqueta-templates .etiqueta-print');
-    const pages = document.getElementById('print-pages');
+  function etqBadge() {
+    var soma = 0;
+    document.querySelectorAll('.qtd-display').forEach(function(s) {
+      soma += parseInt(s.textContent) || 1;
+    });
+    var el = document.getElementById('badge-total');
+    if (el) el.textContent = soma + (soma === 1 ? ' etiqueta' : ' etiquetas');
+  }
+  function etqImprimir() {
+    var tmpls = document.querySelectorAll('#etiqueta-templates .etiqueta-print');
+    var qtds  = document.querySelectorAll('.qtd-display');
+    var pages = document.getElementById('print-pages');
     pages.innerHTML = '';
-    templates.forEach(function(tmpl, idx) {
-      const n = copias[idx] || 1;
-      for (let i = 0; i < n; i++) {
-        pages.appendChild(tmpl.cloneNode(true));
-      }
+    tmpls.forEach(function(tmpl, i) {
+      var n = parseInt(qtds[i] ? qtds[i].textContent : '1') || 1;
+      for (var j = 0; j < n; j++) pages.appendChild(tmpl.cloneNode(true));
     });
     window.print();
   }
-
-  document.getElementById('btnImprimir').addEventListener('click', imprimir);
-
-  document.querySelectorAll('.copias-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      mudarCopias(parseInt(this.dataset.idx), parseInt(this.dataset.delta));
-    });
-  });
+  document.getElementById('btnImprimir').onclick = etqImprimir;
 </script>
+
 {% endblock %}
