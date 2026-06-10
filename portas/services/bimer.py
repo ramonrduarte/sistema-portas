@@ -437,22 +437,29 @@ def enviar_pedido_bimer(config, pedido):
                 logger.error("Bimer retornou 200 com erros para pedido %s: %s", pedido.numero, msg_erros)
                 return False, f"Bimer recusou o pedido: {msg_erros}", ""
 
-        # Resposta pode ser objeto único ou lista
-        obj = data[0] if isinstance(data, list) and data else (data if isinstance(data, dict) else {})
+        # Resposta: { "listaObjetos": [{...}] } ou lista direta ou objeto único
+        lista = []
+        if isinstance(data, list):
+            lista = data
+        elif isinstance(data, dict):
+            lista = data.get("listaObjetos") or data.get("ListaObjetos") or []
+        obj = lista[0] if lista else (data if isinstance(data, dict) else {})
         bimer_id = obj.get("Identificador") or obj.get("identificador", "")
         codigo   = obj.get("Codigo") or obj.get("codigo", "")
 
-        # O Bimer geralmente não devolve o Codigo no POST — tenta via GET
         if not codigo:
             # Tentativa 1: GET /api/venda/pedidos/{identificador}
             if bimer_id:
                 try:
                     r = _bimer_request(config, "get", f"/api/venda/pedidos/{bimer_id}", timeout=_TIMEOUT)
-                    obj2 = r.json()
-                    if isinstance(obj2, list) and obj2:
-                        obj2 = obj2[0]
-                    if isinstance(obj2, dict):
-                        codigo = obj2.get("Codigo") or obj2.get("codigo", "")
+                    d2 = r.json()
+                    lista2 = []
+                    if isinstance(d2, list):
+                        lista2 = d2
+                    elif isinstance(d2, dict):
+                        lista2 = d2.get("listaObjetos") or d2.get("ListaObjetos") or []
+                    if lista2:
+                        codigo = lista2[0].get("Codigo") or lista2[0].get("codigo", "")
                 except Exception:
                     pass
             # Tentativa 2: GET /api/venda/pedidos?codigoPedidoDeCompraCliente=...
