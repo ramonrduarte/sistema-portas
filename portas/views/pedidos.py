@@ -1714,6 +1714,10 @@ def pedido_controle(request):
                 qs_all = qs_all.filter(tipo=tipo_filtro)
             ids = [str(pk) for pk in qs_all.values_list("pk", flat=True)]
 
+        if ids and action == "imprimir_etiquetas":
+            ids_str = ",".join(str(i) for i in ids)
+            return redirect(f"{reverse('etiquetas_imprimir')}?ids={ids_str}")
+
         if ids and action == "ver_insumos":
             ids_str = ",".join(ids)
             return redirect(f"{reverse('pedido_insumos')}?ids={ids_str}")

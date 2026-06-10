@@ -214,6 +214,11 @@
             <a href="{% url 'pedido_imprimir' p.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Imprimir">
               <i class="bi bi-printer"></i>
             </a>
+            {% if p.status == 'wise' or p.status == 'concluido' %}
+            <a href="{% url 'etiquetas_imprimir' %}?ids={{ p.id }}" target="_blank" class="btn btn-sm btn-outline-info" title="Imprimir etiqueta">
+              <i class="bi bi-tag"></i>
+            </a>
+            {% endif %}
             {% if p.status == 'orcamento' %}
             <button type="button" class="btn btn-sm btn-success"
                     hx-get="{% url 'pedido_confirmar_orcamento' p.id %}"
@@ -349,6 +354,15 @@
     {% if status_filtro == 'wise' %}
     <button type="submit" name="action" value="concluido" class="btn btn-success btn-sm">
       Marcar concluído
+    </button>
+    <button type="submit" name="action" value="imprimir_etiquetas" class="btn btn-outline-info btn-sm">
+      <i class="bi bi-tag me-1"></i>Imprimir etiquetas
+    </button>
+    {% endif %}
+
+    {% if status_filtro == 'concluido' %}
+    <button type="submit" name="action" value="imprimir_etiquetas" class="btn btn-outline-info btn-sm">
+      <i class="bi bi-tag me-1"></i>Imprimir etiquetas
     </button>
     {% endif %}
 
