@@ -108,15 +108,21 @@
   /* ── Impressão ── */
   @media print {
     /* Bootstrap 5 define @page{size:a3} e body{min-width:992px!important}
-       no seu próprio CSS de impressão; precisamos sobrescrever ambos. */
+       no seu próprio CSS de impressão; precisamos sobrescrever ambos.
+       Também força color-scheme:light para que impressoras térmicas não
+       recebam texto claro-sobre-claro vindo do tema escuro do Bootstrap. */
     @page { size: 100mm 40mm; margin: 0; }
 
+    html, [data-bs-theme], [data-bs-theme="dark"] {
+      color-scheme: light !important;
+    }
     html, body {
       min-width: 0 !important;
       width: 100mm !important;
       padding: 0 !important;
       margin: 0 !important;
       background: #fff !important;
+      color: #000 !important;
     }
 
     /* Suprime toda a UI da base */
@@ -135,19 +141,23 @@
 
     .print-pages { display: block !important; }
 
+    /* Cada etiqueta ocupa exatamente uma página de 100x40mm.
+       Usamos display:block (sem flex) para máxima compatibilidade
+       com drivers de impressoras térmicas. */
     .etiqueta-print {
+      display: block;
       width: 100mm;
       height: 40mm;
-      padding: 2mm 3mm;
+      padding: 2mm 3mm 1mm 3mm;
       box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      gap: 1mm;
       overflow: hidden;
+      background: #fff;
+      color: #000;
       page-break-after: always;
       break-after: page;
       font-family: Arial, Helvetica, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     /* Evita página em branco após a última etiqueta */
     #print-pages .etiqueta-print:last-child {
@@ -156,36 +166,35 @@
     }
     .etiqueta-print .row-topo {
       display: flex; justify-content: space-between; align-items: baseline;
-      border-bottom: 0.3pt solid #bbb;
-      padding-bottom: 0.5mm; margin-bottom: 0.5mm;
-      font-size: 7pt; color: #555; flex-shrink: 0;
+      border-bottom: 0.5pt solid #555;
+      padding-bottom: 0.5mm; margin-bottom: 1mm;
+      font-size: 7pt; color: #555;
     }
-    .etiqueta-print .row-topo .numero { font-weight: 700; font-size: 7.5pt; color: #000; }
+    .etiqueta-print .row-topo .numero { font-weight: 700; font-size: 8pt; color: #000; }
     .etiqueta-print .row-cidade {
-      font-size: 6.5pt; color: #555;
+      font-size: 7pt; color: #555;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      flex-shrink: 0; line-height: 1.3;
+      margin-bottom: 0.5mm; line-height: 1.3;
     }
     .etiqueta-print .row-cliente {
       font-size: 9pt; font-weight: 700; color: #000;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      flex-shrink: 0;
-      border-bottom: 0.3pt solid #bbb;
-      padding-bottom: 0.5mm; margin-bottom: 0.5mm; line-height: 1.3;
       text-transform: uppercase;
+      border-bottom: 0.5pt solid #555;
+      padding-bottom: 0.5mm; margin-bottom: 1mm; line-height: 1.3;
     }
     .etiqueta-print .row-descricao {
-      font-size: 7pt; color: #111;
+      font-size: 7.5pt; color: #000;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      flex-shrink: 0; line-height: 1.4;
+      margin-bottom: 0.5mm; line-height: 1.4;
     }
-    .etiqueta-print .row-descricao .label { font-weight: 700; color: #444; }
+    .etiqueta-print .row-descricao .label { font-weight: 700; }
     .etiqueta-print .row-obs {
-      font-size: 6.5pt; color: #444;
+      font-size: 7pt; color: #333;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      flex-shrink: 0; line-height: 1.3; font-style: italic;
+      line-height: 1.3; font-style: italic;
     }
-    .etiqueta-print .row-obs .label { font-weight: 700; font-style: normal; color: #666; }
+    .etiqueta-print .row-obs .label { font-weight: 700; font-style: normal; }
   }
 </style>
 {% endblock %}
