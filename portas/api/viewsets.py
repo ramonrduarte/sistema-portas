@@ -33,7 +33,7 @@ class EspessuraVidroViewSet(ReadOrAdminMixin, ModelViewSet):
 
 
 class VidroBaseViewSet(ReadOrAdminMixin, ModelViewSet):
-    queryset = VidroBase.objects.select_related("espessura").all()
+    queryset = VidroBase.objects.select_related("espessura").order_by("codigo")
     serializer_class = VidroBaseSerializer
     lookup_field = "codigo"
 
@@ -51,13 +51,13 @@ class DivisorViewSet(ReadOrAdminMixin, ModelViewSet):
 
 
 class PerfilViewSet(ReadOrAdminMixin, ModelViewSet):
-    queryset = Perfil.objects.select_related("acabamento").all()
+    queryset = Perfil.objects.select_related("acabamento").order_by("codigo")
     serializer_class = PerfilSerializer
     lookup_field = "codigo"
 
 
 class PerfilPuxadorViewSet(ReadOrAdminMixin, ModelViewSet):
-    queryset = PerfilPuxador.objects.select_related("acabamento").all()
+    queryset = PerfilPuxador.objects.select_related("acabamento").order_by("codigo")
     serializer_class = PerfilPuxadorSerializer
     lookup_field = "codigo"
 
