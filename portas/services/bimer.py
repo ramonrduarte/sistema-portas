@@ -14,6 +14,7 @@ Endpoints confirmados:
        — retorna preço do produto para a empresa e tabela especificadas
 """
 import logging
+import time
 import requests
 from datetime import datetime, timedelta, timezone as dt_tz
 
@@ -52,12 +53,18 @@ def obter_token(config):
     Salva access_token, refresh_token e token_expires_at no config.
     """
     url = f"{config.base_url.rstrip('/')}/auth/token"
-    resp = requests.post(
-        url,
-        data={"username": config.username, "password": config.password},
-        timeout=_TIMEOUT,
-    )
-    resp.raise_for_status()
+    try:
+        resp = requests.post(
+            url,
+            data={"username": config.username, "password": config.password},
+            timeout=_TIMEOUT,
+        )
+        resp.raise_for_status()
+    except requests.HTTPError as e:
+        logger.error("Falha na autenticação Bimer (HTTP %s) para usuário %s",
+                     e.response.status_code if e.response is not None else "?",
+                     config.username)
+        raise
     data = resp.json()
 
     config.access_token     = data["accessToken"]
@@ -128,13 +135,21 @@ def _bimer_request(config, method, path, **kwargs):
     headers = kwargs.pop("headers", {})
     headers["Authorization"] = f"Bearer {token}"
 
-    resp = getattr(requests, method)(url, headers=headers, **kwargs)
-
-    if resp.status_code == 401:
-        # Token rejeitado pelo servidor — força nova autenticação e tenta uma vez mais
-        token = obter_token(config)
-        headers["Authorization"] = f"Bearer {token}"
+    for tentativa in range(3):
         resp = getattr(requests, method)(url, headers=headers, **kwargs)
+
+        if resp.status_code == 401:
+            token = obter_token(config)
+            headers["Authorization"] = f"Bearer {token}"
+            resp = getattr(requests, method)(url, headers=headers, **kwargs)
+
+        if resp.status_code in (429, 503) and tentativa < 2:
+            logger.warning("Bimer retornou %s; aguardando %ss antes de tentar novamente.",
+                           resp.status_code, 2 ** tentativa)
+            time.sleep(2 ** tentativa)
+            continue
+
+        break
 
     resp.raise_for_status()
     return resp

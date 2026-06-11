@@ -19,6 +19,7 @@ services:
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-False}
       CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-False}
       GPT_API_TOKEN: ${GPT_API_TOKEN}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
     volumes:
       - media_data:/app/media
     labels:

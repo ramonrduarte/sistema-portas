@@ -150,6 +150,7 @@ urlpatterns = [
     path("integracoes/assistente-ia/",          views.assistente_ia_config,         name="assistente_ia_config"),
     path("integracoes/assistente-ia/testar/",   views.assistente_ia_testar_conexao, name="assistente_ia_testar_conexao"),
     path("integracoes/assistente-ia/novo-link/", views.assistente_ia_gerar_novo_link, name="assistente_ia_gerar_novo_link"),
+    path("integracoes/assistente-ia/token/",    views.assistente_ia_token,          name="assistente_ia_token"),
 
     # Páginas públicas (sem login, protegidas por token UUID)
     path("monitor/<uuid:token>/", views.monitor_producao, name="monitor_producao"),
@@ -160,6 +161,7 @@ urlpatterns = [
 
     # Configurações
     path("configuracoes/", views.configuracoes_empresa, name="configuracoes_empresa"),
+    path("configuracoes/regenerar-token/", views.configuracoes_regenerar_token_monitor, name="configuracoes_regenerar_token_monitor"),
 
     # Backup
     path("backup/", views.backup_config, name="backup_config"),

@@ -4,10 +4,14 @@ MM_POR_METRO = Decimal("1000")
 
 
 def mm_para_m(mm) -> Decimal:
+    if not mm:
+        return Decimal("0")
     return Decimal(mm) / MM_POR_METRO
 
 
 def area_m2(largura_mm, altura_mm) -> Decimal:
+    if not largura_mm or not altura_mm:
+        return Decimal("0")
     return mm_para_m(largura_mm) * mm_para_m(altura_mm)
 
 

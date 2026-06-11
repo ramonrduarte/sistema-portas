@@ -140,13 +140,20 @@
         </div>
 
         <label class="form-label small fw-bold">Token de autenticação (GPT_API_TOKEN)</label>
-        <div class="input-group">
-          <input type="text" class="form-control" value="{{ gpt_api_token }}" id="link-gpt-token" readonly>
-          <button class="btn btn-outline-secondary" type="button"
-                  onclick="navigator.clipboard.writeText(document.getElementById('link-gpt-token').value)">
-            Copiar
-          </button>
-        </div>
+        {% if gpt_token_configurado %}
+          <div id="gpt-token-area">
+            <button class="btn btn-outline-secondary btn-sm"
+                    hx-get="{% url 'assistente_ia_token' %}"
+                    hx-target="#gpt-token-area"
+                    hx-swap="outerHTML">
+              Revelar token
+            </button>
+          </div>
+        {% else %}
+          <div class="alert alert-warning py-2 mb-1">
+            Token não configurado. Defina <code>GPT_API_TOKEN</code> no <code>.env</code> do servidor e reimplante.
+          </div>
+        {% endif %}
         <p class="form-text mb-0">
           Configure como autenticação do tipo <strong>API Key / Bearer</strong> nas
           Actions do GPT. Esse token é definido no <code>.env</code> do servidor

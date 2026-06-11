@@ -117,18 +117,18 @@ __all__ = [
     "etiquetas_selecao", "etiquetas_imprimir",
     # integrações
     "bimer_config", "bimer_testar_conexao", "bimer_sincronizar", "bimer_sincronizar_clientes",
-    "assistente_ia_config", "assistente_ia_testar_conexao", "assistente_ia_gerar_novo_link",
+    "assistente_ia_config", "assistente_ia_testar_conexao", "assistente_ia_gerar_novo_link", "assistente_ia_token",
     # configurações
-    "configuracoes_empresa",
+    "configuracoes_empresa", "configuracoes_regenerar_token_monitor",
     # backup
     "backup_config", "backup_testar_diretorio",
 ]
 
 from .integracoes import (
     bimer_config, bimer_testar_conexao, bimer_sincronizar, bimer_sincronizar_clientes,
-    assistente_ia_config, assistente_ia_testar_conexao, assistente_ia_gerar_novo_link,
+    assistente_ia_config, assistente_ia_testar_conexao, assistente_ia_gerar_novo_link, assistente_ia_token,
 )
-from .configuracoes import configuracoes_empresa
+from .configuracoes import configuracoes_empresa, configuracoes_regenerar_token_monitor
 from .backup import backup_config, backup_testar_diretorio
 from .corte import (
     fila_corte_perfis,

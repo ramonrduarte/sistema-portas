@@ -101,11 +101,21 @@ def assistente_ia_config(request):
     schema_url = request.build_absolute_uri(reverse("assistente_schema"))
 
     return render(request, "portas/integracoes/assistente_ia.html", {
-        "form":          form,
-        "config":        config,
-        "chat_url":      chat_url,
-        "schema_url":    schema_url,
-        "gpt_api_token": settings.GPT_API_TOKEN,
+        "form":                  form,
+        "config":                config,
+        "chat_url":              chat_url,
+        "schema_url":            schema_url,
+        "gpt_token_configurado": bool(settings.GPT_API_TOKEN),
+    })
+
+
+@login_required
+def assistente_ia_token(request):
+    """HTMX GET — retorna o valor do GPT_API_TOKEN para exibição pontual (staff only)."""
+    if not _apenas_staff(request):
+        return HttpResponseForbidden()
+    return render(request, "portas/integracoes/_gpt_token.html", {
+        "token": settings.GPT_API_TOKEN,
     })
 
 

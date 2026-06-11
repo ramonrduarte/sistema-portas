@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 import re
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 
 
@@ -162,7 +163,7 @@ class VidroBase(models.Model):
 
 class PessoaBase(AtivoModel):
     """Base para cadastros de pessoas/entidades simples."""
-    nome = models.CharField(max_length=255)
+    nome = models.CharField(max_length=255, db_index=True)
     telefone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
 
@@ -354,8 +355,8 @@ class PedidoItem(models.Model):
     )
 
     # Medidas
-    largura_mm = models.PositiveIntegerField()
-    altura_mm = models.PositiveIntegerField()
+    largura_mm = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    altura_mm = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     quantidade = models.PositiveIntegerField(default=1)
 
     # Estrutura
@@ -480,8 +481,8 @@ class PedidoItemVidro(models.Model):
     )
 
     vidro = models.ForeignKey("VidroBase", on_delete=models.PROTECT)
-    largura_mm = models.PositiveIntegerField(verbose_name="Largura (mm)")
-    altura_mm = models.PositiveIntegerField(verbose_name="Altura (mm)")
+    largura_mm = models.PositiveIntegerField(verbose_name="Largura (mm)", validators=[MinValueValidator(1)])
+    altura_mm = models.PositiveIntegerField(verbose_name="Altura (mm)", validators=[MinValueValidator(1)])
     quantidade = models.PositiveIntegerField(default=1)
 
     desconto = models.DecimalField(

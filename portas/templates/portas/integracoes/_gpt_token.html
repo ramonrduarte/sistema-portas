@@ -1,0 +1,7 @@
+<div class="input-group">
+  <input type="text" class="form-control" value="{{ token }}" id="link-gpt-token" readonly>
+  <button class="btn btn-outline-secondary" type="button"
+          onclick="navigator.clipboard.writeText(document.getElementById('link-gpt-token').value)">
+    Copiar
+  </button>
+</div>

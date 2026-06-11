@@ -169,11 +169,21 @@ LOGGING = {
 }
 
 # ── Cache (usado pelo throttling da API do assistente) ────────────────────────
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+# Em produção com Redis configurado, o throttle funciona entre todos os workers Gunicorn.
+REDIS_URL = config("REDIS_URL", default="")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
 
 # ── Assistente GPT ────────────────────────────────────────────────────────────
 # Token Bearer enviado pelo GPT nas chamadas à API do assistente.
@@ -188,6 +198,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 50,
     'DEFAULT_THROTTLE_RATES': {
         'assistente': '120/minute',
     },
