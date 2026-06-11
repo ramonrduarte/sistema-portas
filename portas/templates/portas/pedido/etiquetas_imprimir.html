@@ -64,7 +64,7 @@
   .row-cliente {
     font-size: 11pt; font-weight: 700;
     color: var(--bs-body-color);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    overflow-wrap: break-word; word-break: break-word;
     flex-shrink: 0; line-height: 1.3;
     border-bottom: 1px solid var(--bs-border-color);
     padding-bottom: 2px; margin-bottom: 4px;
@@ -72,12 +72,12 @@
   }
   .row-descricao {
     font-size: 9pt; color: var(--bs-body-color);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    overflow-wrap: break-word; word-break: break-word;
     flex-shrink: 0; line-height: 1.35;
   }
   .row-obs {
     font-size: 9pt; color: var(--bs-secondary-color);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    overflow-wrap: break-word; word-break: break-word;
     flex-shrink: 0; line-height: 1.3; font-style: italic;
   }
 
@@ -169,19 +169,19 @@
     .etiqueta-print .row-topo .cidade { text-align: right; }
     .etiqueta-print .row-cliente {
       font-size: 12pt; font-weight: 700; color: #000;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      overflow-wrap: break-word; word-break: break-word;
       text-transform: uppercase;
       border-bottom: 0.5pt solid #555;
       padding-bottom: 0.5mm; margin-bottom: 1.5mm; line-height: 1.3;
     }
     .etiqueta-print .row-descricao {
       font-size: 10pt; color: #000;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      overflow-wrap: break-word; word-break: break-word;
       margin-bottom: 0.5mm; line-height: 1.4;
     }
     .etiqueta-print .row-obs {
       font-size: 10pt; color: #333;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      overflow-wrap: break-word; word-break: break-word;
       line-height: 1.3; font-style: italic;
     }
   }
