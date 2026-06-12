@@ -1,0 +1,30 @@
+services:
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-192.168.0.187,127.0.0.1,localhost}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://192.168.0.187:8000}
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_NAME: ${DATABASE_NAME:-portas_test}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST:-192.168.0.110}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      GPT_API_TOKEN: ${GPT_API_TOKEN:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-False}
+      CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-False}
+      SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-0}
+      SECURE_HSTS_INCLUDE_SUBDOMAINS: ${SECURE_HSTS_INCLUDE_SUBDOMAINS:-False}
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
